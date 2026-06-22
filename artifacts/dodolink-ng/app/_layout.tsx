@@ -15,8 +15,6 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { setBaseUrl } from "@workspace/api-client-react";
-import { usePushNotifications } from "@/hooks/usePushNotifications";
-import { useUserIdentity } from "@/hooks/useUserIdentity";
 
 setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
 
@@ -26,8 +24,6 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 function RootLayoutNav() {
-  const { userId } = useUserIdentity();
-  usePushNotifications(userId);
   return (
     <Stack screenOptions={{ headerBackTitle: "Back", headerTintColor: "#1B5E20" }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
