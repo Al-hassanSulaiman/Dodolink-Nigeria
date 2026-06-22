@@ -1,0 +1,14 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "u1ZF8zBfkRjv3W79jrSW3"
+uri = "file://artifacts/dodolink-ng/assets/images/icon.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "5SS9h7AyXA5cE0yeclAo9"
+uri = "file://artifacts/dodolink-ng/assets/images/splash.png"
+type = "image"
+title = "generated_image"

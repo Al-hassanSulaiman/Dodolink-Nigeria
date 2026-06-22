@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/"
+title = "Dodolink NG"
+version = "1.0.0"
+id = "artifacts/dodolink-ng"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/" ]
+localPort = 23014
+
+[services.development]
+run = "pnpm --filter @workspace/dodolink-ng run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/dodolink-ng", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/dodolink-ng", "run", "serve" ]
+
+[services.env]
+PORT = "23014"
+BASE_PATH = "/"

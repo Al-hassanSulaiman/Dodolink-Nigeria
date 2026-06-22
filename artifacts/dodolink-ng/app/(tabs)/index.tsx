@@ -1,0 +1,120 @@
+import { useListProducts, useListStores } from "@workspace/api-client-react";
+import { StyleSheet, View, Text, ScrollView, RefreshControl } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useColors } from "@/hooks/useColors";
+import { ProductCard } from "@/components/ProductCard";
+import { StoreCard } from "@/components/StoreCard";
+import { LoadingScreen } from "@/components/Loading";
+import { EmptyState } from "@/components/EmptyState";
+import { Link } from "expo-router";
+
+export default function HomeScreen() {
+  const colors = useColors();
+  const { data: products, isLoading: isLoadingProducts, refetch: refetchProducts } = useListProducts({ limit: 6 });
+  const { data: stores, isLoading: isLoadingStores, refetch: refetchStores } = useListStores({ limit: 3 });
+
+  const refreshing = isLoadingProducts || isLoadingStores;
+  const onRefresh = () => {
+    refetchProducts();
+    refetchStores();
+  };
+
+  if (isLoadingProducts && !products) {
+    return <LoadingScreen message="Loading Dodolink..." />;
+  }
+
+  return (
+    <ScrollView 
+      style={[styles.container, { backgroundColor: colors.background }]}
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+    >
+      <View style={styles.header}>
+        <Text style={[styles.title, { color: colors.primary }]}>Dodolink NG</Text>
+        <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>The digital Alaba Market</Text>
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Featured Products</Text>
+          <Link href="/search" style={[styles.seeAll, { color: colors.primary }]}>See All</Link>
+        </View>
+        
+        {products && products.length > 0 ? (
+          <View style={styles.grid}>
+            {products.map(product => (
+              <View key={product.id} style={styles.gridItem}>
+                <ProductCard product={product} />
+              </View>
+            ))}
+          </View>
+        ) : (
+          <EmptyState title="No products yet" description="Check back later for new arrivals." icon="box" />
+        )}
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Top Stores</Text>
+        </View>
+        
+        {stores && stores.length > 0 ? (
+          stores.map(store => (
+            <StoreCard key={store.id} store={store} />
+          ))
+        ) : (
+          <EmptyState title="No stores found" description="Be the first to create a store." icon="shopping-bag" />
+        )}
+      </View>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  content: {
+    padding: 16,
+    paddingTop: 60, // approximate safe area top
+    paddingBottom: 100, // space for tab bar
+  },
+  header: {
+    marginBottom: 24,
+  },
+  title: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 28,
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 16,
+  },
+  section: {
+    marginBottom: 32,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 20,
+  },
+  seeAll: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 14,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -8,
+  },
+  gridItem: {
+    width: '50%',
+    paddingHorizontal: 8,
+  },
+});
