@@ -293,6 +293,26 @@ paths:
                   $ref: "#/components/schemas/Product"
 
   # ─── Search ─────────────────────────────────────────────────────────────────
+  # ─── Push Tokens ────────────────────────────────────────────────────────────
+  /push-tokens:
+    post:
+      operationId: registerPushToken
+      tags: [stores]
+      summary: Register an Expo push token for a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterPushTokenBody"
+      responses:
+        "200":
+          description: Token registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
   /search:
     get:
       operationId: search
@@ -742,6 +762,15 @@ components:
           type: string
           format: date-time
       required: [id, storeId, reviewerName, reviewerId, rating, comment, createdAt]
+
+    RegisterPushTokenBody:
+      type: object
+      properties:
+        userId:
+          type: string
+        token:
+          type: string
+      required: [userId, token]
 
     CreateReviewBody:
       type: object

@@ -277,6 +277,19 @@ export const ListProductsResponse = zod.array(ListProductsResponseItem)
 
 
 /**
+ * @summary Register an Expo push token for a user
+ */
+export const RegisterPushTokenBody = zod.object({
+  "userId": zod.string(),
+  "token": zod.string()
+})
+
+export const RegisterPushTokenResponse = zod.object({
+  "status": zod.string()
+})
+
+
+/**
  * @summary Search products and stores
  */
 export const SearchQueryParams = zod.object({

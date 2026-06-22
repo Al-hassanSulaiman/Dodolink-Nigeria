@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { db, conversationsTable, messagesTable, storesTable } from "@workspace/db";
+import { db, conversationsTable, messagesTable, storesTable, pushTokensTable } from "@workspace/db";
 import { SendMessageBody, StartConversationBody } from "@workspace/api-zod";
+import { notifyTokens } from "../lib/push";
 
 const router: IRouter = Router();
 
@@ -80,6 +81,34 @@ router.post("/conversations/:conversationId/messages", async (req, res): Promise
   await db.update(conversationsTable)
     .set({ lastMessage: parsed.data.body, lastMessageAt: new Date() })
     .where(eq(conversationsTable.id, conversationId));
+
+  // Send push notification to the recipient
+  const [conv] = await db.select().from(conversationsTable).where(eq(conversationsTable.id, conversationId));
+  if (conv) {
+    // If sender is customer, notify the store owner; if sender is retailer, notify the customer
+    const recipientId = parsed.data.senderType === "customer" ? null : conv.customerId;
+    if (parsed.data.senderType === "customer") {
+      // Notify store owner — find store owner userId
+      const [store] = await db.select({ ownerUserId: storesTable.ownerUserId, name: storesTable.name }).from(storesTable).where(eq(storesTable.id, conv.storeId));
+      if (store) {
+        const tokens = await db.select({ token: pushTokensTable.token }).from(pushTokensTable).where(eq(pushTokensTable.userId, store.ownerUserId));
+        await notifyTokens(
+          tokens.map(t => t.token),
+          `New message from ${parsed.data.senderName}`,
+          parsed.data.body,
+          { conversationId },
+        );
+      }
+    } else if (recipientId) {
+      const tokens = await db.select({ token: pushTokensTable.token }).from(pushTokensTable).where(eq(pushTokensTable.userId, recipientId));
+      await notifyTokens(
+        tokens.map(t => t.token),
+        `Reply from ${parsed.data.senderName}`,
+        parsed.data.body,
+        { conversationId },
+      );
+    }
+  }
 
   res.status(201).json(msg);
 });

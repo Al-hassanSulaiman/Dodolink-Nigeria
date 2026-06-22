@@ -171,6 +171,11 @@ export interface Review {
   createdAt: string;
 }
 
+export interface RegisterPushTokenBody {
+  userId: string;
+  token: string;
+}
+
 export interface CreateReviewBody {
   reviewerName: string;
   reviewerId: string;

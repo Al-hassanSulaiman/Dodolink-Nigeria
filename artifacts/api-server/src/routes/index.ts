@@ -5,6 +5,7 @@ import productsRouter from "./products";
 import searchRouter from "./search";
 import messagesRouter from "./messages";
 import reviewsRouter from "./reviews";
+import pushTokensRouter from "./push_tokens";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(productsRouter);
 router.use(searchRouter);
 router.use(messagesRouter);
 router.use(reviewsRouter);
+router.use(pushTokensRouter);
 
 export default router;

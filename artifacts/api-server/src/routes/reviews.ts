@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
-import { eq, avg, count, sql } from "drizzle-orm";
-import { db, reviewsTable, storesTable } from "@workspace/db";
+import { eq, avg, count } from "drizzle-orm";
+import { db, reviewsTable, storesTable, pushTokensTable } from "@workspace/db";
 import { CreateReviewBody } from "@workspace/api-zod";
+import { notifyTokens } from "../lib/push";
 
 const router: IRouter = Router();
 
@@ -35,9 +36,26 @@ router.post("/stores/:storeId/reviews", async (req, res): Promise<void> => {
     .from(reviewsTable)
     .where(eq(reviewsTable.storeId, storeId));
 
-  await db.update(storesTable)
+  const [store] = await db
+    .update(storesTable)
     .set({ avgRating: Number(stats[0]?.avgRating ?? 0), totalReviews: Number(stats[0]?.total ?? 0) })
-    .where(eq(storesTable.id, storeId));
+    .where(eq(storesTable.id, storeId))
+    .returning({ ownerUserId: storesTable.ownerUserId, name: storesTable.name });
+
+  // Push notification to store owner
+  if (store) {
+    const tokens = await db
+      .select({ token: pushTokensTable.token })
+      .from(pushTokensTable)
+      .where(eq(pushTokensTable.userId, store.ownerUserId));
+    const stars = "★".repeat(parsed.data.rating) + "☆".repeat(5 - parsed.data.rating);
+    await notifyTokens(
+      tokens.map(t => t.token),
+      `New ${stars} review on ${store.name}`,
+      `${parsed.data.reviewerName}: "${parsed.data.comment}"`,
+      { storeId },
+    );
+  }
 
   res.status(201).json(review);
 });
