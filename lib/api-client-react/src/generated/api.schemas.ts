@@ -37,6 +37,8 @@ export interface Product {
   price: number;
   category: string;
   imageUrl?: string | null;
+  /** Up to 5 product images. First image is the thumbnail. */
+  imageUrls: string[];
   inStock: boolean;
   createdAt: string;
 }
@@ -87,6 +89,8 @@ export interface CreateProductBody {
   price: number;
   category: string;
   imageUrl?: string | null;
+  /** Up to 5 product image object paths. */
+  imageUrls?: string[];
   inStock?: boolean;
 }
 
@@ -96,6 +100,8 @@ export interface UpdateProductBody {
   price?: number;
   category?: string;
   imageUrl?: string | null;
+  /** Up to 5 product image object paths. */
+  imageUrls?: string[];
   inStock?: boolean;
 }
 
@@ -185,6 +191,20 @@ export interface CreateReviewBody {
      */
   rating: number;
   comment: string;
+}
+
+export interface UploadUrlRequest {
+  /** @minLength 1 */
+  name: string;
+  /** @minimum 1 */
+  size: number;
+  /** @minLength 1 */
+  contentType: string;
+}
+
+export interface UploadUrlResponse {
+  uploadURL: string;
+  objectPath: string;
 }
 
 export type ListStoresParams = {

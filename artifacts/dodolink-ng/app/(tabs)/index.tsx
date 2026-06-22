@@ -37,7 +37,7 @@ export default function HomeScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Featured Products</Text>
-          <Link href="/search" style={[styles.seeAll, { color: colors.primary }]}>See All</Link>
+          <Link href="/search" style={StyleSheet.flatten([styles.seeAll, { color: colors.primary }])}>See All</Link>
         </View>
         
         {products && products.length > 0 ? (

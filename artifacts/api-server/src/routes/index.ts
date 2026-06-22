@@ -6,6 +6,7 @@ import searchRouter from "./search";
 import messagesRouter from "./messages";
 import reviewsRouter from "./reviews";
 import pushTokensRouter from "./push_tokens";
+import storageRouter from "./storage";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(searchRouter);
 router.use(messagesRouter);
 router.use(reviewsRouter);
 router.use(pushTokensRouter);
+router.use(storageRouter);
 
 export default router;

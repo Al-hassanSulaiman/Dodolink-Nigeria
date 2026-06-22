@@ -7,12 +7,13 @@ import { ImagePlaceholder } from './ImagePlaceholder';
 
 export function ProductCard({ product }: { product: Product }) {
   const colors = useColors();
-  
+  const thumbnail = (product.imageUrls && product.imageUrls[0]) || product.imageUrl || null;
+
   return (
     <Link href={`/product/${product.id}`} asChild>
-      <Pressable style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        {product.imageUrl ? (
-          <Image source={{ uri: product.imageUrl }} style={styles.image} resizeMode="cover" />
+      <Pressable style={StyleSheet.flatten([styles.card, { backgroundColor: colors.card, borderColor: colors.border }])}>
+        {thumbnail ? (
+          <Image source={{ uri: thumbnail }} style={styles.image} resizeMode="cover" />
         ) : (
           <View style={[styles.imageContainer, { backgroundColor: colors.muted }]}>
             <ImagePlaceholder name={product.name} size={80} borderRadius={0} />

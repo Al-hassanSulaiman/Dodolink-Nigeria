@@ -11,7 +11,7 @@ export function StoreCard({ store }: { store: Store }) {
   
   return (
     <Link href={`/store/${store.id}`} asChild>
-      <Pressable style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <Pressable style={StyleSheet.flatten([styles.card, { backgroundColor: colors.card, borderColor: colors.border }])}>
         {store.imageUrl ? (
           <Image source={{ uri: store.imageUrl }} style={styles.image} resizeMode="cover" />
         ) : (

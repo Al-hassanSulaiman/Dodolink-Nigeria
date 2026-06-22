@@ -11,6 +11,7 @@ export const productsTable = pgTable("products", {
   price: real("price").notNull(),
   category: text("category").notNull(),
   imageUrl: text("image_url"),
+  imageUrls: text("image_urls").array().notNull().default([]),
   inStock: boolean("in_stock").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

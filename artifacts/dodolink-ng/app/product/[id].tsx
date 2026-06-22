@@ -76,7 +76,7 @@ export default function ProductScreen() {
 
           {store && (
             <Link href={`/store/${store.id}`} asChild>
-              <Pressable style={[styles.storeCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Pressable style={StyleSheet.flatten([styles.storeCard, { backgroundColor: colors.card, borderColor: colors.border }])}>
                 {store.imageUrl ? (
                   <Image source={{ uri: store.imageUrl }} style={styles.storeImage} />
                 ) : (

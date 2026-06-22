@@ -1,0 +1,1 @@
+- [Link asChild array-style crash](link-aschild-style.md) — expo-router 6 Link asChild on web renders child as DOM <a>; React 19 throws on array styles

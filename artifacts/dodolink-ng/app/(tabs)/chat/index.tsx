@@ -44,7 +44,7 @@ export default function ChatsScreen() {
 
           return (
             <Link href={`/chat/${item.id}`} asChild>
-              <Pressable style={[styles.chatItem, { borderBottomColor: colors.border }]}>
+              <Pressable style={StyleSheet.flatten([styles.chatItem, { borderBottomColor: colors.border }])}>
                 <ImagePlaceholder name={displayName} size={48} borderRadius={24} />
                 <View style={styles.chatInfo}>
                   <Text style={[styles.chatName, { color: colors.foreground }]} numberOfLines={1}>

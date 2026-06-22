@@ -89,6 +89,7 @@ export const GetStoreResponse = zod.object({
   "price": zod.number(),
   "category": zod.string(),
   "imageUrl": zod.string().nullish(),
+  "imageUrls": zod.array(zod.string()).describe('Up to 5 product images. First image is the thumbnail.'),
   "inStock": zod.boolean(),
   "createdAt": zod.coerce.date()
 }))
@@ -165,6 +166,7 @@ export const ListStoreProductsResponseItem = zod.object({
   "price": zod.number(),
   "category": zod.string(),
   "imageUrl": zod.string().nullish(),
+  "imageUrls": zod.array(zod.string()).describe('Up to 5 product images. First image is the thumbnail.'),
   "inStock": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
@@ -186,6 +188,7 @@ export const CreateProductBody = zod.object({
   "price": zod.number(),
   "category": zod.string(),
   "imageUrl": zod.string().nullish(),
+  "imageUrls": zod.array(zod.string()).optional().describe('Up to 5 product image object paths.'),
   "inStock": zod.boolean().default(createProductBodyInStockDefault)
 })
 
@@ -206,6 +209,7 @@ export const GetProductResponse = zod.object({
   "price": zod.number(),
   "category": zod.string(),
   "imageUrl": zod.string().nullish(),
+  "imageUrls": zod.array(zod.string()).describe('Up to 5 product images. First image is the thumbnail.'),
   "inStock": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
@@ -224,6 +228,7 @@ export const UpdateProductBody = zod.object({
   "price": zod.number().optional(),
   "category": zod.string().optional(),
   "imageUrl": zod.string().nullish(),
+  "imageUrls": zod.array(zod.string()).optional().describe('Up to 5 product image object paths.'),
   "inStock": zod.boolean().optional()
 })
 
@@ -236,6 +241,7 @@ export const UpdateProductResponse = zod.object({
   "price": zod.number(),
   "category": zod.string(),
   "imageUrl": zod.string().nullish(),
+  "imageUrls": zod.array(zod.string()).describe('Up to 5 product images. First image is the thumbnail.'),
   "inStock": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
@@ -270,6 +276,7 @@ export const ListProductsResponseItem = zod.object({
   "price": zod.number(),
   "category": zod.string(),
   "imageUrl": zod.string().nullish(),
+  "imageUrls": zod.array(zod.string()).describe('Up to 5 product images. First image is the thumbnail.'),
   "inStock": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
@@ -320,6 +327,7 @@ export const SearchResponse = zod.object({
   "price": zod.number(),
   "category": zod.string(),
   "imageUrl": zod.string().nullish(),
+  "imageUrls": zod.array(zod.string()).describe('Up to 5 product images. First image is the thumbnail.'),
   "inStock": zod.boolean(),
   "createdAt": zod.coerce.date()
 })),
@@ -432,4 +440,32 @@ export const CreateReviewBody = zod.object({
   "reviewerId": zod.string(),
   "rating": zod.number().min(1).max(createReviewBodyRatingMax),
   "comment": zod.string()
+})
+
+
+/**
+ * @summary Request a presigned URL for file upload
+ */
+
+
+
+
+
+export const RequestUploadUrlBody = zod.object({
+  "name": zod.string().min(1),
+  "size": zod.number().min(1),
+  "contentType": zod.string().min(1)
+})
+
+export const RequestUploadUrlResponse = zod.object({
+  "uploadURL": zod.string().url(),
+  "objectPath": zod.string()
+})
+
+
+/**
+ * @summary Serve an object entity from PRIVATE_OBJECT_DIR
+ */
+export const GetStorageObjectParams = zod.object({
+  "objectPath": zod.coerce.string()
 })
