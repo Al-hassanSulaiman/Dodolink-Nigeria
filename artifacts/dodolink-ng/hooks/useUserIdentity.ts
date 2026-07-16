@@ -10,6 +10,8 @@ export function useUserIdentity() {
     user?.primaryEmailAddress?.emailAddress?.split("@")[0] ||
     "User";
 
+  const imageUrl = user?.imageUrl ?? null;
+
   const updateUserName = async (name: string) => {
     if (!user) return;
     const parts = name.trim().split(/\s+/);
@@ -18,5 +20,15 @@ export function useUserIdentity() {
     await user.update({ firstName, lastName });
   };
 
-  return { userId, userName, updateUserName, isReady: isLoaded };
+  const updateProfileImage = async (uri: string, mimeType = "image/jpeg") => {
+    if (!user) return;
+    const file = {
+      uri,
+      name: `avatar.${mimeType.split("/")[1] ?? "jpg"}`,
+      type: mimeType,
+    } as unknown as File;
+    await user.setProfileImage({ file });
+  };
+
+  return { userId, userName, imageUrl, updateUserName, updateProfileImage, isReady: isLoaded };
 }
