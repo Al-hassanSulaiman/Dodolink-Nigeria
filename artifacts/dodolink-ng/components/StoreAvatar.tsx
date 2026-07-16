@@ -57,8 +57,6 @@ export function StoreAvatar({ store, size = 64, editable = false }: StoreAvatarP
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1, 1],
       quality: 0.85,
     });
 

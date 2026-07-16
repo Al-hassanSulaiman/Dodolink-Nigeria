@@ -4,6 +4,7 @@ import { Link } from 'expo-router';
 import { Store } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { ImagePlaceholder } from './ImagePlaceholder';
+import { getImageUrl } from '@/utils/storage';
 import { Feather } from '@expo/vector-icons';
 
 export function StoreCard({ store }: { store: Store }) {
@@ -13,7 +14,7 @@ export function StoreCard({ store }: { store: Store }) {
     <Link href={`/store/${store.id}`} asChild>
       <Pressable style={StyleSheet.flatten([styles.card, { backgroundColor: colors.card, borderColor: colors.border }])}>
         {store.imageUrl ? (
-          <Image source={{ uri: store.imageUrl }} style={styles.image} resizeMode="cover" />
+          <Image source={{ uri: getImageUrl(store.imageUrl) }} style={styles.image} resizeMode="cover" />
         ) : (
           <ImagePlaceholder name={store.name} size={64} borderRadius={32} />
         )}
