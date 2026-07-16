@@ -17,6 +17,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { setBaseUrl } from "@workspace/api-client-react";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { useUser } from "@clerk/expo";
 
 setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
 
@@ -27,6 +29,12 @@ const proxyUrl = process.env.EXPO_PUBLIC_CLERK_PROXY_URL || undefined;
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
+
+function PushNotificationsGate() {
+  const { user } = useUser();
+  usePushNotifications(user?.id ?? null);
+  return null;
+}
 
 function RootLayoutNav() {
   return (
@@ -68,6 +76,7 @@ export default function RootLayout() {
         <SafeAreaProvider>
           <ErrorBoundary>
             <QueryClientProvider client={queryClient}>
+              <PushNotificationsGate />
               <GestureHandlerRootView>
                 <KeyboardProvider>
                   <RootLayoutNav />

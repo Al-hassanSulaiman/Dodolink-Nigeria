@@ -10,6 +10,7 @@ import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
+import { useUnreadCount } from "@/hooks/useUnreadCount";
 
 function NativeTabLayout() {
   return (
@@ -40,6 +41,7 @@ function ClassicTabLayout() {
   const isDark = colorScheme === "dark";
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
+  const unreadCount = useUnreadCount();
 
   return (
     <Tabs
@@ -100,6 +102,8 @@ function ClassicTabLayout() {
         name="chat/index"
         options={{
           title: "Chats",
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+          tabBarBadgeStyle: { backgroundColor: '#EF4444', fontSize: 11 },
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="message" tintColor={color} size={24} />

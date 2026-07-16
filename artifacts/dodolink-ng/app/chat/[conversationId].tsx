@@ -1,10 +1,11 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { StyleSheet, View, Text, FlatList, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { 
   useListMessages, 
   useSendMessage, 
   getListMessagesQueryKey,
+  getListConversationsQueryKey,
 } from '@workspace/api-client-react';
 import type { Message } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
@@ -27,6 +28,14 @@ export default function ChatThreadScreen() {
   const { data: messages, isLoading } = useListMessages(id, {
     query: { enabled: !!id }
   });
+
+  // Mark conversation as read when chat is opened
+  useEffect(() => {
+    if (!id) return;
+    const base = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+    fetch(`${base}/api/conversations/${id}/read`, { method: 'POST' }).catch(() => {});
+    queryClient.invalidateQueries({ queryKey: getListConversationsQueryKey() });
+  }, [id]);
 
   const sendMessage = useSendMessage({
     mutation: {

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db, conversationsTable, messagesTable, storesTable, pushTokensTable } from "@workspace/db";
 import { SendMessageBody, StartConversationBody } from "@workspace/api-zod";
 import { notifyTokens } from "../lib/push";
@@ -79,7 +79,11 @@ router.post("/conversations/:conversationId/messages", async (req, res): Promise
   const [msg] = await db.insert(messagesTable).values({ ...parsed.data, conversationId }).returning();
 
   await db.update(conversationsTable)
-    .set({ lastMessage: parsed.data.body, lastMessageAt: new Date() })
+    .set({
+      lastMessage: parsed.data.body,
+      lastMessageAt: new Date(),
+      unreadCount: sql`${conversationsTable.unreadCount} + 1`,
+    })
     .where(eq(conversationsTable.id, conversationId));
 
   // Send push notification to the recipient
@@ -111,6 +115,18 @@ router.post("/conversations/:conversationId/messages", async (req, res): Promise
   }
 
   res.status(201).json(msg);
+});
+
+router.post("/conversations/:conversationId/read", async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.conversationId) ? req.params.conversationId[0] : req.params.conversationId;
+  const conversationId = parseInt(raw, 10);
+  if (isNaN(conversationId)) { res.status(400).json({ error: "Invalid conversationId" }); return; }
+
+  await db.update(conversationsTable)
+    .set({ unreadCount: 0 })
+    .where(eq(conversationsTable.id, conversationId));
+
+  res.json({ status: "ok" });
 });
 
 export default router;
