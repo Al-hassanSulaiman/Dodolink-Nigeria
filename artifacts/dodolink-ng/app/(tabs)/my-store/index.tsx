@@ -1,4 +1,5 @@
 import { StyleSheet, View, Text, ScrollView, RefreshControl, Image, Pressable, Alert } from 'react-native';
+import { useAuth } from '@clerk/expo';
 import { useListStores, useListStoreProducts, useDeleteProduct } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { useUserIdentity } from '@/hooks/useUserIdentity';
@@ -13,7 +14,15 @@ import { useQueryClient } from '@tanstack/react-query';
 
 export default function MyStoreScreen() {
   const colors = useColors();
+  const { signOut } = useAuth();
   const { userId, isReady } = useUserIdentity();
+
+  const handleSignOut = () => {
+    Alert.alert('Sign out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign out', style: 'destructive', onPress: () => signOut() },
+    ]);
+  };
   const queryClient = useQueryClient();
 
   const { data: stores, isLoading, refetch } = useListStores({}, {
@@ -64,6 +73,9 @@ export default function MyStoreScreen() {
       <View style={StyleSheet.flatten([styles.container, { backgroundColor: colors.background }])}>
         <View style={StyleSheet.flatten([styles.header, { borderBottomColor: colors.border }])}>
           <Text style={[styles.title, { color: colors.foreground }]}>My Store</Text>
+          <Pressable onPress={handleSignOut} hitSlop={8} style={styles.signOutBtn}>
+            <Feather name="log-out" size={20} color={colors.mutedForeground} />
+          </Pressable>
         </View>
         <EmptyState
           icon="shopping-bag"
@@ -82,6 +94,9 @@ export default function MyStoreScreen() {
     >
       <View style={StyleSheet.flatten([styles.header, { borderBottomColor: colors.border }])}>
         <Text style={[styles.title, { color: colors.foreground }]}>Dashboard</Text>
+        <Pressable onPress={handleSignOut} hitSlop={8} style={styles.signOutBtn}>
+          <Feather name="log-out" size={20} color={colors.mutedForeground} />
+        </Pressable>
       </View>
 
       <View style={styles.content}>
@@ -194,10 +209,16 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   title: {
     fontFamily: 'Inter_700Bold',
     fontSize: 28,
+  },
+  signOutBtn: {
+    padding: 6,
   },
   content: {
     padding: 16,
