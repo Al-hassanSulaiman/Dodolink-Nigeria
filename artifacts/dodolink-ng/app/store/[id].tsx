@@ -1,17 +1,19 @@
 import { useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, RefreshControl, Image, Pressable } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, RefreshControl, Pressable, Alert, Image } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
-import { 
-  useGetStore, 
-  useGetStoreStats, 
+import {
+  useGetStore,
   useListStoreProducts,
   useListStoreReviews,
-  useCreateReview
+  useCreateReview,
+  useUpdateStore,
 } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { useUserIdentity } from '@/hooks/useUserIdentity';
 import { LoadingScreen } from '@/components/Loading';
 import { ImagePlaceholder } from '@/components/ImagePlaceholder';
+import { StoreAvatar } from '@/components/StoreAvatar';
+import { getImageUrl } from '@/utils/storage';
 import { ProductCard } from '@/components/ProductCard';
 import { StarRating } from '@/components/StarRating';
 import { EmptyState } from '@/components/EmptyState';
@@ -29,19 +31,22 @@ export default function StoreScreen() {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
 
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [editCategory, setEditCategory] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+
   const { data: store, isLoading: storeLoading, refetch: refetchStore } = useGetStore(storeId, {
     query: { enabled: !!storeId }
   });
 
-  const { data: stats, isLoading: statsLoading } = useGetStoreStats(storeId, {
+  const { data: products } = useListStoreProducts(storeId, {
     query: { enabled: !!storeId }
   });
 
-  const { data: products, isLoading: productsLoading } = useListStoreProducts(storeId, {
-    query: { enabled: !!storeId }
-  });
-
-  const { data: reviews, isLoading: reviewsLoading } = useListStoreReviews(storeId, {
+  const { data: reviews } = useListStoreReviews(storeId, {
     query: { enabled: !!storeId }
   });
 
@@ -55,6 +60,44 @@ export default function StoreScreen() {
     }
   });
 
+  const updateStore = useUpdateStore({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['listStores'] });
+        queryClient.invalidateQueries({ queryKey: ['getStore', storeId] });
+        setIsEditing(false);
+      },
+      onError: () => {
+        Alert.alert('Save failed', 'Could not update the store. Please try again.');
+      }
+    }
+  });
+
+  const isOwner = !!userId && !!store && store.ownerUserId === userId;
+
+  const handleStartEdit = () => {
+    if (!store) return;
+    setEditName(store.name);
+    setEditDescription(store.description);
+    setEditLocation(store.location);
+    setEditCategory(store.category);
+    setEditPhone(store.phone);
+    setIsEditing(true);
+  };
+
+  const handleSave = () => {
+    updateStore.mutate({
+      storeId,
+      data: {
+        name: editName.trim() || store!.name,
+        description: editDescription.trim(),
+        location: editLocation.trim(),
+        category: editCategory.trim(),
+        phone: editPhone.trim(),
+      }
+    });
+  };
+
   const handleSubmitReview = () => {
     if (!rating || !userId || !userName) return;
     createReview.mutate({ storeId, data: {
@@ -65,47 +108,118 @@ export default function StoreScreen() {
     }});
   };
 
-  const refreshing = storeLoading || productsLoading;
-  const onRefresh = () => {
-    refetchStore();
-  };
+  const onRefresh = () => { refetchStore(); };
 
   if (storeLoading && !store) return <LoadingScreen message="Loading store..." />;
   if (!store) return null;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Stack.Screen options={{ title: store.name }} />
-      <ScrollView 
+      <Stack.Screen
+        options={{
+          title: isEditing ? 'Edit Store' : store.name,
+          headerRight: isOwner ? () => (
+            isEditing ? (
+              <View style={styles.headerButtons}>
+                <Pressable onPress={() => setIsEditing(false)} hitSlop={8} style={styles.headerBtn}>
+                  <Feather name="x" size={20} color={colors.mutedForeground} />
+                </Pressable>
+                <Pressable onPress={handleSave} hitSlop={8} style={styles.headerBtn} disabled={updateStore.isPending}>
+                  <Feather name="check" size={20} color={colors.primary} />
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable onPress={handleStartEdit} hitSlop={8} style={styles.headerBtn}>
+                <Feather name="edit-2" size={18} color={colors.mutedForeground} />
+              </Pressable>
+            )
+          ) : undefined,
+        }}
+      />
+      <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={<RefreshControl refreshing={storeLoading} onRefresh={onRefresh} />}
       >
         <View style={[styles.banner, { backgroundColor: colors.primary }]} />
+
         <View style={styles.header}>
           <View style={[styles.avatarContainer, { borderColor: colors.background }]}>
-            {store.imageUrl ? (
-              <Image source={{ uri: store.imageUrl }} style={styles.avatar} />
+            {isOwner ? (
+              <StoreAvatar store={store} size={80} editable />
+            ) : store.imageUrl ? (
+              <Image source={{ uri: getImageUrl(store.imageUrl) }} style={styles.avatar} resizeMode="cover" />
             ) : (
               <ImagePlaceholder name={store.name} size={80} borderRadius={40} />
             )}
           </View>
+
           <View style={styles.headerInfo}>
-            <Text style={[styles.name, { color: colors.foreground }]}>{store.name}</Text>
+            {isEditing ? (
+              <Input
+                value={editName}
+                onChangeText={setEditName}
+                placeholder="Store name"
+                style={styles.editNameInput}
+              />
+            ) : (
+              <Text style={[styles.name, { color: colors.foreground }]}>{store.name}</Text>
+            )}
             <View style={styles.statsRow}>
               <StarRating rating={store.avgRating || 0} size={14} />
               <Text style={[styles.reviewsCount, { color: colors.mutedForeground }]}>
                 ({store.totalReviews} reviews)
               </Text>
             </View>
-            <Text style={[styles.location, { color: colors.mutedForeground }]}>
-              <Feather name="map-pin" size={12} /> {store.location}
-            </Text>
+            {isEditing ? (
+              <Input
+                value={editLocation}
+                onChangeText={setEditLocation}
+                placeholder="Location"
+                style={styles.editInlineInput}
+              />
+            ) : (
+              <Text style={[styles.location, { color: colors.mutedForeground }]}>
+                <Feather name="map-pin" size={12} /> {store.location}
+              </Text>
+            )}
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={[styles.description, { color: colors.foreground }]}>{store.description}</Text>
-        </View>
+        {isEditing ? (
+          <View style={styles.section}>
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Description</Text>
+            <Input
+              value={editDescription}
+              onChangeText={setEditDescription}
+              placeholder="Tell customers about your store..."
+              multiline
+              style={styles.textArea}
+            />
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Category</Text>
+            <Input
+              value={editCategory}
+              onChangeText={setEditCategory}
+              placeholder="e.g. Food & Drinks, Fashion..."
+            />
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Phone</Text>
+            <Input
+              value={editPhone}
+              onChangeText={setEditPhone}
+              placeholder="+234..."
+              keyboardType="phone-pad"
+            />
+            <Button
+              title={updateStore.isPending ? 'Saving...' : 'Save Changes'}
+              onPress={handleSave}
+              disabled={updateStore.isPending}
+              style={styles.saveBtn}
+            />
+          </View>
+        ) : (
+          <View style={styles.section}>
+            <Text style={[styles.description, { color: colors.foreground }]}>{store.description}</Text>
+          </View>
+        )}
 
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Products</Text>
@@ -122,59 +236,55 @@ export default function StoreScreen() {
           )}
         </View>
 
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Reviews</Text>
-          
-          <View style={[styles.reviewForm, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.formTitle, { color: colors.foreground }]}>Leave a Review</Text>
-            <StarRating rating={rating} onRatingChange={setRating} size={24} showText={false} />
-            <Input
-              placeholder="Write your comment..."
-              value={comment}
-              onChangeText={setComment}
-              multiline
-              style={styles.reviewInput}
-            />
-            <Button 
-              title={createReview.isPending ? "Submitting..." : "Submit Review"} 
-              onPress={handleSubmitReview}
-              disabled={rating === 0 || createReview.isPending}
-            />
-          </View>
+        {!isEditing && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Reviews</Text>
 
-          {reviews && reviews.length > 0 ? (
-            reviews.map(review => (
-              <View key={review.id} style={[styles.reviewItem, { borderBottomColor: colors.border }]}>
-                <View style={styles.reviewHeader}>
-                  <Text style={[styles.reviewerName, { color: colors.foreground }]}>{review.reviewerName}</Text>
-                  <StarRating rating={review.rating} size={12} showText={false} />
-                </View>
-                {review.comment ? (
-                  <Text style={[styles.reviewComment, { color: colors.foreground }]}>{review.comment}</Text>
-                ) : null}
+            {!isOwner && (
+              <View style={[styles.reviewForm, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Text style={[styles.formTitle, { color: colors.foreground }]}>Leave a Review</Text>
+                <StarRating rating={rating} onRatingChange={setRating} size={24} showText={false} />
+                <Input
+                  placeholder="Write your comment..."
+                  value={comment}
+                  onChangeText={setComment}
+                  multiline
+                  style={styles.reviewInput}
+                />
+                <Button
+                  title={createReview.isPending ? 'Submitting...' : 'Submit Review'}
+                  onPress={handleSubmitReview}
+                  disabled={rating === 0 || createReview.isPending}
+                />
               </View>
-            ))
-          ) : (
-            <Text style={[styles.noReviews, { color: colors.mutedForeground }]}>No reviews yet.</Text>
-          )}
-        </View>
+            )}
 
+            {reviews && reviews.length > 0 ? (
+              reviews.map(review => (
+                <View key={review.id} style={[styles.reviewItem, { borderBottomColor: colors.border }]}>
+                  <View style={styles.reviewHeader}>
+                    <Text style={[styles.reviewerName, { color: colors.foreground }]}>{review.reviewerName}</Text>
+                    <StarRating rating={review.rating} size={12} showText={false} />
+                  </View>
+                  {review.comment ? (
+                    <Text style={[styles.reviewComment, { color: colors.foreground }]}>{review.comment}</Text>
+                  ) : null}
+                </View>
+              ))
+            ) : (
+              <Text style={[styles.noReviews, { color: colors.mutedForeground }]}>No reviews yet.</Text>
+            )}
+          </View>
+        )}
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    paddingBottom: 40,
-  },
-  banner: {
-    height: 120,
-    width: '100%',
-  },
+  container: { flex: 1 },
+  content: { paddingBottom: 40 },
+  banner: { height: 120, width: '100%' },
   header: {
     paddingHorizontal: 16,
     flexDirection: 'row',
@@ -283,5 +393,35 @@ const styles = StyleSheet.create({
     fontSize: 15,
     textAlign: 'center',
     marginTop: 16,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  headerBtn: {
+    padding: 4,
+  },
+  editNameInput: {
+    marginBottom: 4,
+    fontFamily: 'Inter_700Bold',
+    fontSize: 18,
+  },
+  editInlineInput: {
+    marginTop: 4,
+    fontSize: 14,
+  },
+  fieldLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  saveBtn: {
+    marginTop: 20,
   },
 });
