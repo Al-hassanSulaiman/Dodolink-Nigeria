@@ -1,15 +1,17 @@
 import { useListProducts, useListStores } from "@workspace/api-client-react";
-import { StyleSheet, View, Text, ScrollView, RefreshControl } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { StyleSheet, View, Text, ScrollView, RefreshControl, Pressable, Alert } from "react-native";
 import { useColors } from "@/hooks/useColors";
 import { ProductCard } from "@/components/ProductCard";
 import { StoreCard } from "@/components/StoreCard";
 import { LoadingScreen } from "@/components/Loading";
 import { EmptyState } from "@/components/EmptyState";
 import { Link } from "expo-router";
+import { Feather } from "@expo/vector-icons";
+import { useAuth } from "@clerk/expo";
 
 export default function HomeScreen() {
   const colors = useColors();
+  const { signOut } = useAuth();
   const { data: products, isLoading: isLoadingProducts, refetch: refetchProducts } = useListProducts({ limit: 6 });
   const { data: stores, isLoading: isLoadingStores, refetch: refetchStores } = useListStores({ limit: 3 });
 
@@ -19,19 +21,31 @@ export default function HomeScreen() {
     refetchStores();
   };
 
+  const handleSignOut = () => {
+    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Sign Out", style: "destructive", onPress: () => signOut() },
+    ]);
+  };
+
   if (isLoadingProducts && !products) {
     return <LoadingScreen message="Loading Dodolink..." />;
   }
 
   return (
-    <ScrollView 
+    <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
     >
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.primary }]}>Dodolink NG</Text>
-        <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>The digital Alaba Market</Text>
+        <View style={styles.headerLeft}>
+          <Text style={[styles.title, { color: colors.primary }]}>Dodolink NG</Text>
+          <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>The digital Alaba Market</Text>
+        </View>
+        <Pressable onPress={handleSignOut} hitSlop={8} style={styles.signOutBtn}>
+          <Feather name="log-out" size={20} color={colors.mutedForeground} />
+        </Pressable>
       </View>
 
       <View style={styles.section}>
@@ -39,7 +53,7 @@ export default function HomeScreen() {
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Featured Products</Text>
           <Link href="/search" style={StyleSheet.flatten([styles.seeAll, { color: colors.primary }])}>See All</Link>
         </View>
-        
+
         {products && products.length > 0 ? (
           <View style={styles.grid}>
             {products.map(product => (
@@ -57,7 +71,7 @@ export default function HomeScreen() {
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Top Stores</Text>
         </View>
-        
+
         {stores && stores.length > 0 ? (
           stores.map(store => (
             <StoreCard key={store.id} store={store} />
@@ -76,11 +90,21 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    paddingTop: 60, // approximate safe area top
-    paddingBottom: 100, // space for tab bar
+    paddingTop: 60,
+    paddingBottom: 100,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
     marginBottom: 24,
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  signOutBtn: {
+    paddingTop: 4,
+    paddingLeft: 8,
   },
   title: {
     fontFamily: "Inter_700Bold",
