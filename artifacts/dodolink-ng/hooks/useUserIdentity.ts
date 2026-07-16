@@ -1,44 +1,22 @@
-import { useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const USER_ID_KEY = '@dodolink_userId';
-const USER_NAME_KEY = '@dodolink_userName';
+import { useUser } from "@clerk/expo";
 
 export function useUserIdentity() {
-  const [userId, setUserId] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string>('Guest');
-  const [isReady, setIsReady] = useState(false);
+  const { user, isLoaded } = useUser();
 
-  useEffect(() => {
-    async function loadIdentity() {
-      try {
-        let storedId = await AsyncStorage.getItem(USER_ID_KEY);
-        let storedName = await AsyncStorage.getItem(USER_NAME_KEY);
-
-        if (!storedId) {
-          storedId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
-          await AsyncStorage.setItem(USER_ID_KEY, storedId);
-        }
-        if (!storedName) {
-          storedName = 'Customer ' + Math.floor(Math.random() * 1000);
-          await AsyncStorage.setItem(USER_NAME_KEY, storedName);
-        }
-
-        setUserId(storedId);
-        setUserName(storedName);
-      } catch (e) {
-        console.error('Failed to load identity', e);
-      } finally {
-        setIsReady(true);
-      }
-    }
-    loadIdentity();
-  }, []);
+  const userId = user?.id ?? null;
+  const userName =
+    user?.fullName ||
+    [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
+    user?.primaryEmailAddress?.emailAddress?.split("@")[0] ||
+    "User";
 
   const updateUserName = async (name: string) => {
-    setUserName(name);
-    await AsyncStorage.setItem(USER_NAME_KEY, name);
+    if (!user) return;
+    const parts = name.trim().split(/\s+/);
+    const firstName = parts[0] ?? "";
+    const lastName = parts.slice(1).join(" ") || undefined;
+    await user.update({ firstName, lastName });
   };
 
-  return { userId, userName, updateUserName, isReady };
+  return { userId, userName, updateUserName, isReady: isLoaded };
 }
