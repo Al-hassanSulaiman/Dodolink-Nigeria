@@ -4,10 +4,12 @@ import { Link } from 'expo-router';
 import { Product } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { ImagePlaceholder } from './ImagePlaceholder';
+import { getImageUrl } from '@/utils/storage';
 
 export function ProductCard({ product }: { product: Product }) {
   const colors = useColors();
-  const thumbnail = (product.imageUrls && product.imageUrls[0]) || product.imageUrl || null;
+  const rawThumb = (product.imageUrls && product.imageUrls[0]) || product.imageUrl || null;
+  const thumbnail = rawThumb ? getImageUrl(rawThumb) : null;
 
   return (
     <Link href={`/product/${product.id}`} asChild>

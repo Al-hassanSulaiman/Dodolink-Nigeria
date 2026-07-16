@@ -9,6 +9,7 @@ import { useColors } from '@/hooks/useColors';
 import { useUserIdentity } from '@/hooks/useUserIdentity';
 import { LoadingScreen } from '@/components/Loading';
 import { ImagePlaceholder } from '@/components/ImagePlaceholder';
+import { getImageUrl } from '@/utils/storage';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
@@ -57,7 +58,7 @@ export default function ProductScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refetchProduct} />}
       >
         {product.imageUrl ? (
-          <Image source={{ uri: product.imageUrl }} style={styles.image} resizeMode="cover" />
+          <Image source={{ uri: getImageUrl(product.imageUrl) }} style={styles.image} resizeMode="cover" />
         ) : (
           <View style={[styles.imageContainer, { backgroundColor: colors.muted }]}>
             <ImagePlaceholder name={product.name} size={120} borderRadius={0} />
@@ -78,7 +79,7 @@ export default function ProductScreen() {
             <Link href={`/store/${store.id}`} asChild>
               <Pressable style={StyleSheet.flatten([styles.storeCard, { backgroundColor: colors.card, borderColor: colors.border }])}>
                 {store.imageUrl ? (
-                  <Image source={{ uri: store.imageUrl }} style={styles.storeImage} />
+                  <Image source={{ uri: getImageUrl(store.imageUrl) }} style={styles.storeImage} />
                 ) : (
                   <ImagePlaceholder name={store.name} size={40} borderRadius={20} />
                 )}
