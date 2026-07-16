@@ -6,8 +6,7 @@ import { useUserIdentity } from '@/hooks/useUserIdentity';
 import { LoadingScreen } from '@/components/Loading';
 import { EmptyState } from '@/components/EmptyState';
 import { Button } from '@/components/ui';
-import { UserAvatar } from '@/components/UserAvatar';
-import { ImagePlaceholder } from '@/components/ImagePlaceholder';
+import { StoreAvatar } from '@/components/StoreAvatar';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { getImageUrl } from '@/utils/storage';
@@ -73,10 +72,7 @@ export default function MyStoreScreen() {
     return (
       <View style={StyleSheet.flatten([styles.container, { backgroundColor: colors.background }])}>
         <View style={StyleSheet.flatten([styles.header, { borderBottomColor: colors.border }])}>
-          <View style={styles.headerLeft}>
-            <UserAvatar size={44} editable />
-            <Text style={[styles.title, { color: colors.foreground }]}>My Store</Text>
-          </View>
+          <Text style={[styles.title, { color: colors.foreground }]}>My Store</Text>
           <Pressable onPress={handleSignOut} hitSlop={8} style={styles.signOutBtn}>
             <Feather name="log-out" size={20} color={colors.mutedForeground} />
           </Pressable>
@@ -98,7 +94,7 @@ export default function MyStoreScreen() {
     >
       <View style={StyleSheet.flatten([styles.header, { borderBottomColor: colors.border }])}>
         <View style={styles.headerLeft}>
-          <UserAvatar size={44} editable />
+          <StoreAvatar store={myStore} size={44} editable />
           <Text style={[styles.title, { color: colors.foreground }]}>Dashboard</Text>
         </View>
         <Pressable onPress={handleSignOut} hitSlop={8} style={styles.signOutBtn}>
