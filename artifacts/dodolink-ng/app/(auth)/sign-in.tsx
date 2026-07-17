@@ -3,6 +3,7 @@ import { type Href, Link, useRouter } from "expo-router";
 import React from "react";
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -16,7 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 
 export default function SignInPage() {
-  const { signIn, errors, fetchStatus } = useSignIn();
+  const { signIn, setActive, errors, fetchStatus } = useSignIn() as any;
   const router = useRouter();
 
   const [emailAddress, setEmailAddress] = React.useState("");
@@ -24,15 +25,24 @@ export default function SignInPage() {
   const [showPassword, setShowPassword] = React.useState(false);
 
   const handleSubmit = async () => {
-    const { error } = await signIn.password({ emailAddress, password });
-    if (error) return;
+    try {
+      const { data, error } = await signIn.password({ emailAddress, password });
+      if (error) return;
 
-    if (signIn.status === "complete") {
-      await signIn.finalize({
-        navigate: () => {
-          router.replace("/(tabs)" as Href);
-        },
-      });
+      const completed = data ?? signIn;
+      if (completed.status === "complete") {
+        if (setActive) {
+          await setActive({ session: completed.createdSessionId });
+        } else {
+          await completed.finalize({ navigate: () => {} });
+        }
+        router.replace("/(tabs)" as Href);
+      } else {
+        Alert.alert("Sign in incomplete", `Status: ${completed.status ?? "unknown"}`);
+      }
+    } catch (err: any) {
+      const msg = err?.errors?.[0]?.longMessage ?? err?.message ?? String(err);
+      Alert.alert("Sign in error", msg);
     }
   };
 
