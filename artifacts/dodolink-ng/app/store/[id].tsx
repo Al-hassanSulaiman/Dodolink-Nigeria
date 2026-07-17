@@ -37,6 +37,7 @@ export default function StoreScreen() {
   const [editLocation, setEditLocation] = useState('');
   const [editCategory, setEditCategory] = useState('');
   const [editPhone, setEditPhone] = useState('');
+  const [editCacNumber, setEditCacNumber] = useState('');
 
   const { data: store, isLoading: storeLoading, refetch: refetchStore } = useGetStore(storeId, {
     query: { enabled: !!storeId }
@@ -82,6 +83,7 @@ export default function StoreScreen() {
     setEditLocation(store.location);
     setEditCategory(store.category);
     setEditPhone(store.phone);
+    setEditCacNumber(store.cacNumber ?? '');
     setIsEditing(true);
   };
 
@@ -94,6 +96,7 @@ export default function StoreScreen() {
         location: editLocation.trim(),
         category: editCategory.trim(),
         phone: editPhone.trim(),
+        cacNumber: editCacNumber.trim() || null,
       }
     });
   };
@@ -208,6 +211,13 @@ export default function StoreScreen() {
               placeholder="+234..."
               keyboardType="phone-pad"
             />
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>CAC Registration Number (optional)</Text>
+            <Input
+              value={editCacNumber}
+              onChangeText={setEditCacNumber}
+              placeholder="e.g. RC-1234567"
+              autoCapitalize="characters"
+            />
             <Button
               title={updateStore.isPending ? 'Saving...' : 'Save Changes'}
               onPress={handleSave}
@@ -218,6 +228,13 @@ export default function StoreScreen() {
         ) : (
           <View style={styles.section}>
             <Text style={[styles.description, { color: colors.foreground }]}>{store.description}</Text>
+            {store.cacNumber ? (
+              <View style={[styles.cacRow, { borderColor: colors.border, backgroundColor: colors.card }]}>
+                <Feather name="shield" size={14} color={colors.primary} />
+                <Text style={[styles.cacLabel, { color: colors.mutedForeground }]}>CAC Reg:</Text>
+                <Text style={[styles.cacValue, { color: colors.foreground }]}>{store.cacNumber}</Text>
+              </View>
+            ) : null}
           </View>
         )}
 
@@ -423,5 +440,24 @@ const styles = StyleSheet.create({
   },
   saveBtn: {
     marginTop: 20,
+  },
+  cacRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignSelf: 'flex-start',
+  },
+  cacLabel: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 13,
+  },
+  cacValue: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
   },
 });

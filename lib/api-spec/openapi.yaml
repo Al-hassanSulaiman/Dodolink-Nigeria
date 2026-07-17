@@ -553,6 +553,9 @@ components:
         imageUrl:
           type: string
           nullable: true
+        cacNumber:
+          type: string
+          nullable: true
         avgRating:
           type: number
           nullable: true
@@ -622,6 +625,9 @@ components:
         imageUrl:
           type: string
           nullable: true
+        cacNumber:
+          type: string
+          nullable: true
       required: [ownerName, ownerUserId, name, description, category, location, phone]
 
     UpdateStoreBody:
@@ -638,6 +644,9 @@ components:
         phone:
           type: string
         imageUrl:
+          type: string
+          nullable: true
+        cacNumber:
           type: string
           nullable: true
 

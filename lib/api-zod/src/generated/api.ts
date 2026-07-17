@@ -37,6 +37,7 @@ export const ListStoresResponseItem = zod.object({
   "location": zod.string(),
   "phone": zod.string(),
   "imageUrl": zod.string().nullish(),
+  "cacNumber": zod.string().nullish(),
   "avgRating": zod.number().nullish(),
   "totalReviews": zod.number(),
   "createdAt": zod.coerce.date()
@@ -55,7 +56,8 @@ export const CreateStoreBody = zod.object({
   "category": zod.string(),
   "location": zod.string(),
   "phone": zod.string(),
-  "imageUrl": zod.string().nullish()
+  "imageUrl": zod.string().nullish(),
+  "cacNumber": zod.string().nullish()
 })
 
 
@@ -76,6 +78,7 @@ export const GetStoreResponse = zod.object({
   "location": zod.string(),
   "phone": zod.string(),
   "imageUrl": zod.string().nullish(),
+  "cacNumber": zod.string().nullish(),
   "avgRating": zod.number().nullish(),
   "totalReviews": zod.number(),
   "createdAt": zod.coerce.date()
@@ -109,7 +112,8 @@ export const UpdateStoreBody = zod.object({
   "category": zod.string().optional(),
   "location": zod.string().optional(),
   "phone": zod.string().optional(),
-  "imageUrl": zod.string().nullish()
+  "imageUrl": zod.string().nullish(),
+  "cacNumber": zod.string().nullish()
 })
 
 export const UpdateStoreResponse = zod.object({
@@ -122,6 +126,7 @@ export const UpdateStoreResponse = zod.object({
   "location": zod.string(),
   "phone": zod.string(),
   "imageUrl": zod.string().nullish(),
+  "cacNumber": zod.string().nullish(),
   "avgRating": zod.number().nullish(),
   "totalReviews": zod.number(),
   "createdAt": zod.coerce.date()
@@ -314,6 +319,7 @@ export const SearchResponse = zod.object({
   "location": zod.string(),
   "phone": zod.string(),
   "imageUrl": zod.string().nullish(),
+  "cacNumber": zod.string().nullish(),
   "avgRating": zod.number().nullish(),
   "totalReviews": zod.number(),
   "createdAt": zod.coerce.date()

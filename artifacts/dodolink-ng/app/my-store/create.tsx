@@ -18,6 +18,7 @@ export default function CreateStoreScreen() {
   const [category, setCategory] = useState('');
   const [location, setLocation] = useState('');
   const [phone, setPhone] = useState('');
+  const [cacNumber, setCacNumber] = useState('');
 
   const createStore = useCreateStore({
     mutation: {
@@ -36,7 +37,8 @@ export default function CreateStoreScreen() {
       description,
       category,
       location,
-      phone
+      phone,
+      cacNumber: cacNumber.trim() || null,
     }});
   };
 
@@ -58,6 +60,9 @@ export default function CreateStoreScreen() {
 
         <Text style={[styles.label, { color: colors.foreground, marginTop: 16 }]}>Phone Number</Text>
         <Input placeholder="e.g. 08012345678" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+
+        <Text style={[styles.label, { color: colors.foreground, marginTop: 16 }]}>CAC Registration Number <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }}>(optional)</Text></Text>
+        <Input placeholder="e.g. RC-1234567" value={cacNumber} onChangeText={setCacNumber} autoCapitalize="characters" />
 
         <Text style={[styles.label, { color: colors.foreground, marginTop: 16 }]}>Description</Text>
         <Input 

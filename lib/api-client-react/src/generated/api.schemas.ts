@@ -23,6 +23,7 @@ export interface Store {
   location: string;
   phone: string;
   imageUrl?: string | null;
+  cacNumber?: string | null;
   avgRating?: number | null;
   totalReviews: number;
   createdAt: string;
@@ -72,6 +73,7 @@ export interface CreateStoreBody {
   location: string;
   phone: string;
   imageUrl?: string | null;
+  cacNumber?: string | null;
 }
 
 export interface UpdateStoreBody {
@@ -81,6 +83,7 @@ export interface UpdateStoreBody {
   location?: string;
   phone?: string;
   imageUrl?: string | null;
+  cacNumber?: string | null;
 }
 
 export interface CreateProductBody {

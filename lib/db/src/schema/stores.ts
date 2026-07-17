@@ -12,6 +12,7 @@ export const storesTable = pgTable("stores", {
   location: text("location").notNull(),
   phone: text("phone").notNull(),
   imageUrl: text("image_url"),
+  cacNumber: text("cac_number"),
   avgRating: real("avg_rating"),
   totalReviews: integer("total_reviews").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
