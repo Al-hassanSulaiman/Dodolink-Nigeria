@@ -1,4 +1,4 @@
-import { useSignIn } from "@clerk/expo";
+import { useSignIn, useClerk } from "@clerk/expo";
 import { type Href, Link, useRouter } from "expo-router";
 import React from "react";
 import {
@@ -18,6 +18,7 @@ import { Feather } from "@expo/vector-icons";
 
 export default function SignInPage() {
   const { signIn, setActive, errors, fetchStatus } = useSignIn() as any;
+  const clerk = useClerk() as any;
   const router = useRouter();
 
   const [emailAddress, setEmailAddress] = React.useState("");
@@ -37,11 +38,23 @@ export default function SignInPage() {
         }
         router.replace("/(tabs)" as Href);
       } else if (result.status === "needs_client_trust") {
-        Alert.alert(
-          "One more step",
-          "Setting up a secure connection. Please sign in again after the page reloads.",
-          [{ text: "OK", onPress: () => { (globalThis as any).location.reload(); } }],
-        );
+        let frontendApi: string | undefined =
+          clerk?.frontendApi ??
+          clerk?.__unstable__environment?.displayConfig?.homeUrl;
+        if (!frontendApi) {
+          try {
+            const pk: string = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
+            const raw = pk.replace(/^pk_(test|live)_/, "");
+            const pad = raw + "=".repeat((4 - (raw.length % 4)) % 4);
+            frontendApi = atob(pad).replace(/\.$/, "");
+          } catch {}
+        }
+        if (frontendApi && typeof (globalThis as any).location !== "undefined") {
+          const origin = (globalThis as any).location.origin as string;
+          (globalThis as any).location.href = `https://${frontendApi}/v1/client/sync?redirect_url=${encodeURIComponent(origin)}`;
+        } else {
+          (globalThis as any).location?.reload();
+        }
       } else {
         Alert.alert("Sign in incomplete", `Status: ${result.status ?? "unknown"}`);
       }

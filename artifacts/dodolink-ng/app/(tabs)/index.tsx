@@ -5,13 +5,14 @@ import { ProductCard } from "@/components/ProductCard";
 import { StoreCard } from "@/components/StoreCard";
 import { LoadingScreen } from "@/components/Loading";
 import { EmptyState } from "@/components/EmptyState";
-import { Link } from "expo-router";
+import { type Href, Link, useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@clerk/expo";
 
 export default function HomeScreen() {
   const colors = useColors();
   const { signOut } = useAuth();
+  const router = useRouter();
   const { data: products, isLoading: isLoadingProducts, refetch: refetchProducts } = useListProducts({ limit: 6 });
   const { data: stores, isLoading: isLoadingStores, refetch: refetchStores } = useListStores({ limit: 3 });
 
@@ -24,7 +25,14 @@ export default function HomeScreen() {
   const handleSignOut = () => {
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
       { text: "Cancel", style: "cancel" },
-      { text: "Sign Out", style: "destructive", onPress: () => signOut() },
+      {
+        text: "Sign Out",
+        style: "destructive",
+        onPress: async () => {
+          await signOut();
+          router.replace("/(auth)/sign-in" as Href);
+        },
+      },
     ]);
   };
 
