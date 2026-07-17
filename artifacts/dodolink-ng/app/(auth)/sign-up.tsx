@@ -13,6 +13,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
 
 export default function SignUpPage() {
   const { signUp, errors, fetchStatus } = useSignUp();
@@ -21,6 +22,7 @@ export default function SignUpPage() {
   const [emailAddress, setEmailAddress] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [code, setCode] = React.useState("");
+  const [showPassword, setShowPassword] = React.useState(false);
 
   const handleSubmit = async () => {
     const { error } = await signUp.password({ emailAddress, password });
@@ -169,15 +171,32 @@ export default function SignUpPage() {
 
             <View style={styles.field}>
               <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={[styles.input, !!errors.fields.password && styles.inputError]}
-                secureTextEntry
-                textContentType="newPassword"
-                placeholder="At least 8 characters"
-                placeholderTextColor="#9CA3AF"
-                value={password}
-                onChangeText={setPassword}
-              />
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={[
+                    styles.input,
+                    styles.passwordInput,
+                    !!errors.fields.password && styles.inputError,
+                  ]}
+                  secureTextEntry={!showPassword}
+                  textContentType="newPassword"
+                  placeholder="At least 8 characters"
+                  placeholderTextColor="#9CA3AF"
+                  value={password}
+                  onChangeText={setPassword}
+                />
+                <Pressable
+                  style={styles.eyeBtn}
+                  onPress={() => setShowPassword(v => !v)}
+                  hitSlop={8}
+                >
+                  <Feather
+                    name={showPassword ? "eye-off" : "eye"}
+                    size={18}
+                    color="#9CA3AF"
+                  />
+                </Pressable>
+              </View>
               {!!errors.fields.password && (
                 <Text style={styles.fieldError}>{errors.fields.password.message}</Text>
               )}
@@ -282,6 +301,19 @@ const styles = StyleSheet.create({
     color: "#111827",
     backgroundColor: "#fff",
     fontFamily: "Inter_400Regular",
+  },
+  passwordContainer: {
+    position: "relative",
+  },
+  passwordInput: {
+    paddingRight: 48,
+  },
+  eyeBtn: {
+    position: "absolute",
+    right: 14,
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
   },
   inputError: { borderColor: "#EF4444" },
   fieldError: {
