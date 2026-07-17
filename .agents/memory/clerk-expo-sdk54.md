@@ -74,6 +74,18 @@ await signIn.finalize({ navigate: ... });
 
 **Why:** Core v3 `SignInFutureResource` uses method-based API (signIn.password(), signIn.resetPasswordEmailCode.*) instead of v2's strategy-based create/prepareFirstFactor/attemptFirstFactor.
 
+## finalize() navigate callback — always use router.replace
+
+In the `signIn.finalize()` and `signUp.finalize()` `navigate` callback, always use `router.replace("/(tabs)")` directly. Do NOT use `decorateUrl + location.assign`:
+
+```ts
+await signIn.finalize({
+  navigate: () => { router.replace("/(tabs)" as Href); },
+});
+```
+
+**Why:** `decorateUrl("/")` returns a full `https://` Clerk handshake URL. Calling `globalThis.location.assign(url)` inside the Replit preview iframe navigates the iframe away to the Clerk redirect URL, which gets lost instead of landing back in the SPA. Since Clerk already stores the session token in JS/localStorage before `finalize` is called, a plain `router.replace` is sufficient — the auth guard (`isSignedIn`) will be true immediately on the next render.
+
 ## useUserIdentity → Clerk
 
 Replace the random-UUID hook with `useUser()` from `@clerk/expo`. Return `user.id`, derive `userName` from fullName / firstName+lastName / email prefix.

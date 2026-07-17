@@ -29,16 +29,8 @@ export default function SignInPage() {
 
     if (signIn.status === "complete") {
       await signIn.finalize({
-        navigate: ({ decorateUrl }) => {
-          const url = decorateUrl("/");
-          if (url.startsWith("http")) {
-            // eslint-disable-next-line no-undef
-            (globalThis as any).location
-              ? (globalThis as any).location.assign(url)
-              : router.replace("/(tabs)" as Href);
-          } else {
-            router.replace("/(tabs)" as Href);
-          }
+        navigate: () => {
+          router.replace("/(tabs)" as Href);
         },
       });
     }

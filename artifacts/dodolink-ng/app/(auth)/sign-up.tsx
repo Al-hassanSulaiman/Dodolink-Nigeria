@@ -34,15 +34,8 @@ export default function SignUpPage() {
     await signUp.verifications.verifyEmailCode({ code });
     if (signUp.status === "complete") {
       await signUp.finalize({
-        navigate: ({ decorateUrl }) => {
-          const url = decorateUrl("/");
-          if (url.startsWith("http")) {
-            (globalThis as any).location
-              ? (globalThis as any).location.assign(url)
-              : router.replace("/(tabs)" as Href);
-          } else {
-            router.replace("/(tabs)" as Href);
-          }
+        navigate: () => {
+          router.replace("/(tabs)" as Href);
         },
       });
     }
