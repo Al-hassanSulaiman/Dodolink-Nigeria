@@ -74,17 +74,36 @@ await signIn.finalize({ navigate: ... });
 
 **Why:** Core v3 `SignInFutureResource` uses method-based API (signIn.password(), signIn.resetPasswordEmailCode.*) instead of v2's strategy-based create/prepareFirstFactor/attemptFirstFactor.
 
-## finalize() navigate callback — always use router.replace
+## needs_client_trust — the normal dev-instance sign-in status
 
-In the `signIn.finalize()` and `signUp.finalize()` `navigate` callback, always use `router.replace("/(tabs)")` directly. Do NOT use `decorateUrl + location.assign`:
+After `signIn.password()` succeeds in a Clerk dev instance, `result.status` is **`"needs_client_trust"`**, NOT `"complete"`. Clerk must perform a browser handshake (redirect round-trip) to establish the session cookie. Only after the handshake does the app fully reload with `isSignedIn: true`.
+
+Correct handler pattern — check both statuses:
 
 ```ts
-await signIn.finalize({
-  navigate: () => { router.replace("/(tabs)" as Href); },
-});
+const { data, error } = await signIn.password({ emailAddress, password });
+if (error) return;
+const result = data ?? signIn;
+
+if (result.status === "complete") {
+  // Rare in dev — client already trusted
+  if (setActive) await setActive({ session: result.createdSessionId });
+  router.replace("/(tabs)");
+} else if (result.status === "needs_client_trust") {
+  // Dev instance handshake required — let Clerk redirect
+  await result.finalize({
+    navigate: ({ decorateUrl }: { decorateUrl: (url: string) => string }) => {
+      (globalThis as any).location.href = decorateUrl("/");
+    },
+  });
+}
 ```
 
-**Why:** `decorateUrl("/")` returns a full `https://` Clerk handshake URL. Calling `globalThis.location.assign(url)` inside the Replit preview iframe navigates the iframe away to the Clerk redirect URL, which gets lost instead of landing back in the SPA. Since Clerk already stores the session token in JS/localStorage before `finalize` is called, a plain `router.replace` is sufficient — the auth guard (`isSignedIn`) will be true immediately on the next render.
+`decorateUrl("/")` returns a same-origin URL with `__clerk_handshake` params appended. The browser navigates to it, ClerkProvider on reload processes the params, session is established, and auth guard lets the user through to `/(tabs)`.
+
+**Why `router.replace` alone fails:** calling `router.replace("/(tabs)")` skips the handshake entirely — Clerk never gets to set `isSignedIn: true`, so the auth guard immediately redirects back to sign-in.
+
+**Why old `location.assign` was also failing:** the previous code only ran `location.assign` when `status === "complete"`, which never happens in dev. So nothing ran at all and the button just reset.
 
 ## useUserIdentity → Clerk
 

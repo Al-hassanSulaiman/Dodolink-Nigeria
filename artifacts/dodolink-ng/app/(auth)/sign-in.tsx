@@ -29,16 +29,21 @@ export default function SignInPage() {
       const { data, error } = await signIn.password({ emailAddress, password });
       if (error) return;
 
-      const completed = data ?? signIn;
-      if (completed.status === "complete") {
+      const result = data ?? signIn;
+
+      if (result.status === "complete") {
         if (setActive) {
-          await setActive({ session: completed.createdSessionId });
-        } else {
-          await completed.finalize({ navigate: () => {} });
+          await setActive({ session: result.createdSessionId });
         }
         router.replace("/(tabs)" as Href);
+      } else if (result.status === "needs_client_trust") {
+        await result.finalize({
+          navigate: ({ decorateUrl }: { decorateUrl: (url: string) => string }) => {
+            (globalThis as any).location.href = decorateUrl("/");
+          },
+        });
       } else {
-        Alert.alert("Sign in incomplete", `Status: ${completed.status ?? "unknown"}`);
+        Alert.alert("Sign in incomplete", `Status: ${result.status ?? "unknown"}`);
       }
     } catch (err: any) {
       const msg = err?.errors?.[0]?.longMessage ?? err?.message ?? String(err);

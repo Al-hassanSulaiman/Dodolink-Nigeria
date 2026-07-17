@@ -3,6 +3,7 @@ import { type Href, Link, useRouter } from "expo-router";
 import React from "react";
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -31,13 +32,24 @@ export default function SignUpPage() {
   };
 
   const handleVerify = async () => {
-    await signUp.verifications.verifyEmailCode({ code });
-    if (signUp.status === "complete") {
-      await signUp.finalize({
-        navigate: () => {
-          router.replace("/(tabs)" as Href);
-        },
-      });
+    try {
+      await signUp.verifications.verifyEmailCode({ code });
+      const result = signUp;
+
+      if (result.status === "complete") {
+        router.replace("/(tabs)" as Href);
+      } else if (result.status === "needs_client_trust") {
+        await result.finalize({
+          navigate: ({ decorateUrl }: { decorateUrl: (url: string) => string }) => {
+            (globalThis as any).location.href = decorateUrl("/");
+          },
+        });
+      } else {
+        Alert.alert("Verification incomplete", `Status: ${result.status ?? "unknown"}`);
+      }
+    } catch (err: any) {
+      const msg = err?.errors?.[0]?.longMessage ?? err?.message ?? String(err);
+      Alert.alert("Verification error", msg);
     }
   };
 
