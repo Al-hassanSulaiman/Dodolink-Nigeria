@@ -13,6 +13,15 @@ export interface ErrorResponse {
   error: string;
 }
 
+export type StoreVerificationStatus = typeof StoreVerificationStatus[keyof typeof StoreVerificationStatus];
+
+
+export const StoreVerificationStatus = {
+  pending: 'pending',
+  verified: 'verified',
+  rejected: 'rejected',
+} as const;
+
 export interface Store {
   id: number;
   ownerName: string;
@@ -22,10 +31,20 @@ export interface Store {
   category: string;
   location: string;
   phone: string;
+  /** @nullable */
   imageUrl?: string | null;
+  /** @nullable */
   cacNumber?: string | null;
+  /** @nullable */
   avgRating?: number | null;
   totalReviews: number;
+  verificationStatus: StoreVerificationStatus;
+  /** @nullable */
+  verifiedAt?: string | null;
+  /** @nullable */
+  verifiedBy?: string | null;
+  /** @nullable */
+  rejectionReason?: string | null;
   createdAt: string;
 }
 
@@ -210,6 +229,20 @@ export interface UploadUrlResponse {
   objectPath: string;
 }
 
+export interface StoreRejectInput {
+  reason: string;
+}
+
+export interface AdminAnalytics {
+  totalStores: number;
+  pendingStores: number;
+  verifiedStores: number;
+  rejectedStores: number;
+  totalProducts: number;
+  totalConversations: number;
+  recentStores: Store[];
+}
+
 export type ListStoresParams = {
 category?: string;
 limit?: number;
@@ -229,4 +262,19 @@ q: string;
 export type ListConversationsParams = {
 userId: string;
 };
+
+export type AdminListStoresParams = {
+status?: AdminListStoresStatus;
+limit?: number;
+offset?: number;
+};
+
+export type AdminListStoresStatus = typeof AdminListStoresStatus[keyof typeof AdminListStoresStatus];
+
+
+export const AdminListStoresStatus = {
+  pending: 'pending',
+  verified: 'verified',
+  rejected: 'rejected',
+} as const;
 

@@ -7,10 +7,12 @@ import messagesRouter from "./messages";
 import reviewsRouter from "./reviews";
 import pushTokensRouter from "./push_tokens";
 import storageRouter from "./storage";
+import adminRouter from "./admin";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(adminRouter);
 router.use(storesRouter);
 router.use(productsRouter);
 router.use(searchRouter);

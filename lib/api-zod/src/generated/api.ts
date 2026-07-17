@@ -40,6 +40,10 @@ export const ListStoresResponseItem = zod.object({
   "cacNumber": zod.string().nullish(),
   "avgRating": zod.number().nullish(),
   "totalReviews": zod.number(),
+  "verificationStatus": zod.enum(['pending', 'verified', 'rejected']),
+  "verifiedAt": zod.coerce.date().nullish(),
+  "verifiedBy": zod.string().nullish(),
+  "rejectionReason": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
 export const ListStoresResponse = zod.array(ListStoresResponseItem)
@@ -81,6 +85,10 @@ export const GetStoreResponse = zod.object({
   "cacNumber": zod.string().nullish(),
   "avgRating": zod.number().nullish(),
   "totalReviews": zod.number(),
+  "verificationStatus": zod.enum(['pending', 'verified', 'rejected']),
+  "verifiedAt": zod.coerce.date().nullish(),
+  "verifiedBy": zod.string().nullish(),
+  "rejectionReason": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 }).and(zod.object({
   "products": zod.array(zod.object({
@@ -129,6 +137,10 @@ export const UpdateStoreResponse = zod.object({
   "cacNumber": zod.string().nullish(),
   "avgRating": zod.number().nullish(),
   "totalReviews": zod.number(),
+  "verificationStatus": zod.enum(['pending', 'verified', 'rejected']),
+  "verifiedAt": zod.coerce.date().nullish(),
+  "verifiedBy": zod.string().nullish(),
+  "rejectionReason": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
 
@@ -322,6 +334,10 @@ export const SearchResponse = zod.object({
   "cacNumber": zod.string().nullish(),
   "avgRating": zod.number().nullish(),
   "totalReviews": zod.number(),
+  "verificationStatus": zod.enum(['pending', 'verified', 'rejected']),
+  "verifiedAt": zod.coerce.date().nullish(),
+  "verifiedBy": zod.string().nullish(),
+  "rejectionReason": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })),
   "products": zod.array(zod.object({
@@ -446,6 +462,132 @@ export const CreateReviewBody = zod.object({
   "reviewerId": zod.string(),
   "rating": zod.number().min(1).max(createReviewBodyRatingMax),
   "comment": zod.string()
+})
+
+
+/**
+ * @summary List all stores with verification status (admin only)
+ */
+export const adminListStoresQueryLimitDefault = 50;
+export const adminListStoresQueryOffsetDefault = 0;
+
+export const AdminListStoresQueryParams = zod.object({
+  "status": zod.enum(['pending', 'verified', 'rejected']).optional(),
+  "limit": zod.coerce.number().default(adminListStoresQueryLimitDefault),
+  "offset": zod.coerce.number().default(adminListStoresQueryOffsetDefault)
+})
+
+export const AdminListStoresResponseItem = zod.object({
+  "id": zod.number(),
+  "ownerName": zod.string(),
+  "ownerUserId": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "category": zod.string(),
+  "location": zod.string(),
+  "phone": zod.string(),
+  "imageUrl": zod.string().nullish(),
+  "cacNumber": zod.string().nullish(),
+  "avgRating": zod.number().nullish(),
+  "totalReviews": zod.number(),
+  "verificationStatus": zod.enum(['pending', 'verified', 'rejected']),
+  "verifiedAt": zod.coerce.date().nullish(),
+  "verifiedBy": zod.string().nullish(),
+  "rejectionReason": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const AdminListStoresResponse = zod.array(AdminListStoresResponseItem)
+
+
+/**
+ * @summary Verify (approve) a store (admin only)
+ */
+export const AdminVerifyStoreParams = zod.object({
+  "storeId": zod.coerce.number()
+})
+
+export const AdminVerifyStoreResponse = zod.object({
+  "id": zod.number(),
+  "ownerName": zod.string(),
+  "ownerUserId": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "category": zod.string(),
+  "location": zod.string(),
+  "phone": zod.string(),
+  "imageUrl": zod.string().nullish(),
+  "cacNumber": zod.string().nullish(),
+  "avgRating": zod.number().nullish(),
+  "totalReviews": zod.number(),
+  "verificationStatus": zod.enum(['pending', 'verified', 'rejected']),
+  "verifiedAt": zod.coerce.date().nullish(),
+  "verifiedBy": zod.string().nullish(),
+  "rejectionReason": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Reject a store application (admin only)
+ */
+export const AdminRejectStoreParams = zod.object({
+  "storeId": zod.coerce.number()
+})
+
+export const AdminRejectStoreBody = zod.object({
+  "reason": zod.string()
+})
+
+export const AdminRejectStoreResponse = zod.object({
+  "id": zod.number(),
+  "ownerName": zod.string(),
+  "ownerUserId": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "category": zod.string(),
+  "location": zod.string(),
+  "phone": zod.string(),
+  "imageUrl": zod.string().nullish(),
+  "cacNumber": zod.string().nullish(),
+  "avgRating": zod.number().nullish(),
+  "totalReviews": zod.number(),
+  "verificationStatus": zod.enum(['pending', 'verified', 'rejected']),
+  "verifiedAt": zod.coerce.date().nullish(),
+  "verifiedBy": zod.string().nullish(),
+  "rejectionReason": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Get platform analytics (admin only)
+ */
+export const AdminGetAnalyticsResponse = zod.object({
+  "totalStores": zod.number(),
+  "pendingStores": zod.number(),
+  "verifiedStores": zod.number(),
+  "rejectedStores": zod.number(),
+  "totalProducts": zod.number(),
+  "totalConversations": zod.number(),
+  "recentStores": zod.array(zod.object({
+  "id": zod.number(),
+  "ownerName": zod.string(),
+  "ownerUserId": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "category": zod.string(),
+  "location": zod.string(),
+  "phone": zod.string(),
+  "imageUrl": zod.string().nullish(),
+  "cacNumber": zod.string().nullish(),
+  "avgRating": zod.number().nullish(),
+  "totalReviews": zod.number(),
+  "verificationStatus": zod.enum(['pending', 'verified', 'rejected']),
+  "verifiedAt": zod.coerce.date().nullish(),
+  "verifiedBy": zod.string().nullish(),
+  "rejectionReason": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}))
 })
 
 

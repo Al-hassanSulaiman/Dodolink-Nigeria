@@ -20,6 +20,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AdminAnalytics,
+  AdminListStoresParams,
   Conversation,
   CreateProductBody,
   CreateReviewBody,
@@ -39,6 +41,7 @@ import type {
   StartConversationBody,
   Store,
   StoreDetail,
+  StoreRejectInput,
   StoreStats,
   UpdateProductBody,
   UpdateStoreBody,
@@ -1575,6 +1578,309 @@ export const useCreateReview = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getCreateReviewMutationOptions(options));
     }
+
+export const getAdminListStoresUrl = (params?: AdminListStoresParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/stores?${stringifiedParams}` : `/api/admin/stores`
+}
+
+/**
+ * @summary List all stores with verification status (admin only)
+ */
+export const adminListStores = async (params?: AdminListStoresParams, options?: RequestInit): Promise<Store[]> => {
+
+  return customFetch<Store[]>(getAdminListStoresUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminListStoresQueryKey = (params?: AdminListStoresParams,) => {
+    return [
+    `/api/admin/stores`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getAdminListStoresQueryOptions = <TData = Awaited<ReturnType<typeof adminListStores>>, TError = ErrorType<void>>(params?: AdminListStoresParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListStores>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListStoresQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListStores>>> = ({ signal }) => adminListStores(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListStores>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminListStoresQueryResult = NonNullable<Awaited<ReturnType<typeof adminListStores>>>
+export type AdminListStoresQueryError = ErrorType<void>
+
+
+/**
+ * @summary List all stores with verification status (admin only)
+ */
+
+export function useAdminListStores<TData = Awaited<ReturnType<typeof adminListStores>>, TError = ErrorType<void>>(
+ params?: AdminListStoresParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListStores>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminListStoresQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getAdminVerifyStoreUrl = (storeId: number,) => {
+
+
+
+
+  return `/api/admin/stores/${storeId}/verify`
+}
+
+/**
+ * @summary Verify (approve) a store (admin only)
+ */
+export const adminVerifyStore = async (storeId: number, options?: RequestInit): Promise<Store> => {
+
+  return customFetch<Store>(getAdminVerifyStoreUrl(storeId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getAdminVerifyStoreMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminVerifyStore>>, TError,{storeId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminVerifyStore>>, TError,{storeId: number}, TContext> => {
+
+const mutationKey = ['adminVerifyStore'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminVerifyStore>>, {storeId: number}> = (props) => {
+          const {storeId} = props ?? {};
+
+          return  adminVerifyStore(storeId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminVerifyStoreMutationResult = NonNullable<Awaited<ReturnType<typeof adminVerifyStore>>>
+
+    export type AdminVerifyStoreMutationError = ErrorType<void>
+
+    /**
+ * @summary Verify (approve) a store (admin only)
+ */
+export const useAdminVerifyStore = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminVerifyStore>>, TError,{storeId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminVerifyStore>>,
+        TError,
+        {storeId: number},
+        TContext
+      > => {
+      return useMutation(getAdminVerifyStoreMutationOptions(options));
+    }
+
+export const getAdminRejectStoreUrl = (storeId: number,) => {
+
+
+
+
+  return `/api/admin/stores/${storeId}/reject`
+}
+
+/**
+ * @summary Reject a store application (admin only)
+ */
+export const adminRejectStore = async (storeId: number,
+    storeRejectInput: StoreRejectInput, options?: RequestInit): Promise<Store> => {
+
+  return customFetch<Store>(getAdminRejectStoreUrl(storeId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      storeRejectInput,)
+  }
+);}
+
+
+
+
+export const getAdminRejectStoreMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminRejectStore>>, TError,{storeId: number;data: BodyType<StoreRejectInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminRejectStore>>, TError,{storeId: number;data: BodyType<StoreRejectInput>}, TContext> => {
+
+const mutationKey = ['adminRejectStore'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminRejectStore>>, {storeId: number;data: BodyType<StoreRejectInput>}> = (props) => {
+          const {storeId,data} = props ?? {};
+
+          return  adminRejectStore(storeId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminRejectStoreMutationResult = NonNullable<Awaited<ReturnType<typeof adminRejectStore>>>
+    export type AdminRejectStoreMutationBody = BodyType<StoreRejectInput>
+    export type AdminRejectStoreMutationError = ErrorType<void>
+
+    /**
+ * @summary Reject a store application (admin only)
+ */
+export const useAdminRejectStore = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminRejectStore>>, TError,{storeId: number;data: BodyType<StoreRejectInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminRejectStore>>,
+        TError,
+        {storeId: number;data: BodyType<StoreRejectInput>},
+        TContext
+      > => {
+      return useMutation(getAdminRejectStoreMutationOptions(options));
+    }
+
+export const getAdminGetAnalyticsUrl = () => {
+
+
+
+
+  return `/api/admin/analytics`
+}
+
+/**
+ * @summary Get platform analytics (admin only)
+ */
+export const adminGetAnalytics = async ( options?: RequestInit): Promise<AdminAnalytics> => {
+
+  return customFetch<AdminAnalytics>(getAdminGetAnalyticsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminGetAnalyticsQueryKey = () => {
+    return [
+    `/api/admin/analytics`
+    ] as const;
+    }
+
+
+export const getAdminGetAnalyticsQueryOptions = <TData = Awaited<ReturnType<typeof adminGetAnalytics>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetAnalytics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminGetAnalyticsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminGetAnalytics>>> = ({ signal }) => adminGetAnalytics({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminGetAnalytics>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminGetAnalyticsQueryResult = NonNullable<Awaited<ReturnType<typeof adminGetAnalytics>>>
+export type AdminGetAnalyticsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get platform analytics (admin only)
+ */
+
+export function useAdminGetAnalytics<TData = Awaited<ReturnType<typeof adminGetAnalytics>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetAnalytics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminGetAnalyticsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getRequestUploadUrlUrl = () => {
 

@@ -15,6 +15,10 @@ export const storesTable = pgTable("stores", {
   cacNumber: text("cac_number"),
   avgRating: real("avg_rating"),
   totalReviews: integer("total_reviews").notNull().default(0),
+  verificationStatus: text("verification_status").notNull().default("pending"),
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
+  verifiedBy: text("verified_by"),
+  rejectionReason: text("rejection_reason"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

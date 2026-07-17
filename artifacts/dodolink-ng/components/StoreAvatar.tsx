@@ -82,42 +82,53 @@ export function StoreAvatar({ store, size = 64, editable = false }: StoreAvatarP
   const cameraSize = Math.round(size * 0.32);
   const badgeSize = Math.round(size * 0.38);
 
+  const isVerified = store.verificationStatus === "verified";
+
   const avatar = (
-    <View
-      style={[
-        styles.circle,
-        { width: size, height: size, borderRadius: radius, backgroundColor: colors.primary },
-      ]}
-    >
-      {photoUri ? (
-        <Image source={{ uri: photoUri }} style={[styles.photo, { borderRadius: radius }]} />
-      ) : (
-        <Text style={[styles.initial, { fontSize: size * 0.38, color: colors.primaryForeground }]}>
-          {initial}
-        </Text>
-      )}
+    <View style={styles.avatarWrapper}>
+      <View
+        style={[
+          styles.circle,
+          { width: size, height: size, borderRadius: radius, backgroundColor: colors.primary },
+        ]}
+      >
+        {photoUri ? (
+          <Image source={{ uri: photoUri }} style={[styles.photo, { borderRadius: radius }]} />
+        ) : (
+          <Text style={[styles.initial, { fontSize: size * 0.38, color: colors.primaryForeground }]}>
+            {initial}
+          </Text>
+        )}
 
-      {uploading && (
-        <View style={[styles.overlay, { borderRadius: radius }]}>
-          <ActivityIndicator color="#fff" size="small" />
-        </View>
-      )}
+        {uploading && (
+          <View style={[styles.overlay, { borderRadius: radius }]}>
+            <ActivityIndicator color="#fff" size="small" />
+          </View>
+        )}
 
-      {editable && !uploading && (
-        <View
-          style={[
-            styles.badge,
-            {
-              width: badgeSize,
-              height: badgeSize,
-              borderRadius: badgeSize / 2,
-              backgroundColor: colors.accent,
-              bottom: 0,
-              right: 0,
-            },
-          ]}
-        >
-          <Feather name="camera" size={cameraSize} color="#fff" />
+        {editable && !uploading && (
+          <View
+            style={[
+              styles.badge,
+              {
+                width: badgeSize,
+                height: badgeSize,
+                borderRadius: badgeSize / 2,
+                backgroundColor: colors.accent,
+                bottom: 0,
+                right: 0,
+              },
+            ]}
+          >
+            <Feather name="camera" size={cameraSize} color="#fff" />
+          </View>
+        )}
+      </View>
+
+      {isVerified && (
+        <View style={styles.verifiedChip}>
+          <Feather name="check-circle" size={10} color="#fff" />
+          <Text style={styles.verifiedText}>Verified</Text>
         </View>
       )}
     </View>
@@ -137,6 +148,10 @@ export function StoreAvatar({ store, size = 64, editable = false }: StoreAvatarP
 }
 
 const styles = StyleSheet.create({
+  avatarWrapper: {
+    alignItems: "center",
+    gap: 4,
+  },
   circle: {
     alignItems: "center",
     justifyContent: "center",
@@ -162,5 +177,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 2,
     borderColor: "#fff",
+  },
+  verifiedChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: "#1B5E20",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  verifiedText: {
+    color: "#fff",
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
+    fontWeight: "600",
   },
 });
