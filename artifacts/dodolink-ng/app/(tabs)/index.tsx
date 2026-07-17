@@ -41,7 +41,7 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={[styles.title, { color: colors.primary }]}>Dodolink NG</Text>
-          <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>The digital Alaba Market</Text>
+          <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Connecting Nigerian businesses to customers</Text>
         </View>
         <Pressable onPress={handleSignOut} hitSlop={8} style={styles.signOutBtn}>
           <Feather name="log-out" size={20} color={colors.mutedForeground} />
