@@ -1,5 +1,5 @@
 import { useListProducts, useListStores } from "@workspace/api-client-react";
-import { StyleSheet, View, Text, ScrollView, RefreshControl, Pressable, Alert } from "react-native";
+import { StyleSheet, View, Text, ScrollView, RefreshControl, Pressable } from "react-native";
 import { useColors } from "@/hooks/useColors";
 import { ProductCard } from "@/components/ProductCard";
 import { StoreCard } from "@/components/StoreCard";
@@ -22,18 +22,9 @@ export default function HomeScreen() {
     refetchStores();
   };
 
-  const handleSignOut = () => {
-    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Sign Out",
-        style: "destructive",
-        onPress: async () => {
-          await signOut();
-          router.replace("/(auth)/sign-in" as Href);
-        },
-      },
-    ]);
+  const handleSignOut = async () => {
+    await signOut();
+    router.replace("/(auth)/sign-in" as Href);
   };
 
   if (isLoadingProducts && !products) {

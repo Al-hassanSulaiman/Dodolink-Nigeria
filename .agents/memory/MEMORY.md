@@ -1,2 +1,3 @@
 - [Link asChild array-style crash](link-aschild-style.md) — expo-router 6 Link asChild on web renders child as DOM <a>; React 19 throws on array styles
 - [Clerk Expo SDK 54 setup](clerk-expo-sdk54.md) — Core v3 API patterns, forgot-password flow, Metro ENOENT crash on install
+- [Replit iframe sandbox blocks dialogs and fonts](replit-iframe-limits.md) — Alert.alert, window.confirm, window.open, and FontFaceObserver all silently fail inside the Replit preview iframe

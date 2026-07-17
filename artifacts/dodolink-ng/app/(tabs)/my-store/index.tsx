@@ -1,4 +1,4 @@
-import { StyleSheet, View, Text, ScrollView, RefreshControl, Image, Pressable, Alert } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, RefreshControl, Image, Pressable } from 'react-native';
 import { useAuth } from '@clerk/expo';
 import { useListStores, useListStoreProducts, useDeleteProduct } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
@@ -17,18 +17,9 @@ export default function MyStoreScreen() {
   const { signOut } = useAuth();
   const { userId, isReady } = useUserIdentity();
 
-  const handleSignOut = () => {
-    Alert.alert('Sign out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign out',
-        style: 'destructive',
-        onPress: async () => {
-          await signOut();
-          router.replace('/(auth)/sign-in');
-        },
-      },
-    ]);
+  const handleSignOut = async () => {
+    await signOut();
+    router.replace('/(auth)/sign-in');
   };
   const queryClient = useQueryClient();
 
