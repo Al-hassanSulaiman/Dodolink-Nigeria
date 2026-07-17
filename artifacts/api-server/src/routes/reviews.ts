@@ -20,6 +20,13 @@ router.post("/stores/:storeId/reviews", async (req, res): Promise<void> => {
   const storeId = parseInt(raw, 10);
   if (isNaN(storeId)) { res.status(400).json({ error: "Invalid storeId" }); return; }
 
+  const [targetStore] = await db.select({ verificationStatus: storesTable.verificationStatus }).from(storesTable).where(eq(storesTable.id, storeId));
+  if (!targetStore) { res.status(404).json({ error: "Store not found" }); return; }
+  if (targetStore.verificationStatus !== "verified") {
+    res.status(403).json({ error: "Only verified stores can receive reviews" });
+    return;
+  }
+
   const parsed = CreateReviewBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 

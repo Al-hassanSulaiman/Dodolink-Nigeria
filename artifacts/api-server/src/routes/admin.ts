@@ -2,7 +2,7 @@ import { Router, type IRouter, type Request, type Response, type NextFunction } 
 import { getAuth, clerkClient } from "@clerk/express";
 import { eq, count, desc, sql } from "drizzle-orm";
 import { db, storesTable, productsTable, conversationsTable } from "@workspace/db";
-import { StoreRejectInput } from "@workspace/api-zod";
+import { AdminRejectStoreBody } from "@workspace/api-zod";
 
 const ADMIN_EMAILS = [
   "alhassansulaiman1369@gmail.com",
@@ -68,7 +68,7 @@ router.post("/admin/stores/:storeId/reject", async (req, res): Promise<void> => 
   const storeId = parseInt(req.params.storeId, 10);
   if (isNaN(storeId)) { res.status(400).json({ error: "Invalid storeId" }); return; }
 
-  const parsed = StoreRejectInput.safeParse(req.body);
+  const parsed = AdminRejectStoreBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
   const [store] = await db

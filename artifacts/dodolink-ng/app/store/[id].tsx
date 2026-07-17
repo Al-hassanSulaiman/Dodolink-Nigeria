@@ -257,39 +257,50 @@ export default function StoreScreen() {
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Reviews</Text>
 
-            {!isOwner && (
-              <View style={[styles.reviewForm, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <Text style={[styles.formTitle, { color: colors.foreground }]}>Leave a Review</Text>
-                <StarRating rating={rating} onRatingChange={setRating} size={24} showText={false} />
-                <Input
-                  placeholder="Write your comment..."
-                  value={comment}
-                  onChangeText={setComment}
-                  multiline
-                  style={styles.reviewInput}
-                />
-                <Button
-                  title={createReview.isPending ? 'Submitting...' : 'Submit Review'}
-                  onPress={handleSubmitReview}
-                  disabled={rating === 0 || createReview.isPending}
-                />
+            {store.verificationStatus !== 'verified' ? (
+              <View style={[styles.unverifiedNotice, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Feather name="lock" size={16} color={colors.mutedForeground} />
+                <Text style={[styles.unverifiedText, { color: colors.mutedForeground }]}>
+                  Reviews are only available for verified stores.
+                </Text>
               </View>
-            )}
-
-            {reviews && reviews.length > 0 ? (
-              reviews.map(review => (
-                <View key={review.id} style={[styles.reviewItem, { borderBottomColor: colors.border }]}>
-                  <View style={styles.reviewHeader}>
-                    <Text style={[styles.reviewerName, { color: colors.foreground }]}>{review.reviewerName}</Text>
-                    <StarRating rating={review.rating} size={12} showText={false} />
-                  </View>
-                  {review.comment ? (
-                    <Text style={[styles.reviewComment, { color: colors.foreground }]}>{review.comment}</Text>
-                  ) : null}
-                </View>
-              ))
             ) : (
-              <Text style={[styles.noReviews, { color: colors.mutedForeground }]}>No reviews yet.</Text>
+              <>
+                {!isOwner && (
+                  <View style={[styles.reviewForm, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <Text style={[styles.formTitle, { color: colors.foreground }]}>Leave a Review</Text>
+                    <StarRating rating={rating} onRatingChange={setRating} size={24} showText={false} />
+                    <Input
+                      placeholder="Write your comment..."
+                      value={comment}
+                      onChangeText={setComment}
+                      multiline
+                      style={styles.reviewInput}
+                    />
+                    <Button
+                      title={createReview.isPending ? 'Submitting...' : 'Submit Review'}
+                      onPress={handleSubmitReview}
+                      disabled={rating === 0 || createReview.isPending}
+                    />
+                  </View>
+                )}
+
+                {reviews && reviews.length > 0 ? (
+                  reviews.map(review => (
+                    <View key={review.id} style={[styles.reviewItem, { borderBottomColor: colors.border }]}>
+                      <View style={styles.reviewHeader}>
+                        <Text style={[styles.reviewerName, { color: colors.foreground }]}>{review.reviewerName}</Text>
+                        <StarRating rating={review.rating} size={12} showText={false} />
+                      </View>
+                      {review.comment ? (
+                        <Text style={[styles.reviewComment, { color: colors.foreground }]}>{review.comment}</Text>
+                      ) : null}
+                    </View>
+                  ))
+                ) : (
+                  <Text style={[styles.noReviews, { color: colors.mutedForeground }]}>No reviews yet.</Text>
+                )}
+              </>
             )}
           </View>
         )}
@@ -440,6 +451,19 @@ const styles = StyleSheet.create({
   },
   saveBtn: {
     marginTop: 20,
+  },
+  unverifiedNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  unverifiedText: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 14,
+    flex: 1,
   },
   cacRow: {
     flexDirection: 'row',
