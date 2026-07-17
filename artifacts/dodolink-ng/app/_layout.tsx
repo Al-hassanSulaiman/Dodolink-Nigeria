@@ -71,6 +71,8 @@ export default function RootLayout() {
       publishableKey={publishableKey}
       tokenCache={tokenCache}
       proxyUrl={proxyUrl}
+      routerPush={(to: string) => { (globalThis as any).location.href = to; }}
+      routerReplace={(to: string) => { (globalThis as any).location.href = to; }}
     >
       <ClerkLoaded>
         <SafeAreaProvider>

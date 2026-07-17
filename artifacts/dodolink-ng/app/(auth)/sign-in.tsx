@@ -37,11 +37,11 @@ export default function SignInPage() {
         }
         router.replace("/(tabs)" as Href);
       } else if (result.status === "needs_client_trust") {
-        await result.finalize({
-          navigate: ({ decorateUrl }: { decorateUrl: (url: string) => string }) => {
-            (globalThis as any).location.href = decorateUrl("/");
-          },
-        });
+        Alert.alert(
+          "One more step",
+          "Setting up a secure connection. Please sign in again after the page reloads.",
+          [{ text: "OK", onPress: () => { (globalThis as any).location.reload(); } }],
+        );
       } else {
         Alert.alert("Sign in incomplete", `Status: ${result.status ?? "unknown"}`);
       }
