@@ -74,36 +74,21 @@ await signIn.finalize({ navigate: ... });
 
 **Why:** Core v3 `SignInFutureResource` uses method-based API (signIn.password(), signIn.resetPasswordEmailCode.*) instead of v2's strategy-based create/prepareFirstFactor/attemptFirstFactor.
 
-## needs_client_trust — the normal dev-instance sign-in status
+## needs_client_trust — Replit iframe sandbox blocks ALL navigation
 
-After `signIn.password()` succeeds in a Clerk dev instance, `result.status` is **`"needs_client_trust"`**, NOT `"complete"`. Clerk must perform a browser handshake (redirect round-trip) to establish the session cookie. Only after the handshake does the app fully reload with `isSignedIn: true`.
+Clerk dev instances always return `needs_client_trust` on first sign-in. Fixing it requires a redirect round-trip to Clerk's FAPI (`/v1/client/sync`). **The Replit preview iframe blocks every navigation method:**
 
-Correct handler pattern — check both statuses:
+- `location.href = externalUrl` → "cannot set location.href"
+- `window.open(url, '_blank')` → "window.open is not an option" (sandbox blocks popups)
+- `<a target="_blank">` → also blocked
 
-```ts
-const { data, error } = await signIn.password({ emailAddress, password });
-if (error) return;
-const result = data ?? signIn;
+**The only working solution for dev testing:** Open the Expo app URL directly in a new browser tab (not inside the Replit iframe). In a standalone tab, Clerk's dev browser sync completes automatically on first load. localStorage is shared between the standalone tab and the Replit iframe (same origin), so signing in there sets the JWT for both contexts.
 
-if (result.status === "complete") {
-  // Rare in dev — client already trusted
-  if (setActive) await setActive({ session: result.createdSessionId });
-  router.replace("/(tabs)");
-} else if (result.status === "needs_client_trust") {
-  // Dev instance handshake required — let Clerk redirect
-  await result.finalize({
-    navigate: ({ decorateUrl }: { decorateUrl: (url: string) => string }) => {
-      (globalThis as any).location.href = decorateUrl("/");
-    },
-  });
-}
-```
+The sign-in page now shows a "One-time setup required" screen when `needs_client_trust` is returned, displaying the app URL with a copy button and an `<a>` link attempt.
 
-`decorateUrl("/")` returns a same-origin URL with `__clerk_handshake` params appended. The browser navigates to it, ClerkProvider on reload processes the params, session is established, and auth guard lets the user through to `/(tabs)`.
+**Why `finalize()` doesn't work either:** `createdSessionId` is null under `needs_client_trust` status — the session hasn't been created yet.
 
-**Why `router.replace` alone fails:** calling `router.replace("/(tabs)")` skips the handshake entirely — Clerk never gets to set `isSignedIn: true`, so the auth guard immediately redirects back to sign-in.
-
-**Why old `location.assign` was also failing:** the previous code only ran `location.assign` when `status === "complete"`, which never happens in dev. So nothing ran at all and the button just reset.
+**For production Clerk keys (pk_live_*):** `needs_client_trust` never occurs. Auth works normally everywhere.
 
 ## useUserIdentity → Clerk
 

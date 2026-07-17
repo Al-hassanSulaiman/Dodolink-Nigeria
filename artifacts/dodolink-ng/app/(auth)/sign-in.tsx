@@ -16,6 +16,30 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 
+function NativeAnchor({ href, children, style }: { href: string; children: React.ReactNode; style?: object }) {
+  if (Platform.OS !== "web") return null;
+  return React.createElement("a", {
+    href,
+    target: "_blank",
+    rel: "noopener noreferrer",
+    style: {
+      display: "flex",
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "#1B5E20",
+      borderRadius: 12,
+      paddingTop: 14,
+      paddingBottom: 14,
+      paddingLeft: 24,
+      paddingRight: 24,
+      textDecoration: "none",
+      gap: 8,
+      ...style,
+    },
+  }, children);
+}
+
 function buildSyncUrl(clerk: any): string | null {
   let frontendApi: string | undefined =
     clerk?.frontendApi ??
@@ -71,33 +95,53 @@ export default function SignInPage() {
   const canSubmit = emailAddress.length > 0 && password.length > 0 && !isLoading;
 
   if (syncUrl) {
+    const appUrl = typeof window !== "undefined" ? window.location.origin : "";
     return (
       <SafeAreaView style={styles.safe}>
-        <View style={styles.trustContainer}>
+        <ScrollView contentContainerStyle={styles.trustContainer}>
           <View style={styles.trustIconWrap}>
             <Feather name="shield" size={40} color="#1B5E20" />
           </View>
           <Text style={styles.trustTitle}>One-time setup required</Text>
           <Text style={styles.trustBody}>
-            This is a development build. Tap the button below to open a secure
-            connection setup page in a new tab, let it redirect back, then close
-            that tab and sign in here again.
+            The preview is sandboxed — authentication needs to happen outside
+            it. Copy the URL below and open it in a new browser tab. Sign in
+            there, then come back here and sign in again.
           </Text>
-          <Pressable
-            style={styles.trustBtn}
-            onPress={() => {
-              if (typeof window !== "undefined") {
-                window.open(syncUrl, "_blank");
-              }
-            }}
-          >
-            <Feather name="external-link" size={16} color="#fff" style={{ marginRight: 8 }} />
-            <Text style={styles.trustBtnText}>Set up secure connection</Text>
-          </Pressable>
+
+          <View style={styles.urlBox}>
+            <Text style={styles.urlLabel}>Your app URL</Text>
+            <TextInput
+              style={styles.urlInput}
+              value={appUrl}
+              editable={false}
+              selectTextOnFocus
+            />
+            <Pressable
+              style={styles.copyBtn}
+              onPress={() => {
+                if (typeof navigator !== "undefined" && navigator.clipboard) {
+                  navigator.clipboard.writeText(appUrl).then(() =>
+                    Alert.alert("Copied!", "URL copied to clipboard.")
+                  );
+                }
+              }}
+            >
+              <Feather name="copy" size={14} color="#1B5E20" />
+              <Text style={styles.copyBtnText}>Copy URL</Text>
+            </Pressable>
+          </View>
+
+          <NativeAnchor href={appUrl}>
+            {React.createElement("span", {
+              style: { color: "#fff", fontSize: 15, fontWeight: "600" },
+            }, "Open in new tab ↗")}
+          </NativeAnchor>
+
           <Pressable style={styles.trustBack} onPress={() => setSyncUrl(null)}>
             <Text style={styles.trustBackText}>← Back to sign in</Text>
           </Pressable>
-        </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -405,5 +449,44 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6B7280",
     fontFamily: "Inter_400Regular",
+  },
+  urlBox: {
+    width: "100%",
+    gap: 6,
+  },
+  urlLabel: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#374151",
+    fontFamily: "Inter_500Medium",
+  },
+  urlInput: {
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 13,
+    color: "#111827",
+    backgroundColor: "#F9FAFB",
+    fontFamily: "Inter_400Regular",
+  },
+  copyBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    backgroundColor: "#fff",
+  },
+  copyBtnText: {
+    fontSize: 13,
+    color: "#1B5E20",
+    fontFamily: "Inter_500Medium",
+    fontWeight: "500",
   },
 });
