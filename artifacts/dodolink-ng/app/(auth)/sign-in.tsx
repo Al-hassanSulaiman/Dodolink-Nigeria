@@ -16,6 +16,24 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 
+function buildSyncUrl(clerk: any): string | null {
+  let frontendApi: string | undefined =
+    clerk?.frontendApi ??
+    clerk?.__unstable__environment?.displayConfig?.homeUrl;
+  if (!frontendApi) {
+    try {
+      const pk: string = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
+      const raw = pk.replace(/^pk_(test|live)_/, "");
+      const pad = raw + "=".repeat((4 - (raw.length % 4)) % 4);
+      frontendApi = atob(pad).replace(/\.$/, "");
+    } catch {}
+  }
+  if (!frontendApi) return null;
+  const origin =
+    typeof window !== "undefined" ? window.location.origin : "";
+  return `https://${frontendApi}/v1/client/sync?redirect_url=${encodeURIComponent(origin)}`;
+}
+
 export default function SignInPage() {
   const { signIn, setActive, errors, fetchStatus } = useSignIn() as any;
   const clerk = useClerk() as any;
@@ -24,6 +42,7 @@ export default function SignInPage() {
   const [emailAddress, setEmailAddress] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [showPassword, setShowPassword] = React.useState(false);
+  const [syncUrl, setSyncUrl] = React.useState<string | null>(null);
 
   const handleSubmit = async () => {
     try {
@@ -38,23 +57,7 @@ export default function SignInPage() {
         }
         router.replace("/(tabs)" as Href);
       } else if (result.status === "needs_client_trust") {
-        let frontendApi: string | undefined =
-          clerk?.frontendApi ??
-          clerk?.__unstable__environment?.displayConfig?.homeUrl;
-        if (!frontendApi) {
-          try {
-            const pk: string = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
-            const raw = pk.replace(/^pk_(test|live)_/, "");
-            const pad = raw + "=".repeat((4 - (raw.length % 4)) % 4);
-            frontendApi = atob(pad).replace(/\.$/, "");
-          } catch {}
-        }
-        if (frontendApi && typeof (globalThis as any).location !== "undefined") {
-          const origin = (globalThis as any).location.origin as string;
-          (globalThis as any).location.href = `https://${frontendApi}/v1/client/sync?redirect_url=${encodeURIComponent(origin)}`;
-        } else {
-          (globalThis as any).location?.reload();
-        }
+        setSyncUrl(buildSyncUrl(clerk));
       } else {
         Alert.alert("Sign in incomplete", `Status: ${result.status ?? "unknown"}`);
       }
@@ -66,6 +69,38 @@ export default function SignInPage() {
 
   const isLoading = fetchStatus === "fetching";
   const canSubmit = emailAddress.length > 0 && password.length > 0 && !isLoading;
+
+  if (syncUrl) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.trustContainer}>
+          <View style={styles.trustIconWrap}>
+            <Feather name="shield" size={40} color="#1B5E20" />
+          </View>
+          <Text style={styles.trustTitle}>One-time setup required</Text>
+          <Text style={styles.trustBody}>
+            This is a development build. Tap the button below to open a secure
+            connection setup page in a new tab, let it redirect back, then close
+            that tab and sign in here again.
+          </Text>
+          <Pressable
+            style={styles.trustBtn}
+            onPress={() => {
+              if (typeof window !== "undefined") {
+                window.open(syncUrl, "_blank");
+              }
+            }}
+          >
+            <Feather name="external-link" size={16} color="#fff" style={{ marginRight: 8 }} />
+            <Text style={styles.trustBtnText}>Set up secure connection</Text>
+          </Pressable>
+          <Pressable style={styles.trustBack} onPress={() => setSyncUrl(null)}>
+            <Text style={styles.trustBackText}>← Back to sign in</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -316,5 +351,59 @@ const styles = StyleSheet.create({
     color: "#1B5E20",
     fontWeight: "600",
     fontFamily: "Inter_600SemiBold",
+  },
+  trustContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+    gap: 20,
+  },
+  trustIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    backgroundColor: "#DCFCE7",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  trustTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#111827",
+    fontFamily: "Inter_700Bold",
+    textAlign: "center",
+  },
+  trustBody: {
+    fontSize: 15,
+    color: "#6B7280",
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  trustBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1B5E20",
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    marginTop: 8,
+  },
+  trustBtnText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: "Inter_600SemiBold",
+  },
+  trustBack: {
+    marginTop: 8,
+    padding: 8,
+  },
+  trustBackText: {
+    fontSize: 14,
+    color: "#6B7280",
+    fontFamily: "Inter_400Regular",
   },
 });
