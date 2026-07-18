@@ -23,9 +23,10 @@ export default function MyStoreScreen() {
   };
   const queryClient = useQueryClient();
 
-  const { data: stores, isLoading, refetch } = useListStores({}, {
-    query: { enabled: !!userId }
-  });
+  const { data: stores, isLoading, refetch } = useListStores(
+    { ownerUserId: userId ?? undefined },
+    { query: { enabled: !!userId } }
+  );
 
   const myStore = stores?.find(s => s.ownerUserId === userId);
 

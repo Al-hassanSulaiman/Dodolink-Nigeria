@@ -21,6 +21,9 @@ export interface SubscriptionStatus {
   subscriptionStatus: SubscriptionStatusSubscriptionStatus;
   subscriptionDueAt?: string | null;
   subscriptionLastPaidAt?: string | null;
+  qualifiedAt?: string | null;
+  gracePeriodDaysRemaining?: number | null;
+  isVisible: boolean;
   autoPayEnabled: boolean;
   hasAutoCharge: boolean;
 }

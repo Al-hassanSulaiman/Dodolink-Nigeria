@@ -149,6 +149,15 @@ export default function SubscriptionScreen() {
   const lastPaid = sub?.subscriptionLastPaidAt ? new Date(sub.subscriptionLastPaidAt) : null;
   const isOverdue = dueDate ? dueDate < new Date() : false;
 
+  const daysLeft = sub?.gracePeriodDaysRemaining ?? null;
+  const isHidden = sub ? !sub.isVisible : false;
+  const graceUrgencyColor =
+    daysLeft !== null && daysLeft <= 3
+      ? '#ef4444'
+      : daysLeft !== null && daysLeft <= 7
+      ? '#f59e0b'
+      : '#3b82f6';
+
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -170,6 +179,37 @@ export default function SubscriptionScreen() {
       </View>
 
       <View style={styles.content}>
+
+        {/* Store hidden banner */}
+        {isHidden && (
+          <View style={[styles.alertBanner, { backgroundColor: '#ef444422', borderColor: '#ef4444' }]}>
+            <Feather name="eye-off" size={18} color="#ef4444" />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.alertTitle, { color: '#ef4444' }]}>Your store is currently hidden</Text>
+              <Text style={[styles.alertBody, { color: '#ef4444cc' }]}>
+                Customers cannot find your store. Pay your subscription to restore visibility immediately.
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Grace period countdown */}
+        {!isHidden && daysLeft !== null && (
+          <View style={[styles.alertBanner, { backgroundColor: graceUrgencyColor + '22', borderColor: graceUrgencyColor }]}>
+            <Feather name="clock" size={18} color={graceUrgencyColor} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.alertTitle, { color: graceUrgencyColor }]}>
+                {daysLeft === 0
+                  ? 'Grace period ends today!'
+                  : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left in grace period`}
+              </Text>
+              <Text style={[styles.alertBody, { color: graceUrgencyColor + 'cc' }]}>
+                Your store will be hidden from customers if you don't pay before the grace period ends.
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Eligibility card */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.cardTitle, { color: colors.foreground }]}>Eligibility</Text>
@@ -434,6 +474,25 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     fontSize: 13,
     flex: 1,
+    lineHeight: 18,
+  },
+  alertBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  alertTitle: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+    marginBottom: 3,
+  },
+  alertBody: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
     lineHeight: 18,
   },
 });

@@ -605,6 +605,9 @@ export const GetSubscriptionResponse = zod.object({
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
   "subscriptionDueAt": zod.coerce.date().nullish(),
   "subscriptionLastPaidAt": zod.coerce.date().nullish(),
+  "qualifiedAt": zod.coerce.date().nullish(),
+  "gracePeriodDaysRemaining": zod.number().nullish(),
+  "isVisible": zod.boolean(),
   "autoPayEnabled": zod.boolean(),
   "hasAutoCharge": zod.boolean()
 })
@@ -645,6 +648,9 @@ export const VerifySubscriptionResponse = zod.object({
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
   "subscriptionDueAt": zod.coerce.date().nullish(),
   "subscriptionLastPaidAt": zod.coerce.date().nullish(),
+  "qualifiedAt": zod.coerce.date().nullish(),
+  "gracePeriodDaysRemaining": zod.number().nullish(),
+  "isVisible": zod.boolean(),
   "autoPayEnabled": zod.boolean(),
   "hasAutoCharge": zod.boolean()
 })
@@ -664,6 +670,9 @@ export const ChargeSubscriptionResponse = zod.object({
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
   "subscriptionDueAt": zod.coerce.date().nullish(),
   "subscriptionLastPaidAt": zod.coerce.date().nullish(),
+  "qualifiedAt": zod.coerce.date().nullish(),
+  "gracePeriodDaysRemaining": zod.number().nullish(),
+  "isVisible": zod.boolean(),
   "autoPayEnabled": zod.boolean(),
   "hasAutoCharge": zod.boolean()
 })
@@ -687,6 +696,9 @@ export const ToggleAutoPayResponse = zod.object({
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
   "subscriptionDueAt": zod.coerce.date().nullish(),
   "subscriptionLastPaidAt": zod.coerce.date().nullish(),
+  "qualifiedAt": zod.coerce.date().nullish(),
+  "gracePeriodDaysRemaining": zod.number().nullish(),
+  "isVisible": zod.boolean(),
   "autoPayEnabled": zod.boolean(),
   "hasAutoCharge": zod.boolean()
 })

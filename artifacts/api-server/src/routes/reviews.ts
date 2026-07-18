@@ -3,6 +3,7 @@ import { eq, avg, count } from "drizzle-orm";
 import { db, reviewsTable, storesTable, pushTokensTable } from "@workspace/db";
 import { CreateReviewBody } from "@workspace/api-zod";
 import { notifyTokens } from "../lib/push";
+import { checkAndSetQualifiedAt } from "../lib/storeSubscription";
 
 const router: IRouter = Router();
 
@@ -63,6 +64,9 @@ router.post("/stores/:storeId/reviews", async (req, res): Promise<void> => {
       { storeId },
     );
   }
+
+  // Check if this review pushes the store to the engagement threshold
+  await checkAndSetQualifiedAt(storeId).catch(() => undefined);
 
   res.status(201).json(review);
 });

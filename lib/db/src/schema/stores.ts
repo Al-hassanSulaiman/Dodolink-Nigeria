@@ -19,7 +19,8 @@ export const storesTable = pgTable("stores", {
   verifiedAt: timestamp("verified_at", { withTimezone: true }),
   verifiedBy: text("verified_by"),
   rejectionReason: text("rejection_reason"),
-  // Subscription fields
+  // Subscription / visibility fields
+  qualifiedAt: timestamp("qualified_at", { withTimezone: true }),
   subscriptionStatus: text("subscription_status").notNull().default("inactive"),
   subscriptionDueAt: timestamp("subscription_due_at", { withTimezone: true }),
   subscriptionLastPaidAt: timestamp("subscription_last_paid_at", { withTimezone: true }),

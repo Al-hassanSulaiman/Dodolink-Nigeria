@@ -3,6 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { db, conversationsTable, messagesTable, storesTable, pushTokensTable } from "@workspace/db";
 import { SendMessageBody, StartConversationBody } from "@workspace/api-zod";
 import { notifyTokens } from "../lib/push";
+import { checkAndSetQualifiedAt } from "../lib/storeSubscription";
 
 const router: IRouter = Router();
 
@@ -55,6 +56,9 @@ router.post("/conversations/start", async (req, res): Promise<void> => {
     senderType: "customer",
     body: initialMessage,
   });
+
+  // Check if this conversation pushes the store to the engagement threshold
+  await checkAndSetQualifiedAt(storeId).catch(() => undefined);
 
   res.status(201).json({ ...conv, storeName: store.name });
 });

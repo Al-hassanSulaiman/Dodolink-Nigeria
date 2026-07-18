@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, count } from "drizzle-orm";
-import { db, storesTable, reviewsTable, conversationsTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
+import { db, storesTable } from "@workspace/db";
 import {
   InitializeSubscriptionBody,
   VerifySubscriptionBody,
@@ -11,24 +11,17 @@ import {
   paystackVerify,
   paystackChargeAuthorization,
 } from "../lib/paystack";
+import {
+  ENGAGEMENT_THRESHOLD,
+  getEngagementCount,
+  isStoreHidden,
+  gracePeriodDaysRemaining,
+} from "../lib/storeSubscription";
 
 const router: IRouter = Router();
 
 const SUBSCRIPTION_AMOUNT_KOBO = 500_000; // ₦5,000
 const SUBSCRIPTION_DAYS = 30;
-const ENGAGEMENT_THRESHOLD = 7;
-
-async function getEngagementCount(storeId: number): Promise<number> {
-  const [revResult] = await db
-    .select({ count: count() })
-    .from(reviewsTable)
-    .where(eq(reviewsTable.storeId, storeId));
-  const [convResult] = await db
-    .select({ count: count() })
-    .from(conversationsTable)
-    .where(eq(conversationsTable.storeId, storeId));
-  return (revResult?.count ?? 0) + (convResult?.count ?? 0);
-}
 
 function buildStatus(store: typeof storesTable.$inferSelect, engagementCount: number) {
   return {
@@ -38,6 +31,9 @@ function buildStatus(store: typeof storesTable.$inferSelect, engagementCount: nu
     subscriptionStatus: store.subscriptionStatus as "inactive" | "active" | "past_due",
     subscriptionDueAt: store.subscriptionDueAt?.toISOString() ?? null,
     subscriptionLastPaidAt: store.subscriptionLastPaidAt?.toISOString() ?? null,
+    qualifiedAt: store.qualifiedAt?.toISOString() ?? null,
+    gracePeriodDaysRemaining: gracePeriodDaysRemaining(store),
+    isVisible: !isStoreHidden(store),
     autoPayEnabled: store.autoPayEnabled,
     hasAutoCharge: !!store.paystackAuthCode,
   };

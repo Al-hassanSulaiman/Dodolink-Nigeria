@@ -770,6 +770,15 @@ components:
           type: string
           format: date-time
           nullable: true
+        qualifiedAt:
+          type: string
+          format: date-time
+          nullable: true
+        gracePeriodDaysRemaining:
+          type: integer
+          nullable: true
+        isVisible:
+          type: boolean
         autoPayEnabled:
           type: boolean
         hasAutoCharge:
@@ -779,6 +788,7 @@ components:
         - engagementCount
         - qualified
         - subscriptionStatus
+        - isVisible
         - autoPayEnabled
         - hasAutoCharge
 
