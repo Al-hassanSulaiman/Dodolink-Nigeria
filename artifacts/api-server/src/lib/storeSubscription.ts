@@ -1,8 +1,16 @@
-import { eq, count, gte, or, isNull, and, ne } from "drizzle-orm";
-import { db, storesTable, reviewsTable, conversationsTable } from "@workspace/db";
+import { eq, count, gte, or, isNull, and } from "drizzle-orm";
+import { db, storesTable, reviewsTable, conversationsTable, pushTokensTable } from "@workspace/db";
+import { notifyTokens } from "./push";
 
 export const ENGAGEMENT_THRESHOLD = 7;
 export const GRACE_PERIOD_DAYS = 14;
+
+const QUALIFICATION_PUSH_TITLE = "Important Notice";
+const QUALIFICATION_PUSH_BODY =
+  "Dear Valued Retailer, your store has reached the qualifying threshold. " +
+  "Starting in 14 days, a monthly subscription fee of ₦5,000 will apply. " +
+  "This helps us maintain a secure, reliable marketplace for your business. " +
+  "Warm regards, Al-Hassan Sulaiman — Founder & CEO, DodoLink.";
 
 export async function getEngagementCount(storeId: number): Promise<number> {
   const [revResult] = await db
@@ -22,6 +30,7 @@ export async function checkAndSetQualifiedAt(storeId: number): Promise<void> {
     .select({
       qualifiedAt: storesTable.qualifiedAt,
       verificationStatus: storesTable.verificationStatus,
+      ownerUserId: storesTable.ownerUserId,
     })
     .from(storesTable)
     .where(eq(storesTable.id, storeId));
@@ -34,6 +43,19 @@ export async function checkAndSetQualifiedAt(storeId: number): Promise<void> {
       .update(storesTable)
       .set({ qualifiedAt: new Date() })
       .where(eq(storesTable.id, storeId));
+
+    // Send push notification to all devices registered by the store owner
+    const tokens = await db
+      .select({ token: pushTokensTable.token })
+      .from(pushTokensTable)
+      .where(eq(pushTokensTable.userId, store.ownerUserId));
+
+    await notifyTokens(
+      tokens.map((t) => t.token),
+      QUALIFICATION_PUSH_TITLE,
+      QUALIFICATION_PUSH_BODY,
+      { type: "subscription_qualified", storeId }
+    );
   }
 }
 
