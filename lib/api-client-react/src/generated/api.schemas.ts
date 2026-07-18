@@ -62,6 +62,15 @@ export const StoreVerificationStatus = {
   rejected: 'rejected',
 } as const;
 
+export type StoreSubscriptionStatus = typeof StoreSubscriptionStatus[keyof typeof StoreSubscriptionStatus];
+
+
+export const StoreSubscriptionStatus = {
+  inactive: 'inactive',
+  active: 'active',
+  past_due: 'past_due',
+} as const;
+
 export interface Store {
   id: number;
   ownerName: string;
@@ -85,6 +94,9 @@ export interface Store {
   verifiedBy?: string | null;
   /** @nullable */
   rejectionReason?: string | null;
+  /** @nullable */
+  qualifiedAt?: string | null;
+  subscriptionStatus: StoreSubscriptionStatus;
   createdAt: string;
 }
 

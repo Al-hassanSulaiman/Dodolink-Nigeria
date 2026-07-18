@@ -874,10 +874,16 @@ components:
           type: ["string", "null"]
         rejectionReason:
           type: ["string", "null"]
+        qualifiedAt:
+          type: ["string", "null"]
+          format: date-time
+        subscriptionStatus:
+          type: string
+          enum: [inactive, active, past_due]
         createdAt:
           type: string
           format: date-time
-      required: [id, ownerName, ownerUserId, name, description, category, location, phone, totalReviews, verificationStatus, createdAt]
+      required: [id, ownerName, ownerUserId, name, description, category, location, phone, totalReviews, verificationStatus, subscriptionStatus, createdAt]
 
     StoreDetail:
       allOf:

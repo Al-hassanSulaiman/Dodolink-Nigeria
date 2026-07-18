@@ -105,7 +105,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function ProtectedRoute({ component: Component }: { component: () => JSX.Element }) {
+function ProtectedRoute({ component: Component }: { component: () => React.ReactElement | null }) {
   return (
     <>
       <Show when="signed-in">

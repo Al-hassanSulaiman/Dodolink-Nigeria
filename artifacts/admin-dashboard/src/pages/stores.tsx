@@ -31,8 +31,36 @@ import {
   FileText,
   User,
   ShieldCheck,
+  CreditCard,
+  EyeOff,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
+
+const GRACE_PERIOD_DAYS = 14;
+
+function getSubscriptionInfo(store: {
+  qualifiedAt?: string | null;
+  subscriptionStatus?: string | null;
+}) {
+  const qualifiedAt = store.qualifiedAt ? new Date(store.qualifiedAt) : null;
+  const status = store.subscriptionStatus ?? "inactive";
+
+  if (!qualifiedAt) return { label: "Not qualified", color: "gray", hidden: false, daysLeft: null };
+  if (status === "active") return { label: "Active", color: "green", hidden: false, daysLeft: null };
+
+  const expiresAt = new Date(qualifiedAt.getTime() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
+  const msLeft = expiresAt.getTime() - Date.now();
+  const daysLeft = Math.ceil(msLeft / (24 * 60 * 60 * 1000));
+
+  if (daysLeft <= 0) return { label: "Hidden – not paid", color: "red", hidden: true, daysLeft: 0 };
+  return {
+    label: status === "past_due" ? "Past due" : "Grace period",
+    color: daysLeft <= 3 ? "red" : daysLeft <= 7 ? "amber" : "blue",
+    hidden: false,
+    daysLeft,
+  };
+}
 
 type VerificationStatus = "pending" | "verified" | "rejected";
 
@@ -126,7 +154,7 @@ export default function StoresPage() {
               <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <h3 className="text-base font-semibold text-gray-900 truncate">{store.name}</h3>
                       <Badge
                         className={
@@ -140,6 +168,22 @@ export default function StoresPage() {
                       >
                         {store.verificationStatus}
                       </Badge>
+                      {/* Subscription badge — only relevant for verified stores */}
+                      {store.verificationStatus === "verified" && (() => {
+                        const sub = getSubscriptionInfo(store);
+                        const cls =
+                          sub.color === "green" ? "bg-green-100 text-green-800 border-green-200" :
+                          sub.color === "red"   ? "bg-red-100 text-red-800 border-red-200" :
+                          sub.color === "amber" ? "bg-amber-100 text-amber-800 border-amber-200" :
+                          sub.color === "blue"  ? "bg-blue-100 text-blue-800 border-blue-200" :
+                                                  "bg-gray-100 text-gray-500 border-gray-200";
+                        return (
+                          <Badge className={cls} variant="outline">
+                            <CreditCard className="w-3 h-3 mr-1" />
+                            {sub.label}
+                          </Badge>
+                        );
+                      })()}
                     </div>
                     <p className="text-sm text-gray-600 line-clamp-2 mb-3">{store.description}</p>
 
@@ -176,6 +220,33 @@ export default function StoresPage() {
                         Verified on {new Date(store.verifiedAt).toLocaleDateString()}
                       </div>
                     )}
+
+                    {/* Subscription detail row for verified stores */}
+                    {store.verificationStatus === "verified" && (() => {
+                      const sub = getSubscriptionInfo(store);
+
+                      if (sub.hidden) return (
+                        <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-red-700 bg-red-50 border border-red-100 rounded-md px-2.5 py-1.5">
+                          <EyeOff className="w-3.5 h-3.5 flex-shrink-0" />
+                          Store is hidden from customers — subscription unpaid after 14-day grace period
+                        </div>
+                      );
+
+                      if (sub.daysLeft !== null) return (
+                        <div className={`mt-2 flex items-center gap-1.5 text-xs font-medium rounded-md px-2.5 py-1.5 border ${
+                          sub.color === "red"   ? "text-red-700 bg-red-50 border-red-100" :
+                          sub.color === "amber" ? "text-amber-700 bg-amber-50 border-amber-100" :
+                                                  "text-blue-700 bg-blue-50 border-blue-100"
+                        }`}>
+                          <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+                          {sub.daysLeft === 0
+                            ? "Grace period ends today — store will be hidden if unpaid"
+                            : `${sub.daysLeft} day${sub.daysLeft === 1 ? "" : "s"} left in 14-day grace period before store goes hidden`}
+                        </div>
+                      );
+
+                      return null;
+                    })()}
 
                     <p className="mt-2 text-xs text-gray-400">
                       Category: <span className="font-medium text-gray-500">{store.category}</span>
