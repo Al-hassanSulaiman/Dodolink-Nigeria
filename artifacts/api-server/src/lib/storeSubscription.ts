@@ -28,15 +28,19 @@ const QUALIFICATION_PUSH_BODY =
   "This helps us maintain a secure, reliable marketplace for your business. " +
   "Warm regards, Al-Hassan Sulaiman — Founder & CEO, DodoLink.";
 
+const ENGAGEMENT_WINDOW_DAYS = 30;
+
 export async function getEngagementCount(storeId: number): Promise<number> {
+  const windowStart = new Date(Date.now() - ENGAGEMENT_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+
   const [revResult] = await db
     .select({ count: count() })
     .from(reviewsTable)
-    .where(eq(reviewsTable.storeId, storeId));
+    .where(and(eq(reviewsTable.storeId, storeId), gte(reviewsTable.createdAt, windowStart)));
   const [convResult] = await db
     .select({ count: count() })
     .from(conversationsTable)
-    .where(eq(conversationsTable.storeId, storeId));
+    .where(and(eq(conversationsTable.storeId, storeId), gte(conversationsTable.createdAt, windowStart)));
   return (revResult?.count ?? 0) + (convResult?.count ?? 0);
 }
 
