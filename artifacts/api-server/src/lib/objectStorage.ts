@@ -9,25 +9,33 @@ import {
   setObjectAclPolicy,
 } from "./objectAcl";
 
+/**
+ * Running on Replit: use the sidecar credential endpoint.
+ * Running elsewhere (e.g. Cloud Run): use Application Default Credentials —
+ * the Cloud Run service account is picked up automatically.
+ */
 const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
+const isReplit = !!process.env.REPL_ID;
 
-export const objectStorageClient = new Storage({
-  credentials: {
-    audience: "replit",
-    subject_token_type: "access_token",
-    token_url: `${REPLIT_SIDECAR_ENDPOINT}/token`,
-    type: "external_account",
-    credential_source: {
-      url: `${REPLIT_SIDECAR_ENDPOINT}/credential`,
-      format: {
-        type: "json",
-        subject_token_field_name: "access_token",
+export const objectStorageClient = isReplit
+  ? new Storage({
+      credentials: {
+        audience: "replit",
+        subject_token_type: "access_token",
+        token_url: `${REPLIT_SIDECAR_ENDPOINT}/token`,
+        type: "external_account",
+        credential_source: {
+          url: `${REPLIT_SIDECAR_ENDPOINT}/credential`,
+          format: {
+            type: "json",
+            subject_token_field_name: "access_token",
+          },
+        },
+        universe_domain: "googleapis.com",
       },
-    },
-    universe_domain: "googleapis.com",
-  },
-  projectId: "",
-});
+      projectId: "",
+    })
+  : new Storage(); // ADC — Cloud Run service account handles auth automatically
 
 export class ObjectNotFoundError extends Error {
   constructor() {
@@ -52,8 +60,7 @@ export class ObjectStorageService {
     );
     if (paths.length === 0) {
       throw new Error(
-        "PUBLIC_OBJECT_SEARCH_PATHS not set. Create a bucket in 'Object Storage' " +
-          "tool and set PUBLIC_OBJECT_SEARCH_PATHS env var (comma-separated paths)."
+        "PUBLIC_OBJECT_SEARCH_PATHS not set. Set this to comma-separated GCS paths."
       );
     }
     return paths;
@@ -62,10 +69,7 @@ export class ObjectStorageService {
   getPrivateObjectDir(): string {
     const dir = process.env.PRIVATE_OBJECT_DIR || "";
     if (!dir) {
-      throw new Error(
-        "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' " +
-          "tool and set PRIVATE_OBJECT_DIR env var."
-      );
+      throw new Error("PRIVATE_OBJECT_DIR not set. Set this to a GCS path prefix.");
     }
     return dir;
   }
@@ -73,17 +77,14 @@ export class ObjectStorageService {
   async searchPublicObject(filePath: string): Promise<File | null> {
     for (const searchPath of this.getPublicObjectSearchPaths()) {
       const fullPath = `${searchPath}/${filePath}`;
-
       const { bucketName, objectName } = parseObjectPath(fullPath);
       const bucket = objectStorageClient.bucket(bucketName);
       const file = bucket.file(objectName);
-
       const [exists] = await file.exists();
       if (exists) {
         return file;
       }
     }
-
     return null;
   }
 
@@ -108,24 +109,10 @@ export class ObjectStorageService {
 
   async getObjectEntityUploadURL(): Promise<string> {
     const privateObjectDir = this.getPrivateObjectDir();
-    if (!privateObjectDir) {
-      throw new Error(
-        "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' " +
-          "tool and set PRIVATE_OBJECT_DIR env var."
-      );
-    }
-
     const objectId = randomUUID();
     const fullPath = `${privateObjectDir}/uploads/${objectId}`;
-
     const { bucketName, objectName } = parseObjectPath(fullPath);
-
-    return signObjectURL({
-      bucketName,
-      objectName,
-      method: "PUT",
-      ttlSec: 900,
-    });
+    return signObjectURL({ bucketName, objectName, method: "PUT", ttlSec: 900 });
   }
 
   async getObjectEntityFile(objectPath: string): Promise<File> {
@@ -206,10 +193,7 @@ export class ObjectStorageService {
   }
 }
 
-function parseObjectPath(path: string): {
-  bucketName: string;
-  objectName: string;
-} {
+function parseObjectPath(path: string): { bucketName: string; objectName: string } {
   if (!path.startsWith("/")) {
     path = `/${path}`;
   }
@@ -217,16 +201,17 @@ function parseObjectPath(path: string): {
   if (pathParts.length < 3) {
     throw new Error("Invalid path: must contain at least a bucket name");
   }
-
-  const bucketName = pathParts[1];
-  const objectName = pathParts.slice(2).join("/");
-
-  return {
-    bucketName,
-    objectName,
-  };
+  return { bucketName: pathParts[1], objectName: pathParts.slice(2).join("/") };
 }
 
+/**
+ * Signs a GCS object URL.
+ *
+ * On Replit:    delegates to the sidecar signing endpoint.
+ * On Cloud Run: uses GCS V4 signed URLs. Requires:
+ *   - GOOGLE_SERVICE_ACCOUNT_EMAIL set to the Cloud Run service account
+ *   - The service account must have roles/iam.serviceAccountTokenCreator
+ */
 async function signObjectURL({
   bucketName,
   objectName,
@@ -238,30 +223,45 @@ async function signObjectURL({
   method: "GET" | "PUT" | "DELETE" | "HEAD";
   ttlSec: number;
 }): Promise<string> {
-  const request = {
-    bucket_name: bucketName,
-    object_name: objectName,
-    method,
-    expires_at: new Date(Date.now() + ttlSec * 1000).toISOString(),
-  };
-  const response = await fetch(
-    `${REPLIT_SIDECAR_ENDPOINT}/object-storage/signed-object-url`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(request),
-      signal: AbortSignal.timeout(30_000),
+  if (isReplit) {
+    const request = {
+      bucket_name: bucketName,
+      object_name: objectName,
+      method,
+      expires_at: new Date(Date.now() + ttlSec * 1000).toISOString(),
+    };
+    const response = await fetch(
+      `${REPLIT_SIDECAR_ENDPOINT}/object-storage/signed-object-url`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(request),
+        signal: AbortSignal.timeout(30_000),
+      }
+    );
+    if (!response.ok) {
+      throw new Error(`Failed to sign object URL, status: ${response.status}`);
     }
-  );
-  if (!response.ok) {
+    const { signed_url: signedURL } = (await response.json()) as { signed_url: string };
+    return signedURL;
+  }
+
+  // Cloud Run: V4 signed URL via GCS client
+  const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  if (!serviceAccountEmail) {
     throw new Error(
-      `Failed to sign object URL, errorcode: ${response.status}, ` +
-        `make sure you're running on Replit`
+      "GOOGLE_SERVICE_ACCOUNT_EMAIL must be set for signed URLs outside Replit. " +
+        "Set it to your Cloud Run service account email."
     );
   }
 
-  const { signed_url: signedURL } = (await response.json()) as { signed_url: string };
-  return signedURL;
+  const actionMap = { GET: "read", PUT: "write", DELETE: "delete", HEAD: "read" } as const;
+  const bucket = objectStorageClient.bucket(bucketName);
+  const file = bucket.file(objectName);
+  const [url] = await file.getSignedUrl({
+    version: "v4",
+    action: actionMap[method],
+    expires: Date.now() + ttlSec * 1000,
+  });
+  return url;
 }

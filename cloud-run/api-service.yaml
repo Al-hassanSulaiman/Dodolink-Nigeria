@@ -1,0 +1,77 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: dodolink-api
+  annotations:
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        # Cloud SQL connection — replace with your instance connection name
+        run.googleapis.com/cloudsql-instances: "PROJECT_ID:REGION:INSTANCE_NAME"
+        run.googleapis.com/execution-environment: gen2
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "10"
+    spec:
+      serviceAccountName: dodolink-api-sa@PROJECT_ID.iam.gserviceaccount.com
+      containers:
+        - image: REGION-docker.pkg.dev/PROJECT_ID/dodolink/api-server:latest
+          ports:
+            - containerPort: 8080
+          resources:
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          env:
+            # ── Database (Cloud SQL via Unix socket) ──────────────────────
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: database-url
+                  key: latest
+            # ── Clerk Auth ────────────────────────────────────────────────
+            - name: CLERK_PUBLISHABLE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: clerk-publishable-key
+                  key: latest
+            - name: CLERK_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: clerk-secret-key
+                  key: latest
+            # ── Paystack ──────────────────────────────────────────────────
+            - name: PAYSTACK_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: paystack-secret-key
+                  key: latest
+            - name: PAYSTACK_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: paystack-public-key
+                  key: latest
+            # ── Session ───────────────────────────────────────────────────
+            - name: SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: session-secret
+                  key: latest
+            # ── Google Cloud Storage ──────────────────────────────────────
+            - name: DEFAULT_OBJECT_STORAGE_BUCKET_ID
+              value: "YOUR_GCS_BUCKET_NAME"
+            - name: PRIVATE_OBJECT_DIR
+              value: "/YOUR_GCS_BUCKET_NAME/private"
+            - name: PUBLIC_OBJECT_SEARCH_PATHS
+              value: "/YOUR_GCS_BUCKET_NAME/public"
+            - name: GOOGLE_SERVICE_ACCOUNT_EMAIL
+              value: "dodolink-api-sa@PROJECT_ID.iam.gserviceaccount.com"
+            # ── Runtime ───────────────────────────────────────────────────
+            - name: NODE_ENV
+              value: "production"
+          livenessProbe:
+            httpGet:
+              path: /api/healthz
+            initialDelaySeconds: 10
+            periodSeconds: 30
