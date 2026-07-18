@@ -675,7 +675,9 @@ export const GetSubscriptionResponse = zod.object({
   "gracePeriodDaysRemaining": zod.number().nullish(),
   "isVisible": zod.boolean(),
   "autoPayEnabled": zod.boolean(),
-  "hasAutoCharge": zod.boolean()
+  "hasAutoCharge": zod.boolean(),
+  "paymentsLive": zod.boolean().describe('True when the billing system is active (after Jan 1 2027)'),
+  "paymentsLaunchDate": zod.coerce.date().describe('ISO date when billing goes live')
 })
 
 
@@ -718,7 +720,9 @@ export const VerifySubscriptionResponse = zod.object({
   "gracePeriodDaysRemaining": zod.number().nullish(),
   "isVisible": zod.boolean(),
   "autoPayEnabled": zod.boolean(),
-  "hasAutoCharge": zod.boolean()
+  "hasAutoCharge": zod.boolean(),
+  "paymentsLive": zod.boolean().describe('True when the billing system is active (after Jan 1 2027)'),
+  "paymentsLaunchDate": zod.coerce.date().describe('ISO date when billing goes live')
 })
 
 
@@ -740,7 +744,9 @@ export const ChargeSubscriptionResponse = zod.object({
   "gracePeriodDaysRemaining": zod.number().nullish(),
   "isVisible": zod.boolean(),
   "autoPayEnabled": zod.boolean(),
-  "hasAutoCharge": zod.boolean()
+  "hasAutoCharge": zod.boolean(),
+  "paymentsLive": zod.boolean().describe('True when the billing system is active (after Jan 1 2027)'),
+  "paymentsLaunchDate": zod.coerce.date().describe('ISO date when billing goes live')
 })
 
 
@@ -766,7 +772,9 @@ export const ToggleAutoPayResponse = zod.object({
   "gracePeriodDaysRemaining": zod.number().nullish(),
   "isVisible": zod.boolean(),
   "autoPayEnabled": zod.boolean(),
-  "hasAutoCharge": zod.boolean()
+  "hasAutoCharge": zod.boolean(),
+  "paymentsLive": zod.boolean().describe('True when the billing system is active (after Jan 1 2027)'),
+  "paymentsLaunchDate": zod.coerce.date().describe('ISO date when billing goes live')
 })
 
 

@@ -26,6 +26,10 @@ export interface SubscriptionStatus {
   isVisible: boolean;
   autoPayEnabled: boolean;
   hasAutoCharge: boolean;
+  /** True when the billing system is active (after Jan 1 2027) */
+  paymentsLive: boolean;
+  /** ISO date when billing goes live */
+  paymentsLaunchDate: string;
 }
 
 export interface SubscriptionInitInput {

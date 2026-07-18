@@ -13,7 +13,9 @@ import {
 } from "../lib/paystack";
 import {
   ENGAGEMENT_THRESHOLD,
+  SUBSCRIPTION_LAUNCH_DATE,
   getEngagementCount,
+  isPaymentsLive,
   isStoreHidden,
   gracePeriodDaysRemaining,
 } from "../lib/storeSubscription";
@@ -36,6 +38,8 @@ function buildStatus(store: typeof storesTable.$inferSelect, engagementCount: nu
     isVisible: !isStoreHidden(store),
     autoPayEnabled: store.autoPayEnabled,
     hasAutoCharge: !!store.paystackAuthCode,
+    paymentsLive: isPaymentsLive(),
+    paymentsLaunchDate: SUBSCRIPTION_LAUNCH_DATE.toISOString(),
   };
 }
 
@@ -53,6 +57,11 @@ router.get("/stores/:storeId/subscription", async (req, res): Promise<void> => {
 
 // POST /stores/:storeId/subscription/initialize
 router.post("/stores/:storeId/subscription/initialize", async (req, res): Promise<void> => {
+  if (!isPaymentsLive()) {
+    res.status(403).json({ error: `Subscription billing is not active yet. It launches on ${SUBSCRIPTION_LAUNCH_DATE.toDateString()}.` });
+    return;
+  }
+
   const storeId = parseInt(req.params.storeId, 10);
   if (isNaN(storeId)) { res.status(400).json({ error: "Invalid storeId" }); return; }
 
@@ -138,6 +147,11 @@ router.post("/stores/:storeId/subscription/verify", async (req, res): Promise<vo
 
 // POST /stores/:storeId/subscription/charge
 router.post("/stores/:storeId/subscription/charge", async (req, res): Promise<void> => {
+  if (!isPaymentsLive()) {
+    res.status(403).json({ error: `Subscription billing is not active yet. It launches on ${SUBSCRIPTION_LAUNCH_DATE.toDateString()}.` });
+    return;
+  }
+
   const storeId = parseInt(req.params.storeId, 10);
   if (isNaN(storeId)) { res.status(400).json({ error: "Invalid storeId" }); return; }
 

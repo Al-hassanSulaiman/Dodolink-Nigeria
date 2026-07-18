@@ -294,48 +294,65 @@ export default function SubscriptionScreen() {
               {SUBSCRIPTION_FEE}/month keeps your store visible and accepting orders.
             </Text>
 
-            {/* Pending verification banner */}
-            {pendingReference && (
-              <View
-                style={[styles.pendingBanner, { backgroundColor: colors.primary + '15', borderColor: colors.primary + '44' }]}
-              >
-                <Feather name="info" size={16} color={colors.primary} />
-                <Text style={[styles.pendingText, { color: colors.primary }]}>
-                  After completing payment in your browser, tap the button below to confirm.
-                </Text>
+            {/* Coming soon banner — shown before Jan 1 2027 */}
+            {!sub.paymentsLive ? (
+              <View style={[styles.comingSoonBanner, { backgroundColor: '#16a34a18', borderColor: '#16a34a44' }]}>
+                <Feather name="calendar" size={20} color="#16a34a" />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.comingSoonTitle, { color: '#16a34a' }]}>
+                    Subscription billing launches January 1, 2027
+                  </Text>
+                  <Text style={[styles.comingSoonBody, { color: '#16a34a99' }]}>
+                    Your store is free to use until then. No payment is required right now — enjoy building your customer base!
+                  </Text>
+                </View>
               </View>
-            )}
-
-            {pendingReference ? (
-              <Button
-                title={verifyMutation.isPending ? 'Confirming…' : 'I have completed payment'}
-                onPress={handleConfirmPayment}
-                disabled={verifyMutation.isPending}
-              />
             ) : (
-              <View style={styles.buttonGroup}>
-                <Button
-                  title={
-                    initMutation.isPending
-                      ? 'Opening payment…'
-                      : sub.subscriptionStatus === 'active'
-                      ? `Renew now (${SUBSCRIPTION_FEE})`
-                      : `Pay ${SUBSCRIPTION_FEE} to activate`
-                  }
-                  onPress={handlePayManually}
-                  disabled={initMutation.isPending}
-                />
-                {sub.hasAutoCharge && sub.subscriptionStatus !== 'active' && (
-                  <View style={{ marginTop: 8 }}>
-                    <Button
-                      title={chargeMutation.isPending ? 'Charging…' : 'Charge saved card'}
-                      variant="outline"
-                      onPress={handleAutoCharge}
-                      disabled={chargeMutation.isPending}
-                    />
+              <>
+                {/* Pending verification banner */}
+                {pendingReference && (
+                  <View
+                    style={[styles.pendingBanner, { backgroundColor: colors.primary + '15', borderColor: colors.primary + '44' }]}
+                  >
+                    <Feather name="info" size={16} color={colors.primary} />
+                    <Text style={[styles.pendingText, { color: colors.primary }]}>
+                      After completing payment in your browser, tap the button below to confirm.
+                    </Text>
                   </View>
                 )}
-              </View>
+
+                {pendingReference ? (
+                  <Button
+                    title={verifyMutation.isPending ? 'Confirming…' : 'I have completed payment'}
+                    onPress={handleConfirmPayment}
+                    disabled={verifyMutation.isPending}
+                  />
+                ) : (
+                  <View style={styles.buttonGroup}>
+                    <Button
+                      title={
+                        initMutation.isPending
+                          ? 'Opening payment…'
+                          : sub.subscriptionStatus === 'active'
+                          ? `Renew now (${SUBSCRIPTION_FEE})`
+                          : `Pay ${SUBSCRIPTION_FEE} to activate`
+                      }
+                      onPress={handlePayManually}
+                      disabled={initMutation.isPending}
+                    />
+                    {sub.hasAutoCharge && sub.subscriptionStatus !== 'active' && (
+                      <View style={{ marginTop: 8 }}>
+                        <Button
+                          title={chargeMutation.isPending ? 'Charging…' : 'Charge saved card'}
+                          variant="outline"
+                          onPress={handleAutoCharge}
+                          disabled={chargeMutation.isPending}
+                        />
+                      </View>
+                    )}
+                  </View>
+                )}
+              </>
             )}
           </View>
         )}
@@ -464,6 +481,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     flex: 1,
     lineHeight: 18,
+  },
+  comingSoonBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  comingSoonTitle: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  comingSoonBody: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    lineHeight: 19,
   },
   infoCard: {
     flexDirection: 'row',

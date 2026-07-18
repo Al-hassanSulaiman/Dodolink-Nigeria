@@ -813,6 +813,13 @@ components:
           type: boolean
         hasAutoCharge:
           type: boolean
+        paymentsLive:
+          type: boolean
+          description: True when the billing system is active (after Jan 1 2027)
+        paymentsLaunchDate:
+          type: string
+          format: date-time
+          description: ISO date when billing goes live
       required:
         - storeId
         - engagementCount
@@ -821,6 +828,8 @@ components:
         - isVisible
         - autoPayEnabled
         - hasAutoCharge
+        - paymentsLive
+        - paymentsLaunchDate
 
     SubscriptionInitInput:
       type: object

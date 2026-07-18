@@ -5,6 +5,22 @@ import { notifyTokens } from "./push";
 export const ENGAGEMENT_THRESHOLD = 7;
 export const GRACE_PERIOD_DAYS = 14;
 
+/** Payments are disabled until this date. On this date they auto-enable. */
+export const SUBSCRIPTION_LAUNCH_DATE = new Date("2027-01-01T00:00:00.000Z");
+
+/** True when the subscription billing system is live. */
+export function isPaymentsLive(): boolean {
+  return Date.now() >= SUBSCRIPTION_LAUNCH_DATE.getTime();
+}
+
+/**
+ * If a store qualified before the launch date, treat the grace period as
+ * starting from the launch date so nobody gets immediately hidden on day 1.
+ */
+function effectiveQualifiedAt(qualifiedAt: Date): Date {
+  return qualifiedAt < SUBSCRIPTION_LAUNCH_DATE ? SUBSCRIPTION_LAUNCH_DATE : qualifiedAt;
+}
+
 const QUALIFICATION_PUSH_TITLE = "Important Notice";
 const QUALIFICATION_PUSH_BODY =
   "Dear Valued Retailer, your store has reached the qualifying threshold. " +
@@ -67,40 +83,50 @@ type StoreVisibilityFields = {
 
 /** Drizzle OR-condition: store is publicly visible. */
 export function visibleStoresFilter() {
+  // Before launch date nothing is hidden — all stores visible
+  if (!isPaymentsLive()) return or(isNull(storesTable.id), eq(storesTable.id, storesTable.id));
+
   const graceDeadline = new Date(Date.now() - GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
+  // Adjust grace deadline to account for stores that qualified before launch
+  const effectiveLaunchGraceDeadline = new Date(
+    Math.max(SUBSCRIPTION_LAUNCH_DATE.getTime(), graceDeadline.getTime())
+  );
+
   return or(
-    // Not yet qualified — always visible
     isNull(storesTable.qualifiedAt),
-    // Actively paying — always visible
     eq(storesTable.subscriptionStatus, "active"),
-    // Initial grace period only (inactive = never paid): 14 days from qualifiedAt
     and(
       eq(storesTable.subscriptionStatus, "inactive"),
-      gte(storesTable.qualifiedAt, graceDeadline)
+      gte(storesTable.qualifiedAt, effectiveLaunchGraceDeadline)
     )
-    // past_due = missed renewal → hidden immediately, no grace
+    // past_due = missed renewal → hidden immediately
   );
 }
 
 /** Returns true when a store should be hidden from public view. */
 export function isStoreHidden(store: StoreVisibilityFields): boolean {
+  // Before launch date nothing is hidden
+  if (!isPaymentsLive()) return false;
+
   if (!store.qualifiedAt) return false;
   if (store.subscriptionStatus === "active") return false;
-  // Missed renewal: hidden immediately
   if (store.subscriptionStatus === "past_due") return true;
-  // Initial qualification (inactive, never paid): 14-day grace from qualifiedAt
+
+  // Initial qualification (inactive): 14-day grace from effectiveQualifiedAt
+  const effQualifiedAt = effectiveQualifiedAt(store.qualifiedAt);
   const graceDeadline = new Date(Date.now() - GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
-  return store.qualifiedAt < graceDeadline;
+  return effQualifiedAt < graceDeadline;
 }
 
 /** Returns days left in initial grace period (null if not qualified, active, or past_due). */
 export function gracePeriodDaysRemaining(store: StoreVisibilityFields): number | null {
   if (!store.qualifiedAt) return null;
   if (store.subscriptionStatus === "active") return null;
-  // Missed renewal — no grace, already hidden
   if (store.subscriptionStatus === "past_due") return null;
-  // Initial qualification only
-  const expiresAt = new Date(store.qualifiedAt.getTime() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
+
+  // Use effectiveQualifiedAt so pre-launch retailers get 14 days from launch date
+  const effQualifiedAt = effectiveQualifiedAt(store.qualifiedAt);
+  const expiresAt = new Date(effQualifiedAt.getTime() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
   const msLeft = expiresAt.getTime() - Date.now();
   if (msLeft <= 0) return 0;
   return Math.ceil(msLeft / (24 * 60 * 60 * 1000));
