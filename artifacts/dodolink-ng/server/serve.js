@@ -46,6 +46,11 @@ function getAppName() {
 }
 
 function serveManifest(platform, res) {
+  if (platform !== "ios" && platform !== "android") {
+    res.writeHead(400, { "content-type": "application/json" });
+    res.end(JSON.stringify({ error: "Invalid platform" }));
+    return;
+  }
   const manifestPath = path.join(STATIC_ROOT, platform, "manifest.json");
 
   if (!fs.existsSync(manifestPath)) {
