@@ -27,8 +27,8 @@ steps:
 
 substitutions:
   _SERVICE_NAME: dodolink-api
-  _REGION: us-central1
-  _IMAGE_NAME: us-central1-docker.pkg.dev/$PROJECT_ID/dodolink/api-server
+  _REGION: africa-south1
+  _IMAGE_NAME: $_REGION-docker.pkg.dev/$PROJECT_ID/dodolink/api-server
 
 options:
   logging: CLOUD_LOGGING_ONLY
