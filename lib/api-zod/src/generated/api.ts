@@ -592,6 +592,107 @@ export const AdminGetAnalyticsResponse = zod.object({
 
 
 /**
+ * @summary Get subscription status and engagement count for a store
+ */
+export const GetSubscriptionParams = zod.object({
+  "storeId": zod.coerce.number()
+})
+
+export const GetSubscriptionResponse = zod.object({
+  "storeId": zod.number(),
+  "engagementCount": zod.number(),
+  "qualified": zod.boolean(),
+  "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
+  "subscriptionDueAt": zod.coerce.date().nullish(),
+  "subscriptionLastPaidAt": zod.coerce.date().nullish(),
+  "autoPayEnabled": zod.boolean(),
+  "hasAutoCharge": zod.boolean()
+})
+
+
+/**
+ * @summary Initialize a Paystack payment for subscription
+ */
+export const InitializeSubscriptionParams = zod.object({
+  "storeId": zod.coerce.number()
+})
+
+export const InitializeSubscriptionBody = zod.object({
+  "email": zod.string().email()
+})
+
+export const InitializeSubscriptionResponse = zod.object({
+  "checkoutUrl": zod.string(),
+  "reference": zod.string()
+})
+
+
+/**
+ * @summary Verify a Paystack payment reference and activate subscription
+ */
+export const VerifySubscriptionParams = zod.object({
+  "storeId": zod.coerce.number()
+})
+
+export const VerifySubscriptionBody = zod.object({
+  "reference": zod.string()
+})
+
+export const VerifySubscriptionResponse = zod.object({
+  "storeId": zod.number(),
+  "engagementCount": zod.number(),
+  "qualified": zod.boolean(),
+  "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
+  "subscriptionDueAt": zod.coerce.date().nullish(),
+  "subscriptionLastPaidAt": zod.coerce.date().nullish(),
+  "autoPayEnabled": zod.boolean(),
+  "hasAutoCharge": zod.boolean()
+})
+
+
+/**
+ * @summary Manually trigger auto-charge using saved authorization
+ */
+export const ChargeSubscriptionParams = zod.object({
+  "storeId": zod.coerce.number()
+})
+
+export const ChargeSubscriptionResponse = zod.object({
+  "storeId": zod.number(),
+  "engagementCount": zod.number(),
+  "qualified": zod.boolean(),
+  "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
+  "subscriptionDueAt": zod.coerce.date().nullish(),
+  "subscriptionLastPaidAt": zod.coerce.date().nullish(),
+  "autoPayEnabled": zod.boolean(),
+  "hasAutoCharge": zod.boolean()
+})
+
+
+/**
+ * @summary Enable or disable auto-pay for a store
+ */
+export const ToggleAutoPayParams = zod.object({
+  "storeId": zod.coerce.number()
+})
+
+export const ToggleAutoPayBody = zod.object({
+  "enabled": zod.boolean()
+})
+
+export const ToggleAutoPayResponse = zod.object({
+  "storeId": zod.number(),
+  "engagementCount": zod.number(),
+  "qualified": zod.boolean(),
+  "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
+  "subscriptionDueAt": zod.coerce.date().nullish(),
+  "subscriptionLastPaidAt": zod.coerce.date().nullish(),
+  "autoPayEnabled": zod.boolean(),
+  "hasAutoCharge": zod.boolean()
+})
+
+
+/**
  * @summary Request a presigned URL for file upload
  */
 

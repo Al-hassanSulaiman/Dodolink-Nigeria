@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, real, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, real, integer, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -19,6 +19,14 @@ export const storesTable = pgTable("stores", {
   verifiedAt: timestamp("verified_at", { withTimezone: true }),
   verifiedBy: text("verified_by"),
   rejectionReason: text("rejection_reason"),
+  // Subscription fields
+  subscriptionStatus: text("subscription_status").notNull().default("inactive"),
+  subscriptionDueAt: timestamp("subscription_due_at", { withTimezone: true }),
+  subscriptionLastPaidAt: timestamp("subscription_last_paid_at", { withTimezone: true }),
+  paystackCustomerCode: text("paystack_customer_code"),
+  paystackAuthCode: text("paystack_auth_code"),
+  paystackEmail: text("paystack_email"),
+  autoPayEnabled: boolean("auto_pay_enabled").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

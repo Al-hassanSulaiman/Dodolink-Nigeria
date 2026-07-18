@@ -116,6 +116,27 @@ export default function MyStoreScreen() {
           </View>
         </View>
 
+        {/* Subscription card */}
+        <Pressable
+          style={StyleSheet.flatten([styles.card, styles.subCard, { backgroundColor: colors.card, borderColor: colors.border, marginTop: 12 }])}
+          onPress={() => router.push('/my-store/subscription')}
+        >
+          <View style={styles.subCardLeft}>
+            <Feather name="credit-card" size={20} color={colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.subCardTitle, { color: colors.foreground }]}>Subscription</Text>
+              <Text style={[styles.subCardBody, { color: colors.mutedForeground }]}>
+                {myStore.subscriptionStatus === 'active'
+                  ? 'Active — renews in 30 days'
+                  : myStore.subscriptionStatus === 'past_due'
+                  ? '⚠️ Payment overdue'
+                  : 'Manage your ₦5,000/month plan'}
+              </Text>
+            </View>
+          </View>
+          <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+        </Pressable>
+
         {/* Products section */}
         <View style={StyleSheet.flatten([styles.card, { backgroundColor: colors.card, borderColor: colors.border, marginTop: 16 }])}>
           <View style={styles.sectionHeader}>
@@ -322,5 +343,26 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  subCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  subCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  subCardTitle: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 15,
+    marginBottom: 2,
+  },
+  subCardBody: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
   },
 });

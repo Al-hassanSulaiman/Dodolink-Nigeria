@@ -5,6 +5,43 @@
  * Dodolink NG API - Nigerian marketplace connecting retailers and customers
  * OpenAPI spec version: 0.1.0
  */
+export type SubscriptionStatusSubscriptionStatus = typeof SubscriptionStatusSubscriptionStatus[keyof typeof SubscriptionStatusSubscriptionStatus];
+
+
+export const SubscriptionStatusSubscriptionStatus = {
+  inactive: 'inactive',
+  active: 'active',
+  past_due: 'past_due',
+} as const;
+
+export interface SubscriptionStatus {
+  storeId: number;
+  engagementCount: number;
+  qualified: boolean;
+  subscriptionStatus: SubscriptionStatusSubscriptionStatus;
+  subscriptionDueAt?: string | null;
+  subscriptionLastPaidAt?: string | null;
+  autoPayEnabled: boolean;
+  hasAutoCharge: boolean;
+}
+
+export interface SubscriptionInitInput {
+  email: string;
+}
+
+export interface SubscriptionCheckout {
+  checkoutUrl: string;
+  reference: string;
+}
+
+export interface SubscriptionVerifyInput {
+  reference: string;
+}
+
+export interface AutoPayToggleInput {
+  enabled: boolean;
+}
+
 export interface HealthStatus {
   status: string;
 }

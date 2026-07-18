@@ -16,9 +16,9 @@ async function requireAdmin(req: Request, res: Response, next: NextFunction): Pr
     return;
   }
   try {
-    const user = await clerkClient(req).users.getUser(userId);
-    const emails = user.emailAddresses.map((e) => e.emailAddress);
-    if (!emails.some((e) => ADMIN_EMAILS.includes(e))) {
+    const user = await clerkClient.users.getUser(userId);
+    const emails = user.emailAddresses.map((e: { emailAddress: string }) => e.emailAddress);
+    if (!emails.some((e: string) => ADMIN_EMAILS.includes(e))) {
       res.status(403).json({ error: "Forbidden – not an admin account" });
       return;
     }

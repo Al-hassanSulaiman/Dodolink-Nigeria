@@ -22,6 +22,7 @@ import type {
 import type {
   AdminAnalytics,
   AdminListStoresParams,
+  AutoPayToggleInput,
   Conversation,
   CreateProductBody,
   CreateReviewBody,
@@ -43,6 +44,10 @@ import type {
   StoreDetail,
   StoreRejectInput,
   StoreStats,
+  SubscriptionCheckout,
+  SubscriptionInitInput,
+  SubscriptionStatus,
+  SubscriptionVerifyInput,
   UpdateProductBody,
   UpdateStoreBody,
   UploadUrlRequest,
@@ -1881,6 +1886,369 @@ export function useAdminGetAnalytics<TData = Awaited<ReturnType<typeof adminGetA
 
 
 
+
+export const getGetSubscriptionUrl = (storeId: number,) => {
+
+
+
+
+  return `/api/stores/${storeId}/subscription`
+}
+
+/**
+ * @summary Get subscription status and engagement count for a store
+ */
+export const getSubscription = async (storeId: number, options?: RequestInit): Promise<SubscriptionStatus> => {
+
+  return customFetch<SubscriptionStatus>(getGetSubscriptionUrl(storeId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSubscriptionQueryKey = (storeId: number,) => {
+    return [
+    `/api/stores/${storeId}/subscription`
+    ] as const;
+    }
+
+
+export const getGetSubscriptionQueryOptions = <TData = Awaited<ReturnType<typeof getSubscription>>, TError = ErrorType<void>>(storeId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSubscription>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSubscriptionQueryKey(storeId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSubscription>>> = ({ signal }) => getSubscription(storeId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(storeId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSubscription>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSubscriptionQueryResult = NonNullable<Awaited<ReturnType<typeof getSubscription>>>
+export type GetSubscriptionQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get subscription status and engagement count for a store
+ */
+
+export function useGetSubscription<TData = Awaited<ReturnType<typeof getSubscription>>, TError = ErrorType<void>>(
+ storeId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSubscription>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSubscriptionQueryOptions(storeId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getInitializeSubscriptionUrl = (storeId: number,) => {
+
+
+
+
+  return `/api/stores/${storeId}/subscription/initialize`
+}
+
+/**
+ * @summary Initialize a Paystack payment for subscription
+ */
+export const initializeSubscription = async (storeId: number,
+    subscriptionInitInput: SubscriptionInitInput, options?: RequestInit): Promise<SubscriptionCheckout> => {
+
+  return customFetch<SubscriptionCheckout>(getInitializeSubscriptionUrl(storeId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      subscriptionInitInput,)
+  }
+);}
+
+
+
+
+export const getInitializeSubscriptionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof initializeSubscription>>, TError,{storeId: number;data: BodyType<SubscriptionInitInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof initializeSubscription>>, TError,{storeId: number;data: BodyType<SubscriptionInitInput>}, TContext> => {
+
+const mutationKey = ['initializeSubscription'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof initializeSubscription>>, {storeId: number;data: BodyType<SubscriptionInitInput>}> = (props) => {
+          const {storeId,data} = props ?? {};
+
+          return  initializeSubscription(storeId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type InitializeSubscriptionMutationResult = NonNullable<Awaited<ReturnType<typeof initializeSubscription>>>
+    export type InitializeSubscriptionMutationBody = BodyType<SubscriptionInitInput>
+    export type InitializeSubscriptionMutationError = ErrorType<void>
+
+    /**
+ * @summary Initialize a Paystack payment for subscription
+ */
+export const useInitializeSubscription = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof initializeSubscription>>, TError,{storeId: number;data: BodyType<SubscriptionInitInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof initializeSubscription>>,
+        TError,
+        {storeId: number;data: BodyType<SubscriptionInitInput>},
+        TContext
+      > => {
+      return useMutation(getInitializeSubscriptionMutationOptions(options));
+    }
+
+export const getVerifySubscriptionUrl = (storeId: number,) => {
+
+
+
+
+  return `/api/stores/${storeId}/subscription/verify`
+}
+
+/**
+ * @summary Verify a Paystack payment reference and activate subscription
+ */
+export const verifySubscription = async (storeId: number,
+    subscriptionVerifyInput: SubscriptionVerifyInput, options?: RequestInit): Promise<SubscriptionStatus> => {
+
+  return customFetch<SubscriptionStatus>(getVerifySubscriptionUrl(storeId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      subscriptionVerifyInput,)
+  }
+);}
+
+
+
+
+export const getVerifySubscriptionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifySubscription>>, TError,{storeId: number;data: BodyType<SubscriptionVerifyInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verifySubscription>>, TError,{storeId: number;data: BodyType<SubscriptionVerifyInput>}, TContext> => {
+
+const mutationKey = ['verifySubscription'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verifySubscription>>, {storeId: number;data: BodyType<SubscriptionVerifyInput>}> = (props) => {
+          const {storeId,data} = props ?? {};
+
+          return  verifySubscription(storeId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerifySubscriptionMutationResult = NonNullable<Awaited<ReturnType<typeof verifySubscription>>>
+    export type VerifySubscriptionMutationBody = BodyType<SubscriptionVerifyInput>
+    export type VerifySubscriptionMutationError = ErrorType<void>
+
+    /**
+ * @summary Verify a Paystack payment reference and activate subscription
+ */
+export const useVerifySubscription = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifySubscription>>, TError,{storeId: number;data: BodyType<SubscriptionVerifyInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof verifySubscription>>,
+        TError,
+        {storeId: number;data: BodyType<SubscriptionVerifyInput>},
+        TContext
+      > => {
+      return useMutation(getVerifySubscriptionMutationOptions(options));
+    }
+
+export const getChargeSubscriptionUrl = (storeId: number,) => {
+
+
+
+
+  return `/api/stores/${storeId}/subscription/charge`
+}
+
+/**
+ * @summary Manually trigger auto-charge using saved authorization
+ */
+export const chargeSubscription = async (storeId: number, options?: RequestInit): Promise<SubscriptionStatus> => {
+
+  return customFetch<SubscriptionStatus>(getChargeSubscriptionUrl(storeId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getChargeSubscriptionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chargeSubscription>>, TError,{storeId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof chargeSubscription>>, TError,{storeId: number}, TContext> => {
+
+const mutationKey = ['chargeSubscription'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof chargeSubscription>>, {storeId: number}> = (props) => {
+          const {storeId} = props ?? {};
+
+          return  chargeSubscription(storeId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChargeSubscriptionMutationResult = NonNullable<Awaited<ReturnType<typeof chargeSubscription>>>
+
+    export type ChargeSubscriptionMutationError = ErrorType<void>
+
+    /**
+ * @summary Manually trigger auto-charge using saved authorization
+ */
+export const useChargeSubscription = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chargeSubscription>>, TError,{storeId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof chargeSubscription>>,
+        TError,
+        {storeId: number},
+        TContext
+      > => {
+      return useMutation(getChargeSubscriptionMutationOptions(options));
+    }
+
+export const getToggleAutoPayUrl = (storeId: number,) => {
+
+
+
+
+  return `/api/stores/${storeId}/subscription/auto-pay`
+}
+
+/**
+ * @summary Enable or disable auto-pay for a store
+ */
+export const toggleAutoPay = async (storeId: number,
+    autoPayToggleInput: AutoPayToggleInput, options?: RequestInit): Promise<SubscriptionStatus> => {
+
+  return customFetch<SubscriptionStatus>(getToggleAutoPayUrl(storeId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      autoPayToggleInput,)
+  }
+);}
+
+
+
+
+export const getToggleAutoPayMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof toggleAutoPay>>, TError,{storeId: number;data: BodyType<AutoPayToggleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof toggleAutoPay>>, TError,{storeId: number;data: BodyType<AutoPayToggleInput>}, TContext> => {
+
+const mutationKey = ['toggleAutoPay'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof toggleAutoPay>>, {storeId: number;data: BodyType<AutoPayToggleInput>}> = (props) => {
+          const {storeId,data} = props ?? {};
+
+          return  toggleAutoPay(storeId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ToggleAutoPayMutationResult = NonNullable<Awaited<ReturnType<typeof toggleAutoPay>>>
+    export type ToggleAutoPayMutationBody = BodyType<AutoPayToggleInput>
+    export type ToggleAutoPayMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Enable or disable auto-pay for a store
+ */
+export const useToggleAutoPay = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof toggleAutoPay>>, TError,{storeId: number;data: BodyType<AutoPayToggleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof toggleAutoPay>>,
+        TError,
+        {storeId: number;data: BodyType<AutoPayToggleInput>},
+        TContext
+      > => {
+      return useMutation(getToggleAutoPayMutationOptions(options));
+    }
 
 export const getRequestUploadUrlUrl = () => {
 

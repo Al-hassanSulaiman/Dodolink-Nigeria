@@ -8,6 +8,7 @@ import reviewsRouter from "./reviews";
 import pushTokensRouter from "./push_tokens";
 import storageRouter from "./storage";
 import adminRouter from "./admin";
+import subscriptionsRouter from "./subscriptions";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(messagesRouter);
 router.use(reviewsRouter);
 router.use(pushTokensRouter);
 router.use(storageRouter);
+router.use(subscriptionsRouter);
 
 export default router;

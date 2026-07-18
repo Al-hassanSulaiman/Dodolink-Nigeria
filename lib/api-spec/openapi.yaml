@@ -575,6 +575,128 @@ paths:
         "403":
           description: Forbidden
 
+  # ─── Subscription ─────────────────────────────────────────────────────────
+  /stores/{storeId}/subscription:
+    get:
+      operationId: getSubscription
+      tags: [stores]
+      summary: Get subscription status and engagement count for a store
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Subscription info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionStatus"
+        "404":
+          description: Store not found
+
+  /stores/{storeId}/subscription/initialize:
+    post:
+      operationId: initializeSubscription
+      tags: [stores]
+      summary: Initialize a Paystack payment for subscription
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscriptionInitInput"
+      responses:
+        "200":
+          description: Checkout URL returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionCheckout"
+        "403":
+          description: Store not eligible
+
+  /stores/{storeId}/subscription/verify:
+    post:
+      operationId: verifySubscription
+      tags: [stores]
+      summary: Verify a Paystack payment reference and activate subscription
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscriptionVerifyInput"
+      responses:
+        "200":
+          description: Subscription activated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionStatus"
+        "400":
+          description: Payment verification failed
+
+  /stores/{storeId}/subscription/charge:
+    post:
+      operationId: chargeSubscription
+      tags: [stores]
+      summary: Manually trigger auto-charge using saved authorization
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Charge result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionStatus"
+        "400":
+          description: No saved authorization or charge failed
+
+  /stores/{storeId}/subscription/auto-pay:
+    patch:
+      operationId: toggleAutoPay
+      tags: [stores]
+      summary: Enable or disable auto-pay for a store
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AutoPayToggleInput"
+      responses:
+        "200":
+          description: Auto-pay updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionStatus"
+
   # ─── Storage ──────────────────────────────────────────────────────────────
   /storage/uploads/request-url:
     post:
@@ -628,6 +750,69 @@ paths:
 
 components:
   schemas:
+    SubscriptionStatus:
+      type: object
+      properties:
+        storeId:
+          type: integer
+        engagementCount:
+          type: integer
+        qualified:
+          type: boolean
+        subscriptionStatus:
+          type: string
+          enum: [inactive, active, past_due]
+        subscriptionDueAt:
+          type: string
+          format: date-time
+          nullable: true
+        subscriptionLastPaidAt:
+          type: string
+          format: date-time
+          nullable: true
+        autoPayEnabled:
+          type: boolean
+        hasAutoCharge:
+          type: boolean
+      required:
+        - storeId
+        - engagementCount
+        - qualified
+        - subscriptionStatus
+        - autoPayEnabled
+        - hasAutoCharge
+
+    SubscriptionInitInput:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required: [email]
+
+    SubscriptionCheckout:
+      type: object
+      properties:
+        checkoutUrl:
+          type: string
+        reference:
+          type: string
+      required: [checkoutUrl, reference]
+
+    SubscriptionVerifyInput:
+      type: object
+      properties:
+        reference:
+          type: string
+      required: [reference]
+
+    AutoPayToggleInput:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+      required: [enabled]
+
     HealthStatus:
       type: object
       properties:
