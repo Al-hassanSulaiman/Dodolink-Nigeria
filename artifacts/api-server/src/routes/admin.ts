@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { getAuth, clerkClient } from "@clerk/express";
-import { eq, count, desc, sql } from "drizzle-orm";
+import { eq, count, desc, sql, inArray } from "drizzle-orm";
 import { db, storesTable, productsTable, conversationsTable } from "@workspace/db";
 import { AdminRejectStoreBody } from "@workspace/api-zod";
 
@@ -113,6 +113,60 @@ router.get("/admin/analytics", async (req, res): Promise<void> => {
     totalConversations: Number(totalConversations),
     recentStores,
   });
+});
+
+const ACTIVE_THRESHOLD_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+router.get("/admin/users", async (req, res): Promise<void> => {
+  const limit = Math.min(Number(req.query.limit ?? 100), 500);
+  const statusFilter = req.query.status as string | undefined;
+
+  // Fetch all users from Clerk
+  const { data: clerkUsers } = await clerkClient.users.getUserList({ limit });
+
+  // Fetch all stores keyed by ownerUserId for enrichment
+  const ownerIds = clerkUsers.map((u) => u.id);
+  const stores =
+    ownerIds.length > 0
+      ? await db
+          .select({
+            ownerUserId: storesTable.ownerUserId,
+            name: storesTable.name,
+            verificationStatus: storesTable.verificationStatus,
+          })
+          .from(storesTable)
+          .where(inArray(storesTable.ownerUserId, ownerIds))
+      : [];
+
+  const storeByOwner = new Map(stores.map((s) => [s.ownerUserId, s]));
+  const now = Date.now();
+
+  const users = clerkUsers.map((u) => {
+    const store = storeByOwner.get(u.id);
+    const isActive = u.lastActiveAt != null && now - u.lastActiveAt < ACTIVE_THRESHOLD_MS;
+    return {
+      id: u.id,
+      email: u.emailAddresses[0]?.emailAddress ?? "",
+      firstName: u.firstName ?? null,
+      lastName: u.lastName ?? null,
+      imageUrl: u.imageUrl,
+      createdAt: u.createdAt,
+      lastActiveAt: u.lastActiveAt ?? null,
+      isActive,
+      hasStore: !!store,
+      storeVerified: store?.verificationStatus === "verified",
+      storeName: store?.name ?? null,
+    };
+  });
+
+  const filtered =
+    statusFilter === "active"
+      ? users.filter((u) => u.isActive)
+      : statusFilter === "inactive"
+        ? users.filter((u) => !u.isActive)
+        : users;
+
+  res.json(filtered);
 });
 
 export default router;

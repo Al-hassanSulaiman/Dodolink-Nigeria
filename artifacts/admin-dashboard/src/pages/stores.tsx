@@ -225,6 +225,28 @@ export default function StoresPage() {
                       </div>
                     )}
 
+                    {/* Paystack subscription detail for verified stores */}
+                    {store.verificationStatus === "verified" && store.qualifiedAt && (
+                      <div className="mt-2 flex items-center gap-3 text-xs text-gray-500 flex-wrap">
+                        <span className="flex items-center gap-1">
+                          <CreditCard className="w-3.5 h-3.5 text-gray-400" />
+                          <span className="font-medium text-gray-600">Last paid:</span>
+                          {store.subscriptionLastPaidAt
+                            ? new Date(store.subscriptionLastPaidAt).toLocaleDateString()
+                            : <span className="italic">Never</span>}
+                        </span>
+                        {store.subscriptionDueAt && store.subscriptionStatus === "active" && (
+                          <span>
+                            <span className="font-medium text-gray-600">Renews:</span>{" "}
+                            {new Date(store.subscriptionDueAt).toLocaleDateString()}
+                          </span>
+                        )}
+                        <span className={`flex items-center gap-1 font-medium ${store.autoPayEnabled ? "text-green-600" : "text-gray-400"}`}>
+                          {store.autoPayEnabled ? "✓ Auto-pay on" : "Auto-pay off"}
+                        </span>
+                      </div>
+                    )}
+
                     {/* Subscription detail row for verified stores */}
                     {store.verificationStatus === "verified" && (() => {
                       const sub = getSubscriptionInfo(store);

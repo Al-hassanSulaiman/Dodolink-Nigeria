@@ -575,6 +575,36 @@ paths:
         "403":
           description: Forbidden
 
+  /admin/users:
+    get:
+      operationId: adminListUsers
+      tags: [admin]
+      summary: List all app users with activity status (admin only)
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminUser"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
   # ─── Subscription ─────────────────────────────────────────────────────────
   /stores/{storeId}/subscription:
     get:
@@ -883,10 +913,15 @@ components:
         subscriptionDueAt:
           type: ["string", "null"]
           format: date-time
+        subscriptionLastPaidAt:
+          type: ["string", "null"]
+          format: date-time
+        autoPayEnabled:
+          type: boolean
         createdAt:
           type: string
           format: date-time
-      required: [id, ownerName, ownerUserId, name, description, category, location, phone, totalReviews, verificationStatus, subscriptionStatus, createdAt]
+      required: [id, ownerName, ownerUserId, name, description, category, location, phone, totalReviews, verificationStatus, subscriptionStatus, autoPayEnabled, createdAt]
 
     StoreDetail:
       allOf:
@@ -1237,3 +1272,33 @@ components:
           items:
             $ref: "#/components/schemas/Store"
       required: [totalStores, pendingStores, verifiedStores, rejectedStores, totalProducts, totalConversations, recentStores]
+
+    AdminUser:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        firstName:
+          type: ["string", "null"]
+        lastName:
+          type: ["string", "null"]
+        imageUrl:
+          type: string
+        createdAt:
+          type: integer
+          description: Unix timestamp in milliseconds
+        lastActiveAt:
+          type: ["integer", "null"]
+          description: Unix timestamp in milliseconds
+        isActive:
+          type: boolean
+          description: True if lastActiveAt is within the last 30 days
+        hasStore:
+          type: boolean
+        storeVerified:
+          type: boolean
+        storeName:
+          type: ["string", "null"]
+      required: [id, email, createdAt, isActive, hasStore, storeVerified]

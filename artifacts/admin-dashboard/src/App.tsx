@@ -8,7 +8,8 @@ import NotFound from "@/pages/not-found";
 import SignInPage from "@/pages/sign-in";
 import DashboardPage from "@/pages/dashboard";
 import StoresPage from "@/pages/stores";
-import { LayoutDashboard, Store, LogOut, ShieldCheck } from "lucide-react";
+import UsersPage from "@/pages/users";
+import { LayoutDashboard, Store, LogOut, ShieldCheck, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const queryClient = new QueryClient({
@@ -42,6 +43,7 @@ if (!clerkPubKey) {
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/stores", label: "Stores", icon: Store },
+  { to: "/users", label: "Users", icon: Users },
 ];
 
 function Sidebar() {
@@ -143,6 +145,9 @@ function Router() {
       </Route>
       <Route path="/stores">
         <ProtectedRoute component={StoresPage} />
+      </Route>
+      <Route path="/users">
+        <ProtectedRoute component={UsersPage} />
       </Route>
       <Route component={NotFound} />
     </Switch>

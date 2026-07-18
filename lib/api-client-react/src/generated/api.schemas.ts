@@ -99,6 +99,9 @@ export interface Store {
   subscriptionStatus: StoreSubscriptionStatus;
   /** @nullable */
   subscriptionDueAt?: string | null;
+  /** @nullable */
+  subscriptionLastPaidAt?: string | null;
+  autoPayEnabled: boolean;
   createdAt: string;
 }
 
@@ -297,6 +300,29 @@ export interface AdminAnalytics {
   recentStores: Store[];
 }
 
+export interface AdminUser {
+  id: string;
+  email: string;
+  /** @nullable */
+  firstName?: string | null;
+  /** @nullable */
+  lastName?: string | null;
+  imageUrl?: string;
+  /** Unix timestamp in milliseconds */
+  createdAt: number;
+  /**
+     * Unix timestamp in milliseconds
+     * @nullable
+     */
+  lastActiveAt?: number | null;
+  /** True if lastActiveAt is within the last 30 days */
+  isActive: boolean;
+  hasStore: boolean;
+  storeVerified: boolean;
+  /** @nullable */
+  storeName?: string | null;
+}
+
 export type ListStoresParams = {
 category?: string;
 limit?: number;
@@ -330,5 +356,18 @@ export const AdminListStoresStatus = {
   pending: 'pending',
   verified: 'verified',
   rejected: 'rejected',
+} as const;
+
+export type AdminListUsersParams = {
+status?: AdminListUsersStatus;
+limit?: number;
+};
+
+export type AdminListUsersStatus = typeof AdminListUsersStatus[keyof typeof AdminListUsersStatus];
+
+
+export const AdminListUsersStatus = {
+  active: 'active',
+  inactive: 'inactive',
 } as const;
 

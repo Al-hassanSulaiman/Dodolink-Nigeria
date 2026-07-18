@@ -47,6 +47,8 @@ export const ListStoresResponseItem = zod.object({
   "qualifiedAt": zod.coerce.date().nullish(),
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
   "subscriptionDueAt": zod.coerce.date().nullish(),
+  "subscriptionLastPaidAt": zod.coerce.date().nullish(),
+  "autoPayEnabled": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
 export const ListStoresResponse = zod.array(ListStoresResponseItem)
@@ -95,6 +97,8 @@ export const GetStoreResponse = zod.object({
   "qualifiedAt": zod.coerce.date().nullish(),
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
   "subscriptionDueAt": zod.coerce.date().nullish(),
+  "subscriptionLastPaidAt": zod.coerce.date().nullish(),
+  "autoPayEnabled": zod.boolean(),
   "createdAt": zod.coerce.date()
 }).and(zod.object({
   "products": zod.array(zod.object({
@@ -150,6 +154,8 @@ export const UpdateStoreResponse = zod.object({
   "qualifiedAt": zod.coerce.date().nullish(),
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
   "subscriptionDueAt": zod.coerce.date().nullish(),
+  "subscriptionLastPaidAt": zod.coerce.date().nullish(),
+  "autoPayEnabled": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
 
@@ -350,6 +356,8 @@ export const SearchResponse = zod.object({
   "qualifiedAt": zod.coerce.date().nullish(),
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
   "subscriptionDueAt": zod.coerce.date().nullish(),
+  "subscriptionLastPaidAt": zod.coerce.date().nullish(),
+  "autoPayEnabled": zod.boolean(),
   "createdAt": zod.coerce.date()
 })),
   "products": zod.array(zod.object({
@@ -509,6 +517,8 @@ export const AdminListStoresResponseItem = zod.object({
   "qualifiedAt": zod.coerce.date().nullish(),
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
   "subscriptionDueAt": zod.coerce.date().nullish(),
+  "subscriptionLastPaidAt": zod.coerce.date().nullish(),
+  "autoPayEnabled": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
 export const AdminListStoresResponse = zod.array(AdminListStoresResponseItem)
@@ -541,6 +551,8 @@ export const AdminVerifyStoreResponse = zod.object({
   "qualifiedAt": zod.coerce.date().nullish(),
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
   "subscriptionDueAt": zod.coerce.date().nullish(),
+  "subscriptionLastPaidAt": zod.coerce.date().nullish(),
+  "autoPayEnabled": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
 
@@ -576,6 +588,8 @@ export const AdminRejectStoreResponse = zod.object({
   "qualifiedAt": zod.coerce.date().nullish(),
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
   "subscriptionDueAt": zod.coerce.date().nullish(),
+  "subscriptionLastPaidAt": zod.coerce.date().nullish(),
+  "autoPayEnabled": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
 
@@ -610,9 +624,37 @@ export const AdminGetAnalyticsResponse = zod.object({
   "qualifiedAt": zod.coerce.date().nullish(),
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
   "subscriptionDueAt": zod.coerce.date().nullish(),
+  "subscriptionLastPaidAt": zod.coerce.date().nullish(),
+  "autoPayEnabled": zod.boolean(),
   "createdAt": zod.coerce.date()
 }))
 })
+
+
+/**
+ * @summary List all app users with activity status (admin only)
+ */
+export const adminListUsersQueryLimitDefault = 100;
+
+export const AdminListUsersQueryParams = zod.object({
+  "status": zod.enum(['active', 'inactive']).optional(),
+  "limit": zod.coerce.number().default(adminListUsersQueryLimitDefault)
+})
+
+export const AdminListUsersResponseItem = zod.object({
+  "id": zod.string(),
+  "email": zod.string(),
+  "firstName": zod.string().nullish(),
+  "lastName": zod.string().nullish(),
+  "imageUrl": zod.string().optional(),
+  "createdAt": zod.number().describe('Unix timestamp in milliseconds'),
+  "lastActiveAt": zod.number().nullish().describe('Unix timestamp in milliseconds'),
+  "isActive": zod.boolean().describe('True if lastActiveAt is within the last 30 days'),
+  "hasStore": zod.boolean(),
+  "storeVerified": zod.boolean(),
+  "storeName": zod.string().nullish()
+})
+export const AdminListUsersResponse = zod.array(AdminListUsersResponseItem)
 
 
 /**
