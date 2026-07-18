@@ -49,24 +49,17 @@ function getSubscriptionInfo(store: {
 
   if (!qualifiedAt) return { label: "Not qualified", color: "gray", hidden: false, daysLeft: null };
   if (status === "active") return { label: "Active", color: "green", hidden: false, daysLeft: null };
+  // Missed renewal — hidden immediately, no grace
+  if (status === "past_due") return { label: "Hidden – not paid", color: "red", hidden: true, daysLeft: null };
 
-  // Grace period anchor:
-  //   past_due  → 14 days from subscriptionDueAt (recurring missed payment)
-  //   inactive  → 14 days from qualifiedAt (first-time, never paid)
-  let graceStartsAt: Date;
-  if (status === "past_due" && store.subscriptionDueAt) {
-    graceStartsAt = new Date(store.subscriptionDueAt);
-  } else {
-    graceStartsAt = qualifiedAt;
-  }
-
-  const expiresAt = new Date(graceStartsAt.getTime() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
+  // Initial qualification only (inactive = never paid): 14-day grace from qualifiedAt
+  const expiresAt = new Date(qualifiedAt.getTime() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
   const msLeft = expiresAt.getTime() - Date.now();
   const daysLeft = Math.ceil(msLeft / (24 * 60 * 60 * 1000));
 
   if (daysLeft <= 0) return { label: "Hidden – not paid", color: "red", hidden: true, daysLeft: 0 };
   return {
-    label: status === "past_due" ? "Grace period (renewal)" : "Grace period",
+    label: "Grace period",
     color: daysLeft <= 3 ? "red" : daysLeft <= 7 ? "amber" : "blue",
     hidden: false,
     daysLeft,

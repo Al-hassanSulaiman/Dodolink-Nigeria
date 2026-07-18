@@ -51,16 +51,12 @@ export function visibleStoresFilter() {
     isNull(storesTable.qualifiedAt),
     // Actively paying — always visible
     eq(storesTable.subscriptionStatus, "active"),
-    // Initial grace period (inactive, never paid): 14 days from qualifiedAt
+    // Initial grace period only (inactive = never paid): 14 days from qualifiedAt
     and(
       eq(storesTable.subscriptionStatus, "inactive"),
       gte(storesTable.qualifiedAt, graceDeadline)
-    ),
-    // Recurring grace period (past_due): 14 days from subscriptionDueAt
-    and(
-      eq(storesTable.subscriptionStatus, "past_due"),
-      gte(storesTable.subscriptionDueAt, graceDeadline)
     )
+    // past_due = missed renewal → hidden immediately, no grace
   );
 }
 
@@ -68,35 +64,21 @@ export function visibleStoresFilter() {
 export function isStoreHidden(store: StoreVisibilityFields): boolean {
   if (!store.qualifiedAt) return false;
   if (store.subscriptionStatus === "active") return false;
-
+  // Missed renewal: hidden immediately
+  if (store.subscriptionStatus === "past_due") return true;
+  // Initial qualification (inactive, never paid): 14-day grace from qualifiedAt
   const graceDeadline = new Date(Date.now() - GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
-
-  if (store.subscriptionStatus === "past_due") {
-    // Recurring missed payment: grace runs from subscriptionDueAt
-    if (!store.subscriptionDueAt) return true;
-    return store.subscriptionDueAt < graceDeadline;
-  }
-
-  // Initial qualification (inactive, never paid): grace runs from qualifiedAt
   return store.qualifiedAt < graceDeadline;
 }
 
-/** Returns days left in grace period (null if not qualified or subscription is active). */
+/** Returns days left in initial grace period (null if not qualified, active, or past_due). */
 export function gracePeriodDaysRemaining(store: StoreVisibilityFields): number | null {
-  if (!store.qualifiedAt || store.subscriptionStatus === "active") return null;
-
-  let graceStartsAt: Date;
-
-  if (store.subscriptionStatus === "past_due") {
-    // Recurring missed payment: grace runs from subscriptionDueAt
-    if (!store.subscriptionDueAt) return 0;
-    graceStartsAt = store.subscriptionDueAt;
-  } else {
-    // Initial qualification (inactive, never paid): grace runs from qualifiedAt
-    graceStartsAt = store.qualifiedAt;
-  }
-
-  const expiresAt = new Date(graceStartsAt.getTime() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
+  if (!store.qualifiedAt) return null;
+  if (store.subscriptionStatus === "active") return null;
+  // Missed renewal — no grace, already hidden
+  if (store.subscriptionStatus === "past_due") return null;
+  // Initial qualification only
+  const expiresAt = new Date(store.qualifiedAt.getTime() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
   const msLeft = expiresAt.getTime() - Date.now();
   if (msLeft <= 0) return 0;
   return Math.ceil(msLeft / (24 * 60 * 60 * 1000));
