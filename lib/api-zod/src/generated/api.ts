@@ -46,6 +46,7 @@ export const ListStoresResponseItem = zod.object({
   "rejectionReason": zod.string().nullish(),
   "qualifiedAt": zod.coerce.date().nullish(),
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
+  "subscriptionDueAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })
 export const ListStoresResponse = zod.array(ListStoresResponseItem)
@@ -93,6 +94,7 @@ export const GetStoreResponse = zod.object({
   "rejectionReason": zod.string().nullish(),
   "qualifiedAt": zod.coerce.date().nullish(),
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
+  "subscriptionDueAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 }).and(zod.object({
   "products": zod.array(zod.object({
@@ -147,6 +149,7 @@ export const UpdateStoreResponse = zod.object({
   "rejectionReason": zod.string().nullish(),
   "qualifiedAt": zod.coerce.date().nullish(),
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
+  "subscriptionDueAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })
 
@@ -346,6 +349,7 @@ export const SearchResponse = zod.object({
   "rejectionReason": zod.string().nullish(),
   "qualifiedAt": zod.coerce.date().nullish(),
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
+  "subscriptionDueAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })),
   "products": zod.array(zod.object({
@@ -504,6 +508,7 @@ export const AdminListStoresResponseItem = zod.object({
   "rejectionReason": zod.string().nullish(),
   "qualifiedAt": zod.coerce.date().nullish(),
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
+  "subscriptionDueAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })
 export const AdminListStoresResponse = zod.array(AdminListStoresResponseItem)
@@ -535,6 +540,7 @@ export const AdminVerifyStoreResponse = zod.object({
   "rejectionReason": zod.string().nullish(),
   "qualifiedAt": zod.coerce.date().nullish(),
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
+  "subscriptionDueAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })
 
@@ -569,6 +575,7 @@ export const AdminRejectStoreResponse = zod.object({
   "rejectionReason": zod.string().nullish(),
   "qualifiedAt": zod.coerce.date().nullish(),
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
+  "subscriptionDueAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })
 
@@ -602,6 +609,7 @@ export const AdminGetAnalyticsResponse = zod.object({
   "rejectionReason": zod.string().nullish(),
   "qualifiedAt": zod.coerce.date().nullish(),
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
+  "subscriptionDueAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 }))
 })

@@ -880,6 +880,9 @@ components:
         subscriptionStatus:
           type: string
           enum: [inactive, active, past_due]
+        subscriptionDueAt:
+          type: ["string", "null"]
+          format: date-time
         createdAt:
           type: string
           format: date-time

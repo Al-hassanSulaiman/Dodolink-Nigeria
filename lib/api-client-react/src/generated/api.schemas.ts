@@ -97,6 +97,8 @@ export interface Store {
   /** @nullable */
   qualifiedAt?: string | null;
   subscriptionStatus: StoreSubscriptionStatus;
+  /** @nullable */
+  subscriptionDueAt?: string | null;
   createdAt: string;
 }
 

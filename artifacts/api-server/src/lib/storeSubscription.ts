@@ -1,4 +1,4 @@
-import { eq, count, gte, or, isNull } from "drizzle-orm";
+import { eq, count, gte, or, isNull, and, ne } from "drizzle-orm";
 import { db, storesTable, reviewsTable, conversationsTable } from "@workspace/db";
 
 export const ENGAGEMENT_THRESHOLD = 7;
@@ -37,36 +37,66 @@ export async function checkAndSetQualifiedAt(storeId: number): Promise<void> {
   }
 }
 
+type StoreVisibilityFields = {
+  qualifiedAt: Date | null;
+  subscriptionStatus: string;
+  subscriptionDueAt: Date | null;
+};
+
 /** Drizzle OR-condition: store is publicly visible. */
 export function visibleStoresFilter() {
   const graceDeadline = new Date(Date.now() - GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
   return or(
+    // Not yet qualified — always visible
     isNull(storesTable.qualifiedAt),
+    // Actively paying — always visible
     eq(storesTable.subscriptionStatus, "active"),
-    gte(storesTable.qualifiedAt, graceDeadline)
+    // Initial grace period (inactive, never paid): 14 days from qualifiedAt
+    and(
+      eq(storesTable.subscriptionStatus, "inactive"),
+      gte(storesTable.qualifiedAt, graceDeadline)
+    ),
+    // Recurring grace period (past_due): 14 days from subscriptionDueAt
+    and(
+      eq(storesTable.subscriptionStatus, "past_due"),
+      gte(storesTable.subscriptionDueAt, graceDeadline)
+    )
   );
 }
 
 /** Returns true when a store should be hidden from public view. */
-export function isStoreHidden(store: {
-  qualifiedAt: Date | null;
-  subscriptionStatus: string;
-}): boolean {
+export function isStoreHidden(store: StoreVisibilityFields): boolean {
   if (!store.qualifiedAt) return false;
   if (store.subscriptionStatus === "active") return false;
+
   const graceDeadline = new Date(Date.now() - GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
+
+  if (store.subscriptionStatus === "past_due") {
+    // Recurring missed payment: grace runs from subscriptionDueAt
+    if (!store.subscriptionDueAt) return true;
+    return store.subscriptionDueAt < graceDeadline;
+  }
+
+  // Initial qualification (inactive, never paid): grace runs from qualifiedAt
   return store.qualifiedAt < graceDeadline;
 }
 
 /** Returns days left in grace period (null if not qualified or subscription is active). */
-export function gracePeriodDaysRemaining(store: {
-  qualifiedAt: Date | null;
-  subscriptionStatus: string;
-}): number | null {
+export function gracePeriodDaysRemaining(store: StoreVisibilityFields): number | null {
   if (!store.qualifiedAt || store.subscriptionStatus === "active") return null;
-  const expiresAt = new Date(
-    store.qualifiedAt.getTime() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000
-  );
+
+  let graceStartsAt: Date;
+
+  if (store.subscriptionStatus === "past_due") {
+    // Recurring missed payment: grace runs from subscriptionDueAt
+    if (!store.subscriptionDueAt) return 0;
+    graceStartsAt = store.subscriptionDueAt;
+  } else {
+    // Initial qualification (inactive, never paid): grace runs from qualifiedAt
+    graceStartsAt = store.qualifiedAt;
+  }
+
+  const expiresAt = new Date(graceStartsAt.getTime() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
   const msLeft = expiresAt.getTime() - Date.now();
   if (msLeft <= 0) return 0;
   return Math.ceil(msLeft / (24 * 60 * 60 * 1000));
