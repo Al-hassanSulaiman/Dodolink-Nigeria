@@ -2,6 +2,7 @@ import { useAdminGetAnalytics } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AlertCircle } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -18,7 +19,7 @@ import {
 import { Store, Package, MessageSquare, Clock, CheckCircle, XCircle } from "lucide-react";
 
 export default function DashboardPage() {
-  const { data: analytics, isLoading } = useAdminGetAnalytics();
+  const { data: analytics, isLoading, error } = useAdminGetAnalytics();
 
   if (isLoading) {
     return (
@@ -32,7 +33,30 @@ export default function DashboardPage() {
     );
   }
 
-  if (!analytics) return null;
+  if (error || !analytics) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <div className="bg-red-50 rounded-2xl p-8 flex flex-col items-center gap-3 max-w-md w-full text-center">
+          <AlertCircle className="w-10 h-10 text-red-500" />
+          <h2 className="text-lg font-semibold text-gray-900">Failed to load dashboard</h2>
+          <p className="text-sm text-gray-500">
+            {error
+              ? `Error: ${(error as Error).message}`
+              : "No data returned from the server."}
+          </p>
+          <p className="text-xs text-gray-400">
+            Make sure you are signed in with an admin account.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-2 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const statCards = [
     {
