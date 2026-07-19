@@ -80,6 +80,7 @@ export default function StoreScreen() {
   });
 
   const isOwner = !!userId && !!store && store.ownerUserId === userId;
+  const detailsLocked = !!store?.detailsLockedByAdmin;
 
   const handleStartEdit = () => {
     if (!store) return;
@@ -96,9 +97,14 @@ export default function StoreScreen() {
     updateStore.mutate({
       storeId,
       data: {
-        name: editName.trim() || store!.name,
+        // Name and location are managed by the admin once locked
+        ...(detailsLocked
+          ? {}
+          : {
+              name: editName.trim() || store!.name,
+              location: editLocation.trim(),
+            }),
         description: editDescription.trim(),
-        location: editLocation.trim(),
         category: editCategory.trim(),
         phone: editPhone.trim(),
         cacNumber: editCacNumber.trim() || null,
@@ -162,7 +168,7 @@ export default function StoreScreen() {
           </View>
 
           <View style={styles.headerInfo}>
-            {isEditing ? (
+            {isEditing && !detailsLocked ? (
               <Input
                 value={editName}
                 onChangeText={setEditName}
@@ -170,7 +176,12 @@ export default function StoreScreen() {
                 style={styles.editNameInput}
               />
             ) : (
-              <Text style={[styles.name, { color: colors.foreground }]}>{store.name}</Text>
+              <Text style={[styles.name, { color: colors.foreground }]}>
+                {store.name}
+                {isEditing && detailsLocked ? (
+                  <Text style={{ color: colors.mutedForeground }}> <Feather name="lock" size={14} /></Text>
+                ) : null}
+              </Text>
             )}
             <View style={styles.statsRow}>
               <StarRating rating={store.avgRating || 0} size={14} />
@@ -178,7 +189,7 @@ export default function StoreScreen() {
                 ({store.totalReviews} reviews)
               </Text>
             </View>
-            {isEditing ? (
+            {isEditing && !detailsLocked ? (
               <Input
                 value={editLocation}
                 onChangeText={setEditLocation}
@@ -188,6 +199,9 @@ export default function StoreScreen() {
             ) : (
               <Text style={[styles.location, { color: colors.mutedForeground }]}>
                 <Feather name="map-pin" size={12} /> {store.location}
+                {isEditing && detailsLocked ? (
+                  <Text> <Feather name="lock" size={12} /></Text>
+                ) : null}
               </Text>
             )}
           </View>
@@ -195,6 +209,14 @@ export default function StoreScreen() {
 
         {isEditing ? (
           <View style={styles.section}>
+            {detailsLocked ? (
+              <View style={[styles.lockedNotice, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Feather name="lock" size={14} color={colors.mutedForeground} />
+                <Text style={[styles.lockedNoticeText, { color: colors.mutedForeground }]}>
+                  Your store name and location were set by Dodolink admin and can no longer be changed.
+                </Text>
+              </View>
+            ) : null}
             <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Description</Text>
             <Input
               value={editDescription}
@@ -456,6 +478,21 @@ const styles = StyleSheet.create({
   },
   saveBtn: {
     marginTop: 20,
+  },
+  lockedNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 8,
+  },
+  lockedNoticeText: {
+    flex: 1,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    lineHeight: 17,
   },
   unverifiedNotice: {
     flexDirection: 'row',

@@ -92,6 +92,7 @@ export interface Store {
   avgRating?: number | null;
   totalReviews: number;
   verificationStatus: StoreVerificationStatus;
+  detailsLockedByAdmin: boolean;
   /** @nullable */
   verifiedAt?: string | null;
   /** @nullable */
@@ -154,6 +155,13 @@ export interface CreateStoreBody {
   phone: string;
   imageUrl?: string | null;
   cacNumber?: string | null;
+}
+
+export interface AdminUpdateStoreBody {
+  /** @minLength 1 */
+  name?: string;
+  /** @minLength 1 */
+  location?: string;
 }
 
 export interface UpdateStoreBody {

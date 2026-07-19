@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { getAuth } from "@clerk/express";
 import { eq, ilike, and, or, sql } from "drizzle-orm";
 import { db, storesTable, productsTable } from "@workspace/db";
 import {
@@ -64,7 +65,36 @@ router.patch("/stores/:storeId", async (req, res): Promise<void> => {
   const parsed = UpdateStoreBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-  const [store] = await db.update(storesTable).set(parsed.data).where(eq(storesTable.id, storeId)).returning();
+  const [existing] = await db.select().from(storesTable).where(eq(storesTable.id, storeId));
+  if (!existing) { res.status(404).json({ error: "Store not found" }); return; }
+
+  const { userId } = getAuth(req);
+  if (!userId) { res.status(401).json({ error: "Authentication required" }); return; }
+  if (existing.ownerUserId !== userId) {
+    res.status(403).json({ error: "Only the store owner can edit this store" });
+    return;
+  }
+
+  const updates = { ...parsed.data };
+  if (existing.detailsLockedByAdmin) {
+    const changingName = updates.name !== undefined && updates.name !== existing.name;
+    const changingLocation = updates.location !== undefined && updates.location !== existing.location;
+    if (changingName || changingLocation) {
+      res.status(403).json({
+        error: "Store name and location were set by an admin and can no longer be changed",
+      });
+      return;
+    }
+    delete updates.name;
+    delete updates.location;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    res.json(existing);
+    return;
+  }
+
+  const [store] = await db.update(storesTable).set(updates).where(eq(storesTable.id, storeId)).returning();
   if (!store) { res.status(404).json({ error: "Store not found" }); return; }
 
   res.json(store);

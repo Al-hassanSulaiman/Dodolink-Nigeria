@@ -23,6 +23,7 @@ import type {
   AdminAnalytics,
   AdminListStoresParams,
   AdminListUsersParams,
+  AdminUpdateStoreBody,
   AdminUser,
   AutoPayToggleInput,
   Conversation,
@@ -1669,6 +1670,78 @@ export function useAdminListStores<TData = Awaited<ReturnType<typeof adminListSt
 
 
 
+
+export const getAdminUpdateStoreUrl = (storeId: number,) => {
+
+
+
+
+  return `/api/admin/stores/${storeId}`
+}
+
+/**
+ * @summary Edit a store's name/location and lock those fields for the owner (admin only)
+ */
+export const adminUpdateStore = async (storeId: number,
+    adminUpdateStoreBody: AdminUpdateStoreBody, options?: RequestInit): Promise<Store> => {
+
+  return customFetch<Store>(getAdminUpdateStoreUrl(storeId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      adminUpdateStoreBody,)
+  }
+);}
+
+
+
+
+export const getAdminUpdateStoreMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateStore>>, TError,{storeId: number;data: BodyType<AdminUpdateStoreBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminUpdateStore>>, TError,{storeId: number;data: BodyType<AdminUpdateStoreBody>}, TContext> => {
+
+const mutationKey = ['adminUpdateStore'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminUpdateStore>>, {storeId: number;data: BodyType<AdminUpdateStoreBody>}> = (props) => {
+          const {storeId,data} = props ?? {};
+
+          return  adminUpdateStore(storeId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminUpdateStoreMutationResult = NonNullable<Awaited<ReturnType<typeof adminUpdateStore>>>
+    export type AdminUpdateStoreMutationBody = BodyType<AdminUpdateStoreBody>
+    export type AdminUpdateStoreMutationError = ErrorType<void>
+
+    /**
+ * @summary Edit a store's name/location and lock those fields for the owner (admin only)
+ */
+export const useAdminUpdateStore = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateStore>>, TError,{storeId: number;data: BodyType<AdminUpdateStoreBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminUpdateStore>>,
+        TError,
+        {storeId: number;data: BodyType<AdminUpdateStoreBody>},
+        TContext
+      > => {
+      return useMutation(getAdminUpdateStoreMutationOptions(options));
+    }
 
 export const getAdminVerifyStoreUrl = (storeId: number,) => {
 

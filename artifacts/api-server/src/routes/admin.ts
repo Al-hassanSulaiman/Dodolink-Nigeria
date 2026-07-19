@@ -2,7 +2,7 @@ import { Router, type IRouter, type Request, type Response, type NextFunction } 
 import { getAuth, clerkClient } from "@clerk/express";
 import { eq, count, desc, sql, inArray } from "drizzle-orm";
 import { db, storesTable, productsTable, conversationsTable } from "@workspace/db";
-import { AdminRejectStoreBody } from "@workspace/api-zod";
+import { AdminRejectStoreBody, AdminUpdateStoreBody } from "@workspace/api-zod";
 
 const ADMIN_EMAILS = [
   "alhassansulaiman1369@gmail.com",
@@ -43,6 +43,32 @@ router.get("/admin/stores", async (req, res): Promise<void> => {
     .limit(Number(limit))
     .offset(Number(offset));
   res.json(stores);
+});
+
+router.patch("/admin/stores/:storeId", async (req, res): Promise<void> => {
+  const storeId = parseInt(req.params.storeId, 10);
+  if (isNaN(storeId)) { res.status(400).json({ error: "Invalid storeId" }); return; }
+
+  const parsed = AdminUpdateStoreBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const { name, location } = parsed.data;
+  if (name === undefined && location === undefined) {
+    res.status(400).json({ error: "Provide a name and/or location to update" });
+    return;
+  }
+
+  const [store] = await db
+    .update(storesTable)
+    .set({
+      ...(name !== undefined ? { name } : {}),
+      ...(location !== undefined ? { location } : {}),
+      detailsLockedByAdmin: true,
+    })
+    .where(eq(storesTable.id, storeId))
+    .returning();
+  if (!store) { res.status(404).json({ error: "Store not found" }); return; }
+  res.json(store);
 });
 
 router.post("/admin/stores/:storeId/verify", async (req, res): Promise<void> => {

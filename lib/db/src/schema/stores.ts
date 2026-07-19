@@ -16,6 +16,7 @@ export const storesTable = pgTable("stores", {
   avgRating: real("avg_rating"),
   totalReviews: integer("total_reviews").notNull().default(0),
   verificationStatus: text("verification_status").notNull().default("pending"),
+  detailsLockedByAdmin: boolean("details_locked_by_admin").notNull().default(false),
   verifiedAt: timestamp("verified_at", { withTimezone: true }),
   verifiedBy: text("verified_by"),
   rejectionReason: text("rejection_reason"),

@@ -3,6 +3,7 @@ import {
   useAdminListStores,
   useAdminVerifyStore,
   useAdminRejectStore,
+  useAdminUpdateStore,
   getAdminListStoresQueryKey,
   getAdminGetAnalyticsQueryKey,
 } from "@workspace/api-client-react";
@@ -20,6 +21,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -34,6 +36,8 @@ import {
   CreditCard,
   EyeOff,
   Clock,
+  Pencil,
+  Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -72,6 +76,9 @@ export default function StoresPage() {
   const [tab, setTab] = useState<VerificationStatus>("pending");
   const [rejectStoreId, setRejectStoreId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [editStoreId, setEditStoreId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editLocation, setEditLocation] = useState("");
   const queryClient = useQueryClient();
 
   const { data: stores, isLoading } = useAdminListStores({ status: tab, limit: 100 });
@@ -100,8 +107,38 @@ export default function StoresPage() {
     },
   });
 
+  const updateMutation = useAdminUpdateStore({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getAdminListStoresQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getAdminGetAnalyticsQueryKey() });
+        setEditStoreId(null);
+        toast.success("Store updated — name and location are now locked for the owner");
+      },
+      onError: () => toast.error("Failed to update store"),
+    },
+  });
+
   function handleVerify(storeId: number) {
     verifyMutation.mutate({ storeId });
+  }
+
+  function openEdit(store: { id: number; name: string; location: string }) {
+    setEditStoreId(store.id);
+    setEditName(store.name);
+    setEditLocation(store.location);
+  }
+
+  function handleEditSubmit() {
+    if (!editStoreId) return;
+    if (!editName.trim() || !editLocation.trim()) {
+      toast.error("Name and location cannot be empty");
+      return;
+    }
+    updateMutation.mutate({
+      storeId: editStoreId,
+      data: { name: editName.trim(), location: editLocation.trim() },
+    });
   }
 
   function handleRejectSubmit() {
@@ -172,6 +209,12 @@ export default function StoresPage() {
                       >
                         {store.verificationStatus}
                       </Badge>
+                      {store.detailsLockedByAdmin && (
+                        <Badge className="bg-gray-100 text-gray-700 border-gray-200" variant="outline">
+                          <Lock className="w-3 h-3 mr-1" />
+                          Name & location locked
+                        </Badge>
+                      )}
                       {/* Subscription badge — only relevant for verified stores */}
                       {store.verificationStatus === "verified" && (() => {
                         const sub = getSubscriptionInfo(store);
@@ -309,6 +352,10 @@ export default function StoresPage() {
                       <XCircle className="w-4 h-4 mr-1.5" />
                       Reject
                     </Button>
+                    <Button size="sm" variant="outline" onClick={() => openEdit(store)}>
+                      <Pencil className="w-4 h-4 mr-1.5" />
+                      Edit name / location
+                    </Button>
                   </div>
                 )}
 
@@ -322,6 +369,10 @@ export default function StoresPage() {
                     >
                       <XCircle className="w-4 h-4 mr-1.5" />
                       Revoke
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => openEdit(store)}>
+                      <Pencil className="w-4 h-4 mr-1.5" />
+                      Edit name / location
                     </Button>
                   </div>
                 )}
@@ -337,6 +388,10 @@ export default function StoresPage() {
                       <CheckCircle className="w-4 h-4 mr-1.5" />
                       Re-approve
                     </Button>
+                    <Button size="sm" variant="outline" onClick={() => openEdit(store)}>
+                      <Pencil className="w-4 h-4 mr-1.5" />
+                      Edit name / location
+                    </Button>
                   </div>
                 )}
               </CardContent>
@@ -344,6 +399,50 @@ export default function StoresPage() {
           ))}
         </div>
       )}
+
+      <Dialog open={editStoreId !== null} onOpenChange={(o) => { if (!o) setEditStoreId(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Store Name & Location</DialogTitle>
+            <DialogDescription>
+              This updates the store everywhere in the app. After saving, the store owner will no
+              longer be able to change the name or location themselves.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-name">Store name</Label>
+              <Input
+                id="edit-name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Store name"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-location">Location</Label>
+              <Input
+                id="edit-location"
+                value={editLocation}
+                onChange={(e) => setEditLocation(e.target.value)}
+                placeholder="e.g. Kaduna, Nigeria"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditStoreId(null)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-green-700 hover:bg-green-800 text-white"
+              onClick={handleEditSubmit}
+              disabled={updateMutation.isPending || !editName.trim() || !editLocation.trim()}
+            >
+              {updateMutation.isPending ? "Saving…" : "Save & Lock"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={rejectStoreId !== null} onOpenChange={(o) => { if (!o) setRejectStoreId(null); }}>
         <DialogContent className="max-w-md">
