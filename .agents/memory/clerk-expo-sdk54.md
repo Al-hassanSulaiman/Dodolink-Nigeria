@@ -57,6 +57,12 @@ if (!isSignedIn) return <Redirect href="/(auth)/sign-in" />;
 
 **Why:** Mobile has no browser cookie jar; must attach Bearer token explicitly via setAuthTokenGetter.
 
+## finalize() is REQUIRED after every `status === "complete"`
+
+The future `useSignIn()`/`useSignUp()` hooks have **no `setActive`** — a guard like `if (setActive)` silently skips activation. After `signIn.password()` or `signUp.verifications.verifyEmailCode()` reaches `status === "complete"`, you MUST `await resource.finalize()` before navigating, or the session exists server-side but the app never activates it (symptom: sign-in "stops" on the form; going back later shows the user already signed in).
+
+**How to apply:** every completion path (password sign-in, email-code sign-up, password reset) ends with `finalize()`; ignore a `session_exists` finalize error, surface others via `errors[0].longMessage ?? longMessage ?? message`.
+
 ## Core v3 forgot-password flow (SignInFutureResource)
 
 ```ts

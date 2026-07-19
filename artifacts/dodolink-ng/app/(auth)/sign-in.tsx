@@ -59,7 +59,7 @@ function buildSyncUrl(clerk: any): string | null {
 }
 
 export default function SignInPage() {
-  const { signIn, setActive, errors, fetchStatus } = useSignIn() as any;
+  const { signIn, errors, fetchStatus } = useSignIn() as any;
   const clerk = useClerk() as any;
   const { isSignedIn } = useAuth();
   const router = useRouter();
@@ -88,8 +88,17 @@ export default function SignInPage() {
       const result = data ?? signIn;
 
       if (result.status === "complete") {
-        if (setActive) {
-          await setActive({ session: result.createdSessionId });
+        // finalize() converts the completed sign-in into the active session.
+        // Without it the app never learns the user is signed in.
+        const { error: finalizeError } = await result.finalize();
+        if (finalizeError && !isAlreadySignedInError(finalizeError)) {
+          const msg =
+            finalizeError?.errors?.[0]?.longMessage ??
+            finalizeError?.longMessage ??
+            finalizeError?.message ??
+            "Could not complete sign in. Please try again.";
+          showAlert("Sign in error", msg);
+          return;
         }
         router.replace("/(tabs)" as Href);
       } else if (result.status === "needs_client_trust") {

@@ -45,6 +45,20 @@ export default function SignUpPage() {
       const result = signUp;
 
       if (result.status === "complete") {
+        // finalize() converts the completed sign-up into the active session.
+        const { error: finalizeError } = await result.finalize();
+        if (finalizeError) {
+          const errCode = (finalizeError as any)?.errors?.[0]?.code ?? (finalizeError as any)?.code;
+          if (errCode !== "session_exists") {
+            const msg =
+              (finalizeError as any)?.errors?.[0]?.longMessage ??
+              (finalizeError as any)?.longMessage ??
+              (finalizeError as any)?.message ??
+              "Could not complete sign up. Please try again.";
+            showAlert("Sign up error", msg);
+            return;
+          }
+        }
         router.replace("/(tabs)" as Href);
       } else if ((result.status as string) === "needs_client_trust") {
         await result.finalize({
