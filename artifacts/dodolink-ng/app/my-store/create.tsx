@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { StyleSheet, View, Text } from 'react-native';
 import { router, Stack } from 'expo-router';
 import { useCreateStore } from '@workspace/api-client-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useColors } from '@/hooks/useColors';
 import { useUserIdentity } from '@/hooks/useUserIdentity';
 import { Input, Button } from '@/components/ui';
@@ -20,10 +21,13 @@ export default function CreateStoreScreen() {
   const [phone, setPhone] = useState('');
   const [cacNumber, setCacNumber] = useState('');
 
+  const queryClient = useQueryClient();
+
   const createStore = useCreateStore({
     mutation: {
       onSuccess: () => {
-        router.replace('/my-store/index');
+        queryClient.invalidateQueries({ queryKey: ['/api/stores'] });
+        router.replace('/(tabs)/my-store');
       }
     }
   });
