@@ -12,6 +12,7 @@ function headers() {
 export interface PaystackTransaction {
   status: string;
   amount: number;
+  currency?: string;
   reference: string;
   authorization: {
     authorization_code: string;

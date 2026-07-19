@@ -35,6 +35,7 @@ import type {
   ListConversationsParams,
   ListProductsParams,
   ListStoresParams,
+  MarkConversationRead200,
   Message,
   Product,
   RegisterPushTokenBody,
@@ -1365,6 +1366,76 @@ export const useSendMessage = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getSendMessageMutationOptions(options));
+    }
+
+export const getMarkConversationReadUrl = (conversationId: number,) => {
+
+
+
+
+  return `/api/conversations/${conversationId}/read`
+}
+
+/**
+ * @summary Mark a conversation as read
+ */
+export const markConversationRead = async (conversationId: number, options?: RequestInit): Promise<MarkConversationRead200> => {
+
+  return customFetch<MarkConversationRead200>(getMarkConversationReadUrl(conversationId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getMarkConversationReadMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markConversationRead>>, TError,{conversationId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof markConversationRead>>, TError,{conversationId: number}, TContext> => {
+
+const mutationKey = ['markConversationRead'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markConversationRead>>, {conversationId: number}> = (props) => {
+          const {conversationId} = props ?? {};
+
+          return  markConversationRead(conversationId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarkConversationReadMutationResult = NonNullable<Awaited<ReturnType<typeof markConversationRead>>>
+
+    export type MarkConversationReadMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Mark a conversation as read
+ */
+export const useMarkConversationRead = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markConversationRead>>, TError,{conversationId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof markConversationRead>>,
+        TError,
+        {conversationId: number},
+        TContext
+      > => {
+      return useMutation(getMarkConversationReadMutationOptions(options));
     }
 
 export const getStartConversationUrl = () => {

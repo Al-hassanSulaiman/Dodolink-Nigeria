@@ -1,7 +1,7 @@
 import { StyleSheet, View, Text, ScrollView, RefreshControl, Image, Pressable } from 'react-native';
 import { confirmAlert } from '@/utils/alerts';
 import { useAuth } from '@clerk/expo';
-import { useListStores, useListStoreProducts, useDeleteProduct, getListProductsQueryKey } from '@workspace/api-client-react';
+import { useListStores, useListStoreProducts, useDeleteProduct, getListProductsQueryKey, getListStoresQueryKey, getListStoreProductsQueryKey } from '@workspace/api-client-react';
 import { ImagePlaceholder } from '@/components/ImagePlaceholder';
 import { useColors } from '@/hooks/useColors';
 import { useUserIdentity } from '@/hooks/useUserIdentity';
@@ -27,14 +27,14 @@ export default function MyStoreScreen() {
 
   const { data: stores, isLoading, refetch } = useListStores(
     { ownerUserId: userId ?? undefined },
-    { query: { enabled: !!userId } }
+    { query: { enabled: !!userId, queryKey: getListStoresQueryKey({ ownerUserId: userId ?? undefined }) } }
   );
 
   const myStore = stores?.find(s => s.ownerUserId === userId);
 
   const { data: products, isLoading: productsLoading, refetch: refetchProducts } = useListStoreProducts(
     myStore?.id ?? 0,
-    { query: { enabled: !!myStore?.id } }
+    { query: { enabled: !!myStore?.id, queryKey: getListStoreProductsQueryKey(myStore?.id ?? 0) } }
   );
 
   const deleteProduct = useDeleteProduct({

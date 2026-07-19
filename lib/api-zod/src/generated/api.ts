@@ -23,6 +23,7 @@ export const listStoresQueryOffsetDefault = 0;
 
 export const ListStoresQueryParams = zod.object({
   "category": zod.coerce.string().optional(),
+  "ownerUserId": zod.coerce.string().optional().describe('Filter stores by owner user ID'),
   "limit": zod.coerce.number().default(listStoresQueryLimitDefault),
   "offset": zod.coerce.number().default(listStoresQueryOffsetDefault)
 })
@@ -433,6 +434,18 @@ export const SendMessageBody = zod.object({
   "senderName": zod.string(),
   "senderType": zod.enum(['customer', 'retailer']),
   "body": zod.string()
+})
+
+
+/**
+ * @summary Mark a conversation as read
+ */
+export const MarkConversationReadParams = zod.object({
+  "conversationId": zod.coerce.number()
+})
+
+export const MarkConversationReadResponse = zod.object({
+  "status": zod.string()
 })
 
 

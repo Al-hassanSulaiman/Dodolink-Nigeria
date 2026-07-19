@@ -19,8 +19,30 @@ import {
   isStoreHidden,
   gracePeriodDaysRemaining,
 } from "../lib/storeSubscription";
+import { requireUser } from "../lib/auth";
 
 const router: IRouter = Router();
+
+/**
+ * Loads the store and verifies the authenticated user owns it.
+ * Sends the appropriate error response and returns null when not allowed.
+ */
+async function loadOwnedStore(
+  req: Parameters<typeof requireUser>[0],
+  res: Parameters<typeof requireUser>[1],
+): Promise<typeof storesTable.$inferSelect | null> {
+  const userId = requireUser(req, res);
+  if (!userId) return null;
+
+  const storeId = parseInt(String(req.params.storeId), 10);
+  if (isNaN(storeId)) { res.status(400).json({ error: "Invalid storeId" }); return null; }
+
+  const [store] = await db.select().from(storesTable).where(eq(storesTable.id, storeId));
+  if (!store) { res.status(404).json({ error: "Store not found" }); return null; }
+  if (store.ownerUserId !== userId) { res.status(403).json({ error: "You do not own this store" }); return null; }
+
+  return store;
+}
 
 const SUBSCRIPTION_AMOUNT_KOBO = 500_000; // ₦5,000
 const SUBSCRIPTION_DAYS = 30;
@@ -45,13 +67,10 @@ function buildStatus(store: typeof storesTable.$inferSelect, engagementCount: nu
 
 // GET /stores/:storeId/subscription
 router.get("/stores/:storeId/subscription", async (req, res): Promise<void> => {
-  const storeId = parseInt(req.params.storeId, 10);
-  if (isNaN(storeId)) { res.status(400).json({ error: "Invalid storeId" }); return; }
+  const store = await loadOwnedStore(req, res);
+  if (!store) return;
 
-  const [store] = await db.select().from(storesTable).where(eq(storesTable.id, storeId));
-  if (!store) { res.status(404).json({ error: "Store not found" }); return; }
-
-  const engagementCount = await getEngagementCount(storeId);
+  const engagementCount = await getEngagementCount(store.id);
   res.json(buildStatus(store, engagementCount));
 });
 
@@ -62,14 +81,12 @@ router.post("/stores/:storeId/subscription/initialize", async (req, res): Promis
     return;
   }
 
-  const storeId = parseInt(req.params.storeId, 10);
-  if (isNaN(storeId)) { res.status(400).json({ error: "Invalid storeId" }); return; }
-
   const parsed = InitializeSubscriptionBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-  const [store] = await db.select().from(storesTable).where(eq(storesTable.id, storeId));
-  if (!store) { res.status(404).json({ error: "Store not found" }); return; }
+  const store = await loadOwnedStore(req, res);
+  if (!store) return;
+  const storeId = store.id;
 
   const engagementCount = await getEngagementCount(storeId);
   if (store.verificationStatus !== "verified" || engagementCount < ENGAGEMENT_THRESHOLD) {
@@ -102,20 +119,49 @@ router.post("/stores/:storeId/subscription/initialize", async (req, res): Promis
 
 // POST /stores/:storeId/subscription/verify
 router.post("/stores/:storeId/subscription/verify", async (req, res): Promise<void> => {
-  const storeId = parseInt(req.params.storeId, 10);
-  if (isNaN(storeId)) { res.status(400).json({ error: "Invalid storeId" }); return; }
-
   const parsed = VerifySubscriptionBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-  const [store] = await db.select().from(storesTable).where(eq(storesTable.id, storeId));
-  if (!store) { res.status(404).json({ error: "Store not found" }); return; }
+  const store = await loadOwnedStore(req, res);
+  if (!store) return;
+  const storeId = store.id;
+
+  // The reference must be one our server generated for THIS store
+  const expectedPrefix = `dodolink_sub_${storeId}_`;
+  const reference = parsed.data.reference;
+  if (!reference.startsWith(expectedPrefix)) {
+    res.status(400).json({ error: "Payment reference does not belong to this store" });
+    return;
+  }
+
+  // Replay protection: the reference embeds the timestamp it was generated at.
+  // Any reference generated before the last successful payment has already been
+  // consumed (or superseded) and cannot be used to renew again.
+  const refTimestamp = Number(reference.slice(expectedPrefix.length));
+  if (!Number.isFinite(refTimestamp)) {
+    res.status(400).json({ error: "Invalid payment reference" });
+    return;
+  }
+  if (store.subscriptionLastPaidAt && refTimestamp <= store.subscriptionLastPaidAt.getTime()) {
+    res.status(400).json({ error: "This payment reference has already been used" });
+    return;
+  }
 
   try {
-    const txn = await paystackVerify(parsed.data.reference);
+    const txn = await paystackVerify(reference);
 
     if (txn.status !== "success") {
       res.status(400).json({ error: `Payment not successful (status: ${txn.status})` });
+      return;
+    }
+
+    if (txn.amount !== SUBSCRIPTION_AMOUNT_KOBO) {
+      res.status(400).json({ error: "Payment amount does not match the subscription fee" });
+      return;
+    }
+
+    if (txn.currency && txn.currency !== "NGN") {
+      res.status(400).json({ error: "Payment must be made in Nigerian Naira (NGN)" });
       return;
     }
 
@@ -152,11 +198,9 @@ router.post("/stores/:storeId/subscription/charge", async (req, res): Promise<vo
     return;
   }
 
-  const storeId = parseInt(req.params.storeId, 10);
-  if (isNaN(storeId)) { res.status(400).json({ error: "Invalid storeId" }); return; }
-
-  const [store] = await db.select().from(storesTable).where(eq(storesTable.id, storeId));
-  if (!store) { res.status(404).json({ error: "Store not found" }); return; }
+  const store = await loadOwnedStore(req, res);
+  if (!store) return;
+  const storeId = store.id;
 
   if (!store.paystackAuthCode || !store.paystackEmail) {
     res.status(400).json({ error: "No saved payment method. Please pay manually first." });
@@ -202,14 +246,12 @@ router.post("/stores/:storeId/subscription/charge", async (req, res): Promise<vo
 
 // PATCH /stores/:storeId/subscription/auto-pay
 router.patch("/stores/:storeId/subscription/auto-pay", async (req, res): Promise<void> => {
-  const storeId = parseInt(req.params.storeId, 10);
-  if (isNaN(storeId)) { res.status(400).json({ error: "Invalid storeId" }); return; }
-
   const parsed = ToggleAutoPayBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-  const [store] = await db.select().from(storesTable).where(eq(storesTable.id, storeId));
-  if (!store) { res.status(404).json({ error: "Store not found" }); return; }
+  const store = await loadOwnedStore(req, res);
+  if (!store) return;
+  const storeId = store.id;
 
   if (parsed.data.enabled && !store.paystackAuthCode) {
     res.status(400).json({ error: "Cannot enable auto-pay without a saved payment method" });

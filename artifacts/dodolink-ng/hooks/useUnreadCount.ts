@@ -1,4 +1,4 @@
-import { useListConversations } from '@workspace/api-client-react';
+import { useListConversations, getListConversationsQueryKey } from '@workspace/api-client-react';
 import { useUserIdentity } from './useUserIdentity';
 
 export function useUnreadCount(): number {
@@ -11,6 +11,7 @@ export function useUnreadCount(): number {
         enabled: !!userId,
         refetchInterval: 15000,
         staleTime: 10000,
+        queryKey: getListConversationsQueryKey({ userId: userId || '' }),
       },
     }
   );

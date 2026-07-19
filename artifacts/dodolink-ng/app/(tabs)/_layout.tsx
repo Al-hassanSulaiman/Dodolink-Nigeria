@@ -131,6 +131,10 @@ function ClassicTabLayout() {
 export default function TabLayout() {
   const { isSignedIn, isLoaded, getToken } = useAuth();
 
+  // Set during render (not in an effect) so child screens' very first
+  // queries already carry the auth token. Also kept in an effect to stay
+  // current if getToken's identity changes.
+  setAuthTokenGetter(() => getToken());
   useEffect(() => {
     setAuthTokenGetter(() => getToken());
   }, [getToken]);

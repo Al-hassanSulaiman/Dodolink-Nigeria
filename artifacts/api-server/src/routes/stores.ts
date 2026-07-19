@@ -1,22 +1,25 @@
 import { Router, type IRouter } from "express";
 import { getAuth } from "@clerk/express";
-import { eq, ilike, and, or, sql } from "drizzle-orm";
+import { eq, ilike, and, sql } from "drizzle-orm";
 import { db, storesTable, productsTable } from "@workspace/db";
 import {
   CreateStoreBody,
   UpdateStoreBody,
 } from "@workspace/api-zod";
 import { visibleStoresFilter, isStoreHidden } from "../lib/storeSubscription";
+import { requireUser } from "../lib/auth";
 
 const router: IRouter = Router();
 
 router.get("/stores", async (req, res): Promise<void> => {
   const { category, limit = 20, offset = 0, ownerUserId } = req.query;
 
-  // Build visibility filter: always show, but include the requesting owner's hidden store
+  // When filtering by owner, return only that owner's stores (including hidden
+  // ones, so owners can always reach their own store to pay). Otherwise apply
+  // the public visibility filter.
   const visFilter = visibleStoresFilter();
   const ownerFilter = typeof ownerUserId === "string" ? eq(storesTable.ownerUserId, ownerUserId) : undefined;
-  const accessFilter = ownerFilter ? or(visFilter, ownerFilter) : visFilter;
+  const accessFilter = ownerFilter ?? visFilter;
 
   let query = db.select().from(storesTable).$dynamic();
   if (category && typeof category === "string") {
@@ -30,12 +33,30 @@ router.get("/stores", async (req, res): Promise<void> => {
 });
 
 router.post("/stores", async (req, res): Promise<void> => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+
   const parsed = CreateStoreBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const [store] = await db.insert(storesTable).values(parsed.data).returning();
+
+  // A user can only own one store
+  const [existing] = await db
+    .select({ id: storesTable.id })
+    .from(storesTable)
+    .where(eq(storesTable.ownerUserId, userId));
+  if (existing) {
+    res.status(409).json({ error: "You already have a store" });
+    return;
+  }
+
+  // Never trust ownerUserId from the client — always bind to the authenticated user
+  const [store] = await db
+    .insert(storesTable)
+    .values({ ...parsed.data, ownerUserId: userId })
+    .returning();
   res.status(201).json(store);
 });
 

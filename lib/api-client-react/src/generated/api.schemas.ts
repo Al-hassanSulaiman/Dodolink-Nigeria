@@ -337,6 +337,10 @@ export interface AdminUser {
 
 export type ListStoresParams = {
 category?: string;
+/**
+ * Filter stores by owner user ID
+ */
+ownerUserId?: string;
 limit?: number;
 offset?: number;
 };
@@ -353,6 +357,10 @@ q: string;
 
 export type ListConversationsParams = {
 userId: string;
+};
+
+export type MarkConversationRead200 = {
+  status: string;
 };
 
 export type AdminListStoresParams = {

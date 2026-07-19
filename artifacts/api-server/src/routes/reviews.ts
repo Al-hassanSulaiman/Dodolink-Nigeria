@@ -4,6 +4,7 @@ import { db, reviewsTable, storesTable, pushTokensTable } from "@workspace/db";
 import { CreateReviewBody } from "@workspace/api-zod";
 import { notifyTokens } from "../lib/push";
 import { checkAndSetQualifiedAt } from "../lib/storeSubscription";
+import { requireUser } from "../lib/auth";
 
 const router: IRouter = Router();
 
@@ -17,19 +18,27 @@ router.get("/stores/:storeId/reviews", async (req, res): Promise<void> => {
 });
 
 router.post("/stores/:storeId/reviews", async (req, res): Promise<void> => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+
   const raw = Array.isArray(req.params.storeId) ? req.params.storeId[0] : req.params.storeId;
   const storeId = parseInt(raw, 10);
   if (isNaN(storeId)) { res.status(400).json({ error: "Invalid storeId" }); return; }
 
-  const [targetStore] = await db.select({ verificationStatus: storesTable.verificationStatus }).from(storesTable).where(eq(storesTable.id, storeId));
+  const [targetStore] = await db.select({ verificationStatus: storesTable.verificationStatus, ownerUserId: storesTable.ownerUserId }).from(storesTable).where(eq(storesTable.id, storeId));
   if (!targetStore) { res.status(404).json({ error: "Store not found" }); return; }
   if (targetStore.verificationStatus !== "verified") {
     res.status(403).json({ error: "Only verified stores can receive reviews" });
     return;
   }
+  if (targetStore.ownerUserId === userId) {
+    res.status(403).json({ error: "You cannot review your own store" });
+    return;
+  }
 
   const parsed = CreateReviewBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  if (parsed.data.reviewerId !== userId) { res.status(403).json({ error: "reviewerId must match the authenticated user" }); return; }
 
   if (parsed.data.rating < 1 || parsed.data.rating > 5) {
     res.status(400).json({ error: "Rating must be between 1 and 5" });

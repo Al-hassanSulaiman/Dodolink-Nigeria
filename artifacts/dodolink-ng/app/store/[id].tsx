@@ -11,6 +11,7 @@ import {
   getGetStoreQueryKey,
   getListStoresQueryKey,
   getListStoreReviewsQueryKey,
+  getListStoreProductsQueryKey,
 } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { useUserIdentity } from '@/hooks/useUserIdentity';
@@ -44,15 +45,15 @@ export default function StoreScreen() {
   const [editCacNumber, setEditCacNumber] = useState('');
 
   const { data: store, isLoading: storeLoading, refetch: refetchStore } = useGetStore(storeId, {
-    query: { enabled: !!storeId }
+    query: { enabled: !!storeId, queryKey: getGetStoreQueryKey(storeId) }
   });
 
   const { data: products } = useListStoreProducts(storeId, {
-    query: { enabled: !!storeId }
+    query: { enabled: !!storeId, queryKey: getListStoreProductsQueryKey(storeId) }
   });
 
   const { data: reviews } = useListStoreReviews(storeId, {
-    query: { enabled: !!storeId }
+    query: { enabled: !!storeId, queryKey: getListStoreReviewsQueryKey(storeId) }
   });
 
   const createReview = useCreateReview({

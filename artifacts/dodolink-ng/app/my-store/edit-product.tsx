@@ -35,7 +35,7 @@ export default function EditProductScreen() {
   const [initialized, setInitialized] = useState(false);
 
   const { data: product, isLoading } = useGetProduct(id, {
-    query: { enabled: !!id }
+    query: { enabled: !!id, queryKey: getGetProductQueryKey(id) }
   });
 
   const queryClient = useQueryClient();

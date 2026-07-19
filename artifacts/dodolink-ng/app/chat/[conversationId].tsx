@@ -6,6 +6,7 @@ import {
   useSendMessage, 
   getListMessagesQueryKey,
   getListConversationsQueryKey,
+  markConversationRead,
 } from '@workspace/api-client-react';
 import type { Message } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
@@ -27,14 +28,15 @@ export default function ChatThreadScreen() {
   const inputRef = useRef<TextInput>(null);
 
   const { data: messages, isLoading } = useListMessages(id, {
-    query: { enabled: !!id }
+    query: { enabled: !!id, queryKey: getListMessagesQueryKey(id) }
   });
 
   // Mark conversation as read when chat is opened
   useEffect(() => {
     if (!id) return;
-    fetch(`${getApiBase()}/api/conversations/${id}/read`, { method: 'POST' }).catch(() => {});
-    queryClient.invalidateQueries({ queryKey: getListConversationsQueryKey() });
+    markConversationRead(id)
+      .then(() => queryClient.invalidateQueries({ queryKey: getListConversationsQueryKey() }))
+      .catch(() => {});
   }, [id]);
 
   const sendMessage = useSendMessage({

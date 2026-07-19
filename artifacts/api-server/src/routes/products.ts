@@ -2,8 +2,19 @@ import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, productsTable, storesTable } from "@workspace/db";
 import { CreateProductBody, UpdateProductBody } from "@workspace/api-zod";
+import { requireUser } from "../lib/auth";
 
 const router: IRouter = Router();
+
+async function productStoreOwner(productId: number): Promise<{ found: boolean; ownerUserId: string | null }> {
+  const rows = await db
+    .select({ ownerUserId: storesTable.ownerUserId })
+    .from(productsTable)
+    .leftJoin(storesTable, eq(productsTable.storeId, storesTable.id))
+    .where(eq(productsTable.id, productId));
+  if (!rows[0]) return { found: false, ownerUserId: null };
+  return { found: true, ownerUserId: rows[0].ownerUserId };
+}
 
 const productSelect = {
   id: productsTable.id,
@@ -44,6 +55,9 @@ router.get("/stores/:storeId/products", async (req, res): Promise<void> => {
 });
 
 router.post("/stores/:storeId/products", async (req, res): Promise<void> => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+
   const raw = Array.isArray(req.params.storeId) ? req.params.storeId[0] : req.params.storeId;
   const storeId = parseInt(raw, 10);
   if (isNaN(storeId)) { res.status(400).json({ error: "Invalid storeId" }); return; }
@@ -51,8 +65,9 @@ router.post("/stores/:storeId/products", async (req, res): Promise<void> => {
   const parsed = CreateProductBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-  const [store] = await db.select({ name: storesTable.name }).from(storesTable).where(eq(storesTable.id, storeId));
+  const [store] = await db.select({ name: storesTable.name, ownerUserId: storesTable.ownerUserId }).from(storesTable).where(eq(storesTable.id, storeId));
   if (!store) { res.status(404).json({ error: "Store not found" }); return; }
+  if (store.ownerUserId !== userId) { res.status(403).json({ error: "You do not own this store" }); return; }
 
   const { imageUrls, ...rest } = parsed.data;
   const [product] = await db.insert(productsTable).values({
@@ -80,12 +95,19 @@ router.get("/products/:productId", async (req, res): Promise<void> => {
 });
 
 router.patch("/products/:productId", async (req, res): Promise<void> => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+
   const raw = Array.isArray(req.params.productId) ? req.params.productId[0] : req.params.productId;
   const productId = parseInt(raw, 10);
   if (isNaN(productId)) { res.status(400).json({ error: "Invalid productId" }); return; }
 
   const parsed = UpdateProductBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const owner = await productStoreOwner(productId);
+  if (!owner.found) { res.status(404).json({ error: "Product not found" }); return; }
+  if (owner.ownerUserId !== userId) { res.status(403).json({ error: "You do not own this product" }); return; }
 
   const { imageUrls, ...rest } = parsed.data;
   const updateData: Record<string, unknown> = { ...rest };
@@ -103,9 +125,16 @@ router.patch("/products/:productId", async (req, res): Promise<void> => {
 });
 
 router.delete("/products/:productId", async (req, res): Promise<void> => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+
   const raw = Array.isArray(req.params.productId) ? req.params.productId[0] : req.params.productId;
   const productId = parseInt(raw, 10);
   if (isNaN(productId)) { res.status(400).json({ error: "Invalid productId" }); return; }
+
+  const owner = await productStoreOwner(productId);
+  if (!owner.found) { res.status(404).json({ error: "Product not found" }); return; }
+  if (owner.ownerUserId !== userId) { res.status(403).json({ error: "You do not own this product" }); return; }
 
   await db.delete(productsTable).where(eq(productsTable.id, productId));
   res.sendStatus(204);

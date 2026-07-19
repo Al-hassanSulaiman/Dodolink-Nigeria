@@ -1,6 +1,6 @@
-# [Project name]
+# Dodolink NG
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Nigerian marketplace: buyers browse local stores and products, chat with sellers, and leave reviews; sellers run a store with a ₦5,000/month Paystack subscription. Expo mobile app (live at dodolink.com.ng) + admin dashboard (`/admin`) + Express API.
 
 ## Run & Operate
 
@@ -26,7 +26,10 @@ _Populate as you build — short repo map plus pointers to the source-of-truth f
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- API security model: public reads (stores/products/search/reviews lists), authenticated writes. Every write and all conversation routes require a Clerk bearer token (`requireUser` in `artifacts/api-server/src/lib/auth.ts`) plus ownership/participant checks. Identity fields in request bodies are never trusted.
+- Paystack subscription verify checks amount (+NGN currency), reference prefix `dodolink_sub_<storeId>_`, and replay protection via the timestamp embedded in the reference vs `subscriptionLastPaidAt` — no schema change needed.
+- `GET /stores?ownerUserId=X` returns only X's stores including hidden past-due ones, so owners can always reach the subscription screen to pay.
+- One store per user, enforced at store creation (409 if one exists).
 
 ## Product
 

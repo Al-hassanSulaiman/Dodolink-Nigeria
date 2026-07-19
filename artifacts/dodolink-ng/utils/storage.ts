@@ -1,3 +1,4 @@
+import { requestUploadUrl as apiRequestUploadUrl } from "@workspace/api-client-react";
 import { getApiBase } from "./apiBase";
 
 export function getImageUrl(objectPath: string): string {
@@ -10,13 +11,9 @@ export async function requestUploadUrl(opts: {
   size: number;
   contentType: string;
 }): Promise<{ uploadURL: string; objectPath: string }> {
-  const res = await fetch(`${getApiBase()}/api/storage/uploads/request-url`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(opts),
-  });
-  if (!res.ok) throw new Error("Failed to get upload URL");
-  return res.json();
+  // Uses the generated API client so the auth token is attached automatically.
+  const res = await apiRequestUploadUrl(opts);
+  return { uploadURL: res.uploadURL, objectPath: res.objectPath };
 }
 
 export async function uploadImageToStorage(imageUri: string): Promise<string> {

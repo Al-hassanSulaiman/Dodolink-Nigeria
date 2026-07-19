@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Pressable, StyleSheet, Text, TextInput, TextInputProps } from 'react-native';
+import { View, Pressable, StyleSheet, Text, TextInput, TextInputProps, StyleProp, ViewStyle } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 
 interface ButtonProps {
@@ -7,9 +7,10 @@ interface ButtonProps {
   title: string;
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
   disabled?: boolean;
+  style?: StyleProp<ViewStyle>;
 }
 
-export function Button({ onPress, title, variant = 'primary', disabled }: ButtonProps) {
+export function Button({ onPress, title, variant = 'primary', disabled, style }: ButtonProps) {
   const colors = useColors();
   
   let backgroundColor = colors.primary;
@@ -46,6 +47,7 @@ export function Button({ onPress, title, variant = 'primary', disabled }: Button
           borderWidth: variant === 'outline' ? 1 : 0,
           opacity: pressed ? 0.8 : 1,
         },
+        style,
       ]}
     >
       <Text style={[styles.text, { color: textColor }]}>{title}</Text>

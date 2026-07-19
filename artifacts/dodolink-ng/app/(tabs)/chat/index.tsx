@@ -1,6 +1,6 @@
 import { StyleSheet, View, Text, FlatList, Pressable } from 'react-native';
 import { Link } from 'expo-router';
-import { useListConversations } from '@workspace/api-client-react';
+import { useListConversations, getListConversationsQueryKey } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { useUserIdentity } from '@/hooks/useUserIdentity';
 import { LoadingScreen } from '@/components/Loading';
@@ -13,7 +13,7 @@ export default function ChatsScreen() {
   const { userId } = useUserIdentity();
 
   const { data: conversations, isLoading } = useListConversations({ userId: userId || '' }, {
-    query: { enabled: !!userId }
+    query: { enabled: !!userId, queryKey: getListConversationsQueryKey({ userId: userId || '' }) }
   });
 
   if (isLoading && !conversations) return <LoadingScreen message="Loading chats..." />;

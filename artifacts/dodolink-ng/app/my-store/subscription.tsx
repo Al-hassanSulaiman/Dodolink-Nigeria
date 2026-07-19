@@ -20,6 +20,8 @@ import {
   useVerifySubscription,
   useChargeSubscription,
   useToggleAutoPay,
+  getGetSubscriptionQueryKey,
+  getListStoresQueryKey,
 } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { useUserIdentity } from '@/hooks/useUserIdentity';
@@ -36,8 +38,13 @@ export default function SubscriptionScreen() {
   const [pendingReference, setPendingReference] = useState<string | null>(null);
 
   const { data: stores, isLoading: storesLoading } = useListStores(
-    {},
-    { query: { enabled: !!userId } }
+    { ownerUserId: userId ?? undefined },
+    {
+      query: {
+        enabled: !!userId,
+        queryKey: getListStoresQueryKey({ ownerUserId: userId ?? undefined }),
+      },
+    }
   );
   const myStore = stores?.find((s) => s.ownerUserId === userId);
 
@@ -46,7 +53,10 @@ export default function SubscriptionScreen() {
     isLoading: subLoading,
     refetch,
   } = useGetSubscription(myStore?.id ?? 0, {
-    query: { enabled: !!myStore?.id },
+    query: {
+      enabled: !!myStore?.id,
+      queryKey: getGetSubscriptionQueryKey(myStore?.id ?? 0),
+    },
   });
 
   const initMutation = useInitializeSubscription();

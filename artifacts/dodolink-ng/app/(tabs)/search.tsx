@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, View, Text, ScrollView, TextInput } from 'react-native';
-import { useSearch } from '@workspace/api-client-react';
+import { useSearch, getSearchQueryKey } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { ProductCard } from '@/components/ProductCard';
 import { StoreCard } from '@/components/StoreCard';
@@ -12,7 +12,7 @@ export default function SearchScreen() {
   const colors = useColors();
   const [query, setQuery] = useState('');
   // Use debounced value or just trigger search when length >= 2
-  const { data, isLoading } = useSearch({ q: query }, { query: { enabled: query.length >= 2 } });
+  const { data, isLoading } = useSearch({ q: query }, { query: { enabled: query.length >= 2, queryKey: getSearchQueryKey({ q: query }) } });
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

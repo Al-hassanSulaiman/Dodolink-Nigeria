@@ -4,12 +4,28 @@ import { db, conversationsTable, messagesTable, storesTable, pushTokensTable } f
 import { SendMessageBody, StartConversationBody } from "@workspace/api-zod";
 import { notifyTokens } from "../lib/push";
 import { checkAndSetQualifiedAt } from "../lib/storeSubscription";
+import { requireUser } from "../lib/auth";
 
 const router: IRouter = Router();
 
+async function loadConversationIfParticipant(conversationId: number, userId: string) {
+  const [conv] = await db.select().from(conversationsTable).where(eq(conversationsTable.id, conversationId));
+  if (!conv) return { conv: null, allowed: false };
+  if (conv.customerId === userId) return { conv, allowed: true };
+  const [store] = await db
+    .select({ ownerUserId: storesTable.ownerUserId })
+    .from(storesTable)
+    .where(eq(storesTable.id, conv.storeId));
+  return { conv, allowed: store?.ownerUserId === userId };
+}
+
 router.get("/conversations", async (req, res): Promise<void> => {
+  const authUserId = requireUser(req, res);
+  if (!authUserId) return;
+
   const userId = typeof req.query.userId === "string" ? req.query.userId : null;
   if (!userId) { res.status(400).json({ error: "userId is required" }); return; }
+  if (userId !== authUserId) { res.status(403).json({ error: "Cannot access another user's conversations" }); return; }
 
   // Get conversations where user is customer OR owns the store
   const storesByOwner = await db.select({ id: storesTable.id, name: storesTable.name }).from(storesTable).where(eq(storesTable.ownerUserId, userId));
@@ -36,10 +52,14 @@ router.get("/conversations", async (req, res): Promise<void> => {
 });
 
 router.post("/conversations/start", async (req, res): Promise<void> => {
+  const authUserId = requireUser(req, res);
+  if (!authUserId) return;
+
   const parsed = StartConversationBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
   const { customerId, customerName, storeId, initialMessage } = parsed.data;
+  if (customerId !== authUserId) { res.status(403).json({ error: "customerId must match the authenticated user" }); return; }
 
   const [store] = await db.select({ name: storesTable.name }).from(storesTable).where(eq(storesTable.id, storeId));
   if (!store) { res.status(404).json({ error: "Store not found" }); return; }
@@ -64,21 +84,36 @@ router.post("/conversations/start", async (req, res): Promise<void> => {
 });
 
 router.get("/conversations/:conversationId/messages", async (req, res): Promise<void> => {
+  const authUserId = requireUser(req, res);
+  if (!authUserId) return;
+
   const raw = Array.isArray(req.params.conversationId) ? req.params.conversationId[0] : req.params.conversationId;
   const conversationId = parseInt(raw, 10);
   if (isNaN(conversationId)) { res.status(400).json({ error: "Invalid conversationId" }); return; }
+
+  const { conv, allowed } = await loadConversationIfParticipant(conversationId, authUserId);
+  if (!conv) { res.status(404).json({ error: "Conversation not found" }); return; }
+  if (!allowed) { res.status(403).json({ error: "You are not a participant in this conversation" }); return; }
 
   const msgs = await db.select().from(messagesTable).where(eq(messagesTable.conversationId, conversationId));
   res.json(msgs);
 });
 
 router.post("/conversations/:conversationId/messages", async (req, res): Promise<void> => {
+  const authUserId = requireUser(req, res);
+  if (!authUserId) return;
+
   const raw = Array.isArray(req.params.conversationId) ? req.params.conversationId[0] : req.params.conversationId;
   const conversationId = parseInt(raw, 10);
   if (isNaN(conversationId)) { res.status(400).json({ error: "Invalid conversationId" }); return; }
 
   const parsed = SendMessageBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  if (parsed.data.senderId !== authUserId) { res.status(403).json({ error: "senderId must match the authenticated user" }); return; }
+
+  const { conv: conversation, allowed } = await loadConversationIfParticipant(conversationId, authUserId);
+  if (!conversation) { res.status(404).json({ error: "Conversation not found" }); return; }
+  if (!allowed) { res.status(403).json({ error: "You are not a participant in this conversation" }); return; }
 
   const [msg] = await db.insert(messagesTable).values({ ...parsed.data, conversationId }).returning();
 
@@ -122,9 +157,16 @@ router.post("/conversations/:conversationId/messages", async (req, res): Promise
 });
 
 router.post("/conversations/:conversationId/read", async (req, res): Promise<void> => {
+  const authUserId = requireUser(req, res);
+  if (!authUserId) return;
+
   const raw = Array.isArray(req.params.conversationId) ? req.params.conversationId[0] : req.params.conversationId;
   const conversationId = parseInt(raw, 10);
   if (isNaN(conversationId)) { res.status(400).json({ error: "Invalid conversationId" }); return; }
+
+  const { conv, allowed } = await loadConversationIfParticipant(conversationId, authUserId);
+  if (!conv) { res.status(404).json({ error: "Conversation not found" }); return; }
+  if (!allowed) { res.status(403).json({ error: "You are not a participant in this conversation" }); return; }
 
   await db.update(conversationsTable)
     .set({ unreadCount: 0 })

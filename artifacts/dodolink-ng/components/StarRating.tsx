@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Text, Pressable } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 
 interface StarRatingProps {
@@ -28,11 +28,10 @@ export function StarRating({ rating, size = 16, onRatingChange, showText = true 
               disabled={!onRatingChange}
               style={{ marginRight: 2 }}
             >
-              <Feather 
-                name="star" 
-                size={size} 
-                color={isFilled ? colors.accent : colors.muted} 
-                style={isFilled ? styles.filled : undefined}
+              <Ionicons
+                name={isFilled ? 'star' : 'star-outline'}
+                size={size}
+                color={isFilled ? colors.accent : colors.muted}
               />
             </Pressable>
           );
@@ -54,9 +53,6 @@ const styles = StyleSheet.create({
   },
   stars: {
     flexDirection: 'row',
-  },
-  filled: {
-    fill: '#F59E0B',
   },
   text: {
     fontFamily: 'Inter_600SemiBold',

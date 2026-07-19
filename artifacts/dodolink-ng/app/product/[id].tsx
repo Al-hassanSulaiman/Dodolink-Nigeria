@@ -3,7 +3,9 @@ import { useLocalSearchParams, Link, Stack } from 'expo-router';
 import { 
   useGetProduct, 
   useGetStore, 
-  useStartConversation 
+  useStartConversation,
+  getGetProductQueryKey,
+  getGetStoreQueryKey,
 } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { useUserIdentity } from '@/hooks/useUserIdentity';
@@ -20,11 +22,11 @@ export default function ProductScreen() {
   const { userId, userName } = useUserIdentity();
 
   const { data: product, isLoading: productLoading, refetch: refetchProduct } = useGetProduct(productId, {
-    query: { enabled: !!productId }
+    query: { enabled: !!productId, queryKey: getGetProductQueryKey(productId) }
   });
 
   const { data: store, isLoading: storeLoading } = useGetStore(product?.storeId || 0, {
-    query: { enabled: !!product?.storeId }
+    query: { enabled: !!product?.storeId, queryKey: getGetStoreQueryKey(product?.storeId || 0) }
   });
 
   const startConversation = useStartConversation({

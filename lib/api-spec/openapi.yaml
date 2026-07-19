@@ -50,6 +50,11 @@ paths:
           in: query
           schema:
             type: string
+        - name: ownerUserId
+          in: query
+          description: Filter stores by owner user ID
+          schema:
+            type: string
         - name: limit
           in: query
           schema:
@@ -401,6 +406,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Message"
+
+  /conversations/{conversationId}/read:
+    post:
+      operationId: markConversationRead
+      tags: [messages]
+      summary: Mark a conversation as read
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Conversation marked as read
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                required: [status]
 
   /conversations/start:
     post:
