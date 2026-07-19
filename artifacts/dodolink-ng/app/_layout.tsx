@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
+import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -18,7 +19,24 @@ import { getApiBase } from "@/utils/apiBase";
 setBaseUrl(getApiBase());
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
-const proxyUrl = process.env.EXPO_PUBLIC_CLERK_PROXY_URL || undefined;
+
+// Clerk proxy URL: baked into the bundle by scripts/build.js at deploy time.
+// On web in production, rebase the proxy path onto the current origin so the
+// app works on any domain pointed at the deployment (e.g. dodolink.com.ng),
+// mirroring getApiBase(). Native bundles keep the full baked URL.
+function getClerkProxyUrl(): string | undefined {
+  const baked = process.env.EXPO_PUBLIC_CLERK_PROXY_URL || "";
+  if (!baked) return undefined;
+  if (Platform.OS === "web" && !__DEV__ && typeof window !== "undefined") {
+    try {
+      return window.location.origin + new URL(baked).pathname;
+    } catch {
+      return baked;
+    }
+  }
+  return baked;
+}
+const proxyUrl = getClerkProxyUrl();
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();

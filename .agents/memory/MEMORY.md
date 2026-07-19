@@ -5,3 +5,4 @@
 - [Clerk API auth needs explicit bearer token](clerk-api-auth.md) — session cookies never reach the API server; ALL clients (web too) must call setAuthTokenGetter(getToken)
 - [Expo web export in workspace](expo-web-export.md) — backgrounded builds get reaped; use the validation runner and free RAM first (needs ~2.5 GB+)
 - [Web API base URL dev vs prod](web-api-base.md) — window.location.origin is correct only in production web; dev web must use EXPO_PUBLIC_DOMAIN (getApiBase handles it)
+- [Clerk proxy URL in Expo prod builds](clerk-expo-prod-proxy.md) — every export bake site needs EXPO_PUBLIC_CLERK_PROXY_URL or prod blank-screens; rebase onto window origin for custom domains

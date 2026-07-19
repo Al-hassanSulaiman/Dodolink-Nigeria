@@ -127,6 +127,16 @@ function getExpoPublicReplId() {
   return process.env.REPL_ID || process.env.EXPO_PUBLIC_REPL_ID;
 }
 
+// Clerk's frontend requests must go through the API server's proxy
+// (CLERK_PROXY_URL, e.g. /api/__clerk) in production. The pk_live key alone
+// points at clerk.<custom-domain>, which has no DNS record, so without this
+// baked URL the published app hangs on a blank screen waiting for Clerk.
+function getClerkProxyUrl(expoPublicDomain) {
+  return process.env.CLERK_PROXY_URL
+    ? `https://${expoPublicDomain}${process.env.CLERK_PROXY_URL}`
+    : "";
+}
+
 async function startMetro(expoPublicDomain, expoPublicReplId) {
   const isRunning = await checkMetroHealth();
   if (isRunning) {
@@ -140,6 +150,10 @@ async function startMetro(expoPublicDomain, expoPublicReplId) {
     ...process.env,
     EXPO_PUBLIC_DOMAIN: expoPublicDomain,
     EXPO_PUBLIC_REPL_ID: expoPublicReplId,
+    EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY:
+      process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ||
+      process.env.CLERK_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_CLERK_PROXY_URL: getClerkProxyUrl(expoPublicDomain),
   };
 
   if (expoPublicReplId) {
@@ -516,6 +530,7 @@ function exportWebBuild(expoPublicDomain, expoPublicReplId) {
       EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY:
         process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ||
         process.env.CLERK_PUBLISHABLE_KEY,
+      EXPO_PUBLIC_CLERK_PROXY_URL: getClerkProxyUrl(expoPublicDomain),
     };
 
     const child = spawn(
