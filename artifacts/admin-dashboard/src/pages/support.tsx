@@ -113,7 +113,19 @@ export default function SupportPage() {
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-gray-900 truncate">{t.userName}</p>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{t.userName}</p>
+                      <Badge
+                        variant="outline"
+                        className={`shrink-0 text-[10px] px-1.5 py-0 ${
+                          t.isSeller
+                            ? "border-green-300 text-green-700 bg-green-50"
+                            : "border-gray-200 text-gray-500 bg-gray-50"
+                        }`}
+                      >
+                        {t.isSeller ? "Retailer" : "Customer"}
+                      </Badge>
+                    </div>
                     {t.unreadCount > 0 && (
                       <Badge className="bg-red-500 text-white hover:bg-red-500">{t.unreadCount}</Badge>
                     )}
@@ -138,7 +150,19 @@ export default function SupportPage() {
           ) : (
             <>
               <div className="px-5 py-3 border-b border-gray-100">
-                <p className="text-sm font-semibold text-gray-900">{selectedThread.userName}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-gray-900">{selectedThread.userName}</p>
+                  <Badge
+                    variant="outline"
+                    className={`text-[10px] px-1.5 py-0 ${
+                      selectedThread.isSeller
+                        ? "border-green-300 text-green-700 bg-green-50"
+                        : "border-gray-200 text-gray-500 bg-gray-50"
+                    }`}
+                  >
+                    {selectedThread.isSeller ? "Retailer" : "Customer"}
+                  </Badge>
+                </div>
                 {selectedThread.userEmail && (
                   <p className="text-xs text-gray-500">{selectedThread.userEmail}</p>
                 )}

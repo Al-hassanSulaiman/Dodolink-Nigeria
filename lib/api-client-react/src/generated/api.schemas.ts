@@ -42,6 +42,7 @@ export interface SupportThread {
   lastMessage: string;
   lastMessageAt: string;
   unreadCount: number;
+  isSeller: boolean;
 }
 
 export type SubscriptionStatusSubscriptionStatus = typeof SubscriptionStatusSubscriptionStatus[keyof typeof SubscriptionStatusSubscriptionStatus];

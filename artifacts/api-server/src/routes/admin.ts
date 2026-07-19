@@ -204,7 +204,7 @@ router.get("/admin/support/threads", async (_req, res): Promise<void> => {
 
   const threads = new Map<
     string,
-    { userId: string; userName: string; userEmail: string | null; lastMessage: string; lastMessageAt: Date; unreadCount: number }
+    { userId: string; userName: string; userEmail: string | null; lastMessage: string; lastMessageAt: Date; unreadCount: number; isSeller: boolean }
   >();
 
   for (const m of rows) {
@@ -217,10 +217,23 @@ router.get("/admin/support/threads", async (_req, res): Promise<void> => {
         lastMessage: m.body,
         lastMessageAt: m.createdAt,
         unreadCount: 0,
+        isSeller: false,
       };
       threads.set(m.userId, thread);
     }
     if (m.senderRole === "user" && !m.readByAdmin) thread.unreadCount += 1;
+  }
+
+  const userIds = [...threads.keys()];
+  if (userIds.length > 0) {
+    const sellerRows = await db
+      .select({ ownerUserId: storesTable.ownerUserId })
+      .from(storesTable)
+      .where(inArray(storesTable.ownerUserId, userIds));
+    for (const s of sellerRows) {
+      const thread = threads.get(s.ownerUserId);
+      if (thread) thread.isSeller = true;
+    }
   }
 
   res.json([...threads.values()]);

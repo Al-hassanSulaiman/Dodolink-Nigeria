@@ -34,7 +34,7 @@ _Populate as you build — short repo map plus pointers to the source-of-truth f
 
 ## Product
 
-- Support/help messaging: mobile users reach a support chat via the help icon (question mark) on Home (`app/support.tsx`, 15s polling); admins triage from a two-pane inbox at `/admin/support` with an unread badge in the sidebar. Admin replies trigger a push notification ("Dodolink Support") to the user.
+- Support/help messaging: mobile users reach a support chat via the help icon (question mark) on Home (`app/support.tsx`, 15s polling); admins triage from a two-pane inbox at `/admin/support` with an unread badge in the sidebar; each thread shows the sender's name, email, and a Retailer/Customer badge (`isSeller` = user owns a store row). Admin replies trigger a push notification ("Dodolink Support") to the user.
 
 ## User preferences
 

@@ -767,7 +767,8 @@ export const AdminListSupportThreadsResponseItem = zod.object({
   "userEmail": zod.string().nullish(),
   "lastMessage": zod.string(),
   "lastMessageAt": zod.coerce.date(),
-  "unreadCount": zod.number()
+  "unreadCount": zod.number(),
+  "isSeller": zod.boolean()
 })
 export const AdminListSupportThreadsResponse = zod.array(AdminListSupportThreadsResponseItem)
 

@@ -1051,7 +1051,9 @@ components:
           format: date-time
         unreadCount:
           type: integer
-      required: [userId, userName, lastMessage, lastMessageAt, unreadCount]
+        isSeller:
+          type: boolean
+      required: [userId, userName, lastMessage, lastMessageAt, unreadCount, isSeller]
 
     SubscriptionStatus:
       type: object
