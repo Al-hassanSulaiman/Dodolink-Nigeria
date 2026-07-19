@@ -2,3 +2,4 @@
 - [Clerk Expo SDK 54 setup](clerk-expo-sdk54.md) — Core v3 API patterns, forgot-password flow, Metro ENOENT crash on install
 - [Replit iframe sandbox blocks dialogs and fonts](replit-iframe-limits.md) — Alert.alert is a no-op on ALL react-native-web (use utils/alerts.ts); iframe also blocks window.confirm/open, FontFaceObserver
 - [Orval query keys are URL-based](orval-query-keys.md) — hand-written keys like ['listStores'] never match; always invalidate with generated get*QueryKey helpers
+- [Clerk API auth needs explicit bearer token](clerk-api-auth.md) — session cookies never reach the API server; ALL clients (web too) must call setAuthTokenGetter(getToken)

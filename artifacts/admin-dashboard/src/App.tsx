@@ -1,9 +1,11 @@
+import { useEffect } from "react";
 import { Switch, Route, Router as WouterRouter, Redirect, useLocation, Link } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ClerkProvider, Show, useClerk } from "@clerk/react";
+import { ClerkProvider, Show, useClerk, useAuth } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
+import { setAuthTokenGetter } from "@workspace/api-client-react";
 import NotFound from "@/pages/not-found";
 import SignInPage from "@/pages/sign-in";
 import DashboardPage from "@/pages/dashboard";
@@ -107,6 +109,23 @@ function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+function AuthTokenBridge() {
+  const { getToken, isLoaded, isSignedIn } = useAuth();
+
+  useEffect(() => {
+    setAuthTokenGetter(() => getToken());
+    return () => setAuthTokenGetter(null);
+  }, [getToken]);
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      queryClient.invalidateQueries();
+    }
+  }, [isLoaded, isSignedIn]);
+
+  return null;
+}
+
 function ProtectedRoute({ component: Component }: { component: () => React.ReactElement | null }) {
   return (
     <>
@@ -169,6 +188,7 @@ function App() {
       }}
     >
       <QueryClientProvider client={queryClient}>
+        <AuthTokenBridge />
         <TooltipProvider>
           <WouterRouter base={basePath}>
             <Router />
