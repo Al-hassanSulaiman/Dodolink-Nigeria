@@ -1,8 +1,9 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { getAuth, clerkClient } from "@clerk/express";
-import { eq, count, desc, sql, inArray } from "drizzle-orm";
-import { db, storesTable, productsTable, conversationsTable } from "@workspace/db";
-import { AdminRejectStoreBody, AdminUpdateStoreBody } from "@workspace/api-zod";
+import { and, asc, eq, count, desc, sql, inArray } from "drizzle-orm";
+import { db, storesTable, productsTable, conversationsTable, supportMessagesTable, pushTokensTable } from "@workspace/db";
+import { AdminRejectStoreBody, AdminUpdateStoreBody, SendSupportMessageBody } from "@workspace/api-zod";
+import { notifyTokens } from "../lib/push";
 
 const ADMIN_EMAILS = [
   "alhassansulaiman1369@gmail.com",
@@ -193,6 +194,98 @@ router.get("/admin/users", async (req, res): Promise<void> => {
         : users;
 
   res.json(filtered);
+});
+
+router.get("/admin/support/threads", async (_req, res): Promise<void> => {
+  const rows = await db
+    .select()
+    .from(supportMessagesTable)
+    .orderBy(desc(supportMessagesTable.createdAt));
+
+  const threads = new Map<
+    string,
+    { userId: string; userName: string; userEmail: string | null; lastMessage: string; lastMessageAt: Date; unreadCount: number }
+  >();
+
+  for (const m of rows) {
+    let thread = threads.get(m.userId);
+    if (!thread) {
+      thread = {
+        userId: m.userId,
+        userName: m.userName,
+        userEmail: m.userEmail,
+        lastMessage: m.body,
+        lastMessageAt: m.createdAt,
+        unreadCount: 0,
+      };
+      threads.set(m.userId, thread);
+    }
+    if (m.senderRole === "user" && !m.readByAdmin) thread.unreadCount += 1;
+  }
+
+  res.json([...threads.values()]);
+});
+
+router.get("/admin/support/threads/:userId/messages", async (req, res): Promise<void> => {
+  const targetUserId = req.params.userId;
+  const messages = await db
+    .select()
+    .from(supportMessagesTable)
+    .where(eq(supportMessagesTable.userId, targetUserId))
+    .orderBy(asc(supportMessagesTable.createdAt));
+  res.json(messages);
+});
+
+router.post("/admin/support/threads/:userId/messages", async (req, res): Promise<void> => {
+  const targetUserId = req.params.userId;
+
+  const parsed = SendSupportMessageBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const body = parsed.data.body.trim();
+  if (!body) { res.status(400).json({ error: "Message cannot be empty" }); return; }
+
+  const [latest] = await db
+    .select()
+    .from(supportMessagesTable)
+    .where(eq(supportMessagesTable.userId, targetUserId))
+    .orderBy(desc(supportMessagesTable.createdAt))
+    .limit(1);
+  if (!latest) { res.status(404).json({ error: "No support thread for this user" }); return; }
+
+  const [message] = await db
+    .insert(supportMessagesTable)
+    .values({
+      userId: targetUserId,
+      userName: latest.userName,
+      userEmail: latest.userEmail,
+      senderRole: "admin",
+      body,
+      readByAdmin: true,
+      readByUser: false,
+    })
+    .returning();
+
+  try {
+    const tokens = await db
+      .select({ token: pushTokensTable.token })
+      .from(pushTokensTable)
+      .where(eq(pushTokensTable.userId, targetUserId));
+    await notifyTokens(tokens.map((t) => t.token), "Dodolink Support", body, { support: true });
+  } catch (err) {
+    req.log.warn({ err }, "Failed to send support reply push notification");
+  }
+
+  res.status(201).json(message);
+});
+
+router.post("/admin/support/threads/:userId/read", async (req, res): Promise<void> => {
+  const targetUserId = req.params.userId;
+  await db
+    .update(supportMessagesTable)
+    .set({ readByAdmin: true })
+    .where(and(eq(supportMessagesTable.userId, targetUserId), eq(supportMessagesTable.senderRole, "user")));
+  res.json({ status: "ok" });
 });
 
 export default router;

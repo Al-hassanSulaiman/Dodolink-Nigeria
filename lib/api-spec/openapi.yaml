@@ -449,6 +449,64 @@ paths:
               schema:
                 $ref: "#/components/schemas/Conversation"
 
+  # ─── Support ────────────────────────────────────────────────────────────────
+  /support/messages:
+    get:
+      operationId: listSupportMessages
+      tags: [support]
+      summary: Get the authenticated user's support conversation
+      responses:
+        "200":
+          description: Support messages for the authenticated user
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SupportMessage"
+        "401":
+          description: Unauthorized
+    post:
+      operationId: sendSupportMessage
+      tags: [support]
+      summary: Send a support message as the authenticated user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendSupportMessageBody"
+      responses:
+        "201":
+          description: Support message created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportMessage"
+        "400":
+          description: Invalid message
+        "401":
+          description: Unauthorized
+
+  /support/read:
+    post:
+      operationId: markSupportRead
+      tags: [support]
+      summary: Mark admin support replies as read for the authenticated user
+      responses:
+        "200":
+          description: Marked as read
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                required: [status]
+        "401":
+          description: Unauthorized
+
   # ─── Reviews ────────────────────────────────────────────────────────────────
   /stores/{storeId}/reviews:
     get:
@@ -666,6 +724,108 @@ paths:
         "403":
           description: Forbidden
 
+  /admin/support/threads:
+    get:
+      operationId: adminListSupportThreads
+      tags: [admin]
+      summary: List support conversation threads (admin only)
+      responses:
+        "200":
+          description: Support threads with latest message and unread count
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SupportThread"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /admin/support/threads/{userId}/messages:
+    get:
+      operationId: adminListSupportMessages
+      tags: [admin]
+      summary: Get all messages in a user's support thread (admin only)
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Messages in the thread
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SupportMessage"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+    post:
+      operationId: adminReplySupport
+      tags: [admin]
+      summary: Reply to a user's support thread (admin only)
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendSupportMessageBody"
+      responses:
+        "201":
+          description: Reply sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportMessage"
+        "400":
+          description: Invalid message
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: No support thread for this user
+
+  /admin/support/threads/{userId}/read:
+    post:
+      operationId: adminMarkSupportRead
+      tags: [admin]
+      summary: Mark a user's support messages as read (admin only)
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Marked as read
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                required: [status]
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
   # ─── Subscription ─────────────────────────────────────────────────────────
   /stores/{storeId}/subscription:
     get:
@@ -841,6 +1001,58 @@ paths:
 
 components:
   schemas:
+    SupportMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        userName:
+          type: string
+        userEmail:
+          type: ["string", "null"]
+        senderRole:
+          type: string
+          enum: [user, admin]
+        body:
+          type: string
+        readByAdmin:
+          type: boolean
+        readByUser:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, userId, userName, senderRole, body, readByAdmin, readByUser, createdAt]
+
+    SendSupportMessageBody:
+      type: object
+      properties:
+        body:
+          type: string
+          minLength: 1
+          maxLength: 2000
+      required: [body]
+
+    SupportThread:
+      type: object
+      properties:
+        userId:
+          type: string
+        userName:
+          type: string
+        userEmail:
+          type: ["string", "null"]
+        lastMessage:
+          type: string
+        lastMessageAt:
+          type: string
+          format: date-time
+        unreadCount:
+          type: integer
+      required: [userId, userName, lastMessage, lastMessageAt, unreadCount]
+
     SubscriptionStatus:
       type: object
       properties:

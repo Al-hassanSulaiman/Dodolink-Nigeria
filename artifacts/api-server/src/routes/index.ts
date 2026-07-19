@@ -7,6 +7,7 @@ import messagesRouter from "./messages";
 import reviewsRouter from "./reviews";
 import pushTokensRouter from "./push_tokens";
 import storageRouter from "./storage";
+import supportRouter from "./support";
 import adminRouter from "./admin";
 import subscriptionsRouter from "./subscriptions";
 
@@ -21,6 +22,7 @@ router.use(messagesRouter);
 router.use(reviewsRouter);
 router.use(pushTokensRouter);
 router.use(storageRouter);
+router.use(supportRouter);
 router.use(subscriptionsRouter);
 
 export default router;

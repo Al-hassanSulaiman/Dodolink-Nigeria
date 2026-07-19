@@ -10,3 +10,5 @@ Orval-generated hooks in `@workspace/api-client-react` use **URL-based** query k
 **Why:** Keys like `['listStores']` or `['getStore', id]` are silent no-ops — the mutation succeeds but every screen keeps stale data. This exact bug appeared in five separate places (store edit, store avatar upload, product delete, review create, store create) during the July 2026 audit.
 
 **How to apply:** Parameterless helpers (`getListProductsQueryKey()`) prefix-match all parametrized variants under React Query's default matching, so they're safe for "invalidate all lists". Note keys are single-string elements: invalidating `['/api/stores']` does NOT match `['/api/stores/5/products']` — use the specific helper for nested routes.
+
+**Also:** every `use*Query` call site should pass an explicit `queryKey: get*QueryKey(sameParams)` in its query options. This lets multiple consumers (e.g. a polling sidebar badge and a page list) share one cache entry so React Query dedupes their requests.

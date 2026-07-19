@@ -42,9 +42,14 @@ export default function HomeScreen() {
           <Text style={[styles.title, { color: colors.primary }]}>Dodolink NG</Text>
           <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Connecting Nigerian businesses to customers</Text>
         </View>
-        <Pressable onPress={handleSignOut} hitSlop={8} style={styles.signOutBtn}>
-          <Feather name="log-out" size={20} color={colors.mutedForeground} />
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable onPress={() => router.push("/support" as Href)} hitSlop={8} style={styles.signOutBtn}>
+            <Feather name="headphones" size={20} color={colors.mutedForeground} />
+          </Pressable>
+          <Pressable onPress={handleSignOut} hitSlop={8} style={styles.signOutBtn}>
+            <Feather name="log-out" size={20} color={colors.mutedForeground} />
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.section}>
@@ -100,6 +105,11 @@ const styles = StyleSheet.create({
   },
   headerLeft: {
     flex: 1,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   signOutBtn: {
     paddingTop: 4,

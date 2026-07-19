@@ -30,10 +30,11 @@ _Populate as you build — short repo map plus pointers to the source-of-truth f
 - Paystack subscription verify checks amount (+NGN currency), reference prefix `dodolink_sub_<storeId>_`, and replay protection via the timestamp embedded in the reference vs `subscriptionLastPaidAt` — no schema change needed.
 - `GET /stores?ownerUserId=X` returns only X's stores including hidden past-due ones, so owners can always reach the subscription screen to pay.
 - One store per user, enforced at store creation (409 if one exists).
+- Support messaging: one flat thread per user in `support_messages` (`lib/db/src/schema/support_messages.ts`) with `senderRole` + per-side read flags; user routes in `artifacts/api-server/src/routes/support.ts` (identity always from Clerk), admin routes in `admin.ts` behind the `requireAdmin` allowlist. Admin replies 404 without an existing thread and snapshot userName/email from the latest row; mark-read endpoints are idempotent bulk updates.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Support/help messaging: mobile users reach a support chat via the headphones icon on Home (`app/support.tsx`, 15s polling); admins triage from a two-pane inbox at `/admin/support` with an unread badge in the sidebar. Admin replies trigger a push notification ("Dodolink Support") to the user.
 
 ## User preferences
 

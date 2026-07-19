@@ -5,6 +5,45 @@
  * Dodolink NG API - Nigerian marketplace connecting retailers and customers
  * OpenAPI spec version: 0.1.0
  */
+export type SupportMessageSenderRole = typeof SupportMessageSenderRole[keyof typeof SupportMessageSenderRole];
+
+
+export const SupportMessageSenderRole = {
+  user: 'user',
+  admin: 'admin',
+} as const;
+
+export interface SupportMessage {
+  id: number;
+  userId: string;
+  userName: string;
+  /** @nullable */
+  userEmail?: string | null;
+  senderRole: SupportMessageSenderRole;
+  body: string;
+  readByAdmin: boolean;
+  readByUser: boolean;
+  createdAt: string;
+}
+
+export interface SendSupportMessageBody {
+  /**
+     * @minLength 1
+     * @maxLength 2000
+     */
+  body: string;
+}
+
+export interface SupportThread {
+  userId: string;
+  userName: string;
+  /** @nullable */
+  userEmail?: string | null;
+  lastMessage: string;
+  lastMessageAt: string;
+  unreadCount: number;
+}
+
 export type SubscriptionStatusSubscriptionStatus = typeof SubscriptionStatusSubscriptionStatus[keyof typeof SubscriptionStatusSubscriptionStatus];
 
 
@@ -363,6 +402,10 @@ export type MarkConversationRead200 = {
   status: string;
 };
 
+export type MarkSupportRead200 = {
+  status: string;
+};
+
 export type AdminListStoresParams = {
 status?: AdminListStoresStatus;
 limit?: number;
@@ -390,4 +433,8 @@ export const AdminListUsersStatus = {
   active: 'active',
   inactive: 'inactive',
 } as const;
+
+export type AdminMarkSupportRead200 = {
+  status: string;
+};
 

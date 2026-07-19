@@ -11,7 +11,12 @@ import SignInPage from "@/pages/sign-in";
 import DashboardPage from "@/pages/dashboard";
 import StoresPage from "@/pages/stores";
 import UsersPage from "@/pages/users";
-import { LayoutDashboard, Store, LogOut, ShieldCheck, Users } from "lucide-react";
+import SupportPage from "@/pages/support";
+import {
+  useAdminListSupportThreads,
+  getAdminListSupportThreadsQueryKey,
+} from "@workspace/api-client-react";
+import { LayoutDashboard, Store, LogOut, ShieldCheck, Users, Headphones } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const queryClient = new QueryClient({
@@ -46,11 +51,20 @@ const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/stores", label: "Stores", icon: Store },
   { to: "/users", label: "Users", icon: Users },
+  { to: "/support", label: "Support", icon: Headphones },
 ];
 
 function Sidebar() {
   const { signOut } = useClerk();
   const [location] = useLocation();
+
+  const { data: supportThreads } = useAdminListSupportThreads({
+    query: {
+      queryKey: getAdminListSupportThreadsQueryKey(),
+      refetchInterval: 30000,
+    },
+  });
+  const supportUnread = (supportThreads ?? []).reduce((sum, t) => sum + t.unreadCount, 0);
 
   return (
     <aside className="w-56 min-h-screen bg-[#1B5E20] flex flex-col">
@@ -78,7 +92,12 @@ function Sidebar() {
               }`}
             >
               <Icon className="w-4.5 h-4.5 flex-shrink-0" />
-              {label}
+              <span className="flex-1">{label}</span>
+              {to === "/support" && supportUnread > 0 && (
+                <span className="min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-semibold flex items-center justify-center">
+                  {supportUnread}
+                </span>
+              )}
             </Link>
           );
         })}
@@ -167,6 +186,9 @@ function Router() {
       </Route>
       <Route path="/users">
         <ProtectedRoute component={UsersPage} />
+      </Route>
+      <Route path="/support">
+        <ProtectedRoute component={SupportPage} />
       </Route>
       <Route component={NotFound} />
     </Switch>

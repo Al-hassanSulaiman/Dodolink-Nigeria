@@ -461,6 +461,43 @@ export const StartConversationBody = zod.object({
 
 
 /**
+ * @summary Get the authenticated user's support conversation
+ */
+export const ListSupportMessagesResponseItem = zod.object({
+  "id": zod.number(),
+  "userId": zod.string(),
+  "userName": zod.string(),
+  "userEmail": zod.string().nullish(),
+  "senderRole": zod.enum(['user', 'admin']),
+  "body": zod.string(),
+  "readByAdmin": zod.boolean(),
+  "readByUser": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+export const ListSupportMessagesResponse = zod.array(ListSupportMessagesResponseItem)
+
+
+/**
+ * @summary Send a support message as the authenticated user
+ */
+export const sendSupportMessageBodyBodyMax = 2000;
+
+
+
+export const SendSupportMessageBody = zod.object({
+  "body": zod.string().min(1).max(sendSupportMessageBodyBodyMax)
+})
+
+
+/**
+ * @summary Mark admin support replies as read for the authenticated user
+ */
+export const MarkSupportReadResponse = zod.object({
+  "status": zod.string()
+})
+
+
+/**
  * @summary List reviews for a store
  */
 export const ListStoreReviewsParams = zod.object({
@@ -719,6 +756,69 @@ export const AdminListUsersResponseItem = zod.object({
   "storeName": zod.string().nullish()
 })
 export const AdminListUsersResponse = zod.array(AdminListUsersResponseItem)
+
+
+/**
+ * @summary List support conversation threads (admin only)
+ */
+export const AdminListSupportThreadsResponseItem = zod.object({
+  "userId": zod.string(),
+  "userName": zod.string(),
+  "userEmail": zod.string().nullish(),
+  "lastMessage": zod.string(),
+  "lastMessageAt": zod.coerce.date(),
+  "unreadCount": zod.number()
+})
+export const AdminListSupportThreadsResponse = zod.array(AdminListSupportThreadsResponseItem)
+
+
+/**
+ * @summary Get all messages in a user's support thread (admin only)
+ */
+export const AdminListSupportMessagesParams = zod.object({
+  "userId": zod.coerce.string()
+})
+
+export const AdminListSupportMessagesResponseItem = zod.object({
+  "id": zod.number(),
+  "userId": zod.string(),
+  "userName": zod.string(),
+  "userEmail": zod.string().nullish(),
+  "senderRole": zod.enum(['user', 'admin']),
+  "body": zod.string(),
+  "readByAdmin": zod.boolean(),
+  "readByUser": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+export const AdminListSupportMessagesResponse = zod.array(AdminListSupportMessagesResponseItem)
+
+
+/**
+ * @summary Reply to a user's support thread (admin only)
+ */
+export const AdminReplySupportParams = zod.object({
+  "userId": zod.coerce.string()
+})
+
+export const adminReplySupportBodyBodyMax = 2000;
+
+
+
+export const AdminReplySupportBody = zod.object({
+  "body": zod.string().min(1).max(adminReplySupportBodyBodyMax)
+})
+
+
+/**
+ * @summary Mark a user's support messages as read (admin only)
+ */
+export const AdminMarkSupportReadParams = zod.object({
+  "userId": zod.coerce.string()
+})
+
+export const AdminMarkSupportReadResponse = zod.object({
+  "status": zod.string()
+})
 
 
 /**
