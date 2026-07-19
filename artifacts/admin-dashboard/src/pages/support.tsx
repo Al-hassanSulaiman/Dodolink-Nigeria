@@ -12,7 +12,7 @@ import type { SupportThread, SupportMessage } from "@workspace/api-client-react"
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Headphones, Send } from "lucide-react";
+import { HelpCircle, Send } from "lucide-react";
 import { toast } from "sonner";
 
 function formatTime(iso: string): string {
@@ -100,7 +100,7 @@ export default function SupportPage() {
               <p className="p-4 text-sm text-gray-400">Loading…</p>
             ) : !threads || threads.length === 0 ? (
               <div className="p-6 text-center">
-                <Headphones className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                <HelpCircle className="w-8 h-8 text-gray-300 mx-auto mb-2" />
                 <p className="text-sm text-gray-500">No support messages yet</p>
               </div>
             ) : (
@@ -131,7 +131,7 @@ export default function SupportPage() {
           {!selectedThread ? (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
-                <Headphones className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                <HelpCircle className="w-10 h-10 text-gray-300 mx-auto mb-3" />
                 <p className="text-sm text-gray-500">Select a conversation to view and reply</p>
               </div>
             </div>

@@ -44,7 +44,7 @@ export default function HomeScreen() {
         </View>
         <View style={styles.headerActions}>
           <Pressable onPress={() => router.push("/support" as Href)} hitSlop={8} style={styles.signOutBtn}>
-            <Feather name="headphones" size={20} color={colors.mutedForeground} />
+            <Feather name="help-circle" size={20} color={colors.mutedForeground} />
           </Pressable>
           <Pressable onPress={handleSignOut} hitSlop={8} style={styles.signOutBtn}>
             <Feather name="log-out" size={20} color={colors.mutedForeground} />

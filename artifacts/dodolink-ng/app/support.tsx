@@ -96,7 +96,7 @@ export default function SupportScreen() {
       ) : (
         <View style={styles.emptyWrap}>
           <View style={[styles.emptyIcon, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Feather name="headphones" size={28} color={colors.primary} />
+            <Feather name="help-circle" size={28} color={colors.primary} />
           </View>
           <Text style={[styles.emptyTitle, { color: colors.foreground }]}>How can we help?</Text>
           <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>

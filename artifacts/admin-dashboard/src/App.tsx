@@ -16,7 +16,7 @@ import {
   useAdminListSupportThreads,
   getAdminListSupportThreadsQueryKey,
 } from "@workspace/api-client-react";
-import { LayoutDashboard, Store, LogOut, ShieldCheck, Users, Headphones } from "lucide-react";
+import { LayoutDashboard, Store, LogOut, ShieldCheck, Users, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const queryClient = new QueryClient({
@@ -51,7 +51,7 @@ const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/stores", label: "Stores", icon: Store },
   { to: "/users", label: "Users", icon: Users },
-  { to: "/support", label: "Support", icon: Headphones },
+  { to: "/support", label: "Support", icon: HelpCircle },
 ];
 
 function Sidebar() {
