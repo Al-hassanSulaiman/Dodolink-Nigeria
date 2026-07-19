@@ -1,10 +1,13 @@
 /**
  * Standalone production server for Expo static builds.
  *
- * Serves the output of build.js (static-build/) with two special routes:
+ * Serves the output of build.js (static-build/) with these routes:
  * - GET / or /manifest with expo-platform header → platform manifest JSON
- * - GET / without expo-platform → landing page HTML
- * Everything else falls through to static file serving from ./static-build/.
+ * - GET / without expo-platform → web app (static-build/web/index.html),
+ *   falling back to the landing page if no web build exists
+ * - GET /go → Expo Go landing page (QR code)
+ * Everything else falls through to static file serving from ./static-build/
+ * and ./static-build/web/, with an SPA fallback to the web index.html.
  *
  * Zero external dependencies — uses only Node.js built-ins (http, fs, path).
  */
@@ -14,6 +17,7 @@ const fs = require("fs");
 const path = require("path");
 
 const STATIC_ROOT = path.resolve(__dirname, "..", "static-build");
+const WEB_ROOT = path.join(STATIC_ROOT, "web");
 const TEMPLATE_PATH = path.resolve(__dirname, "templates", "landing-page.html");
 const basePath = (process.env.BASE_PATH || "/").replace(/\/+$/, "");
 
@@ -86,27 +90,58 @@ function serveLandingPage(req, res, landingPageTemplate, appName) {
   res.end(html);
 }
 
-function serveStaticFile(urlPath, res) {
-  const safePath = path.normalize(urlPath).replace(/^(\.\.(\/|\\|$))+/, "");
-  const filePath = path.join(STATIC_ROOT, safePath);
+function hasWebBuild() {
+  return fs.existsSync(path.join(WEB_ROOT, "index.html"));
+}
 
-  if (!filePath.startsWith(STATIC_ROOT)) {
-    res.writeHead(403);
-    res.end("Forbidden");
-    return;
-  }
-
-  if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
-    res.writeHead(404);
-    res.end("Not Found");
-    return;
-  }
-
+function sendFile(filePath, res) {
   const ext = path.extname(filePath).toLowerCase();
   const contentType = MIME_TYPES[ext] || "application/octet-stream";
+  const headers = { "content-type": contentType };
+  if (ext === ".html") {
+    headers["cache-control"] = "no-cache";
+  }
   const content = fs.readFileSync(filePath);
-  res.writeHead(200, { "content-type": contentType });
+  res.writeHead(200, headers);
   res.end(content);
+}
+
+function resolveWithinRoot(root, urlPath) {
+  const safePath = path.normalize(urlPath).replace(/^(\.\.(\/|\\|$))+/, "");
+  const filePath = path.join(root, safePath);
+
+  if (!filePath.startsWith(root)) {
+    return null;
+  }
+  if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+    return filePath;
+  }
+  return null;
+}
+
+function serveWebIndex(res) {
+  sendFile(path.join(WEB_ROOT, "index.html"), res);
+}
+
+function serveStaticFile(urlPath, res) {
+  const fromStatic = resolveWithinRoot(STATIC_ROOT, urlPath);
+  if (fromStatic) {
+    return sendFile(fromStatic, res);
+  }
+
+  const fromWeb = resolveWithinRoot(WEB_ROOT, urlPath);
+  if (fromWeb) {
+    return sendFile(fromWeb, res);
+  }
+
+  // SPA fallback: page navigations (no file extension) get the web app shell
+  // so client-side routes like /store/1 work on direct load and refresh.
+  if (!path.extname(urlPath) && hasWebBuild()) {
+    return serveWebIndex(res);
+  }
+
+  res.writeHead(404);
+  res.end("Not Found");
 }
 
 const landingPageTemplate = fs.readFileSync(TEMPLATE_PATH, "utf-8");
@@ -127,8 +162,15 @@ const server = http.createServer((req, res) => {
     }
 
     if (pathname === "/") {
+      if (hasWebBuild()) {
+        return serveWebIndex(res);
+      }
       return serveLandingPage(req, res, landingPageTemplate, appName);
     }
+  }
+
+  if (pathname === "/go") {
+    return serveLandingPage(req, res, landingPageTemplate, appName);
   }
 
   serveStaticFile(pathname, res);

@@ -12,6 +12,7 @@ import { useColors } from '@/hooks/useColors';
 import { useUserIdentity } from '@/hooks/useUserIdentity';
 import { useQueryClient } from '@tanstack/react-query';
 import { LoadingScreen } from '@/components/Loading';
+import { getApiBase } from '@/utils/apiBase';
 import { Feather } from '@expo/vector-icons';
 import { KeyboardAvoidingView as KeyboardControllerView } from 'react-native-keyboard-controller';
 import { Pressable } from 'react-native';
@@ -32,8 +33,7 @@ export default function ChatThreadScreen() {
   // Mark conversation as read when chat is opened
   useEffect(() => {
     if (!id) return;
-    const base = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
-    fetch(`${base}/api/conversations/${id}/read`, { method: 'POST' }).catch(() => {});
+    fetch(`${getApiBase()}/api/conversations/${id}/read`, { method: 'POST' }).catch(() => {});
     queryClient.invalidateQueries({ queryKey: getListConversationsQueryKey() });
   }, [id]);
 

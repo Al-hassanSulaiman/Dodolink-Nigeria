@@ -38,7 +38,8 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- The Dodolink NG deployment build (`artifacts/dodolink-ng/scripts/build.js`) exports a react-native-web build (`expo export --platform web`) before building native bundles; `server/serve.js` serves it at `/`, the QR/Expo Go landing page at `/go`, and native manifests via the `expo-platform` header. `static-build/` is gitignored build output.
+- `EXPO_PUBLIC_*` env vars are baked into bundles at export/Metro start time — set them in the build env, they cannot be read at runtime.
 
 ## Pointers
 

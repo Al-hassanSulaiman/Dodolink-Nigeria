@@ -505,6 +505,72 @@ function updateManifests(manifests, timestamp, baseUrl, assetsByHash) {
   console.log("Manifests updated");
 }
 
+function exportWebBuild(expoPublicDomain, expoPublicReplId) {
+  return new Promise((resolve, reject) => {
+    console.log("Exporting web build...");
+
+    const env = {
+      ...process.env,
+      EXPO_PUBLIC_DOMAIN: expoPublicDomain,
+      EXPO_PUBLIC_REPL_ID: expoPublicReplId,
+      EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY:
+        process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ||
+        process.env.CLERK_PUBLISHABLE_KEY,
+    };
+
+    const child = spawn(
+      "pnpm",
+      [
+        "exec",
+        "expo",
+        "export",
+        "--platform",
+        "web",
+        "--output-dir",
+        "static-build/web",
+      ],
+      {
+        stdio: ["ignore", "pipe", "pipe"],
+        cwd: projectRoot,
+        env,
+      },
+    );
+
+    if (child.stdout) {
+      child.stdout.on("data", (data) => {
+        const output = data.toString().trim();
+        if (output) console.log(`[Web Export] ${output}`);
+      });
+    }
+    if (child.stderr) {
+      child.stderr.on("data", (data) => {
+        const output = data.toString().trim();
+        if (output) console.error(`[Web Export Error] ${output}`);
+      });
+    }
+
+    child.on("error", reject);
+    child.on("exit", (code) => {
+      if (code === 0) {
+        const indexPath = path.join(
+          projectRoot,
+          "static-build",
+          "web",
+          "index.html",
+        );
+        if (!fs.existsSync(indexPath)) {
+          reject(new Error("Web export finished but index.html is missing"));
+          return;
+        }
+        console.log("Web build ready");
+        resolve();
+      } else {
+        reject(new Error(`Web export failed with exit code ${code}`));
+      }
+    });
+  });
+}
+
 async function main() {
   console.log("Building static Expo Go deployment...");
 
@@ -517,6 +583,12 @@ async function main() {
 
   prepareDirectories(timestamp);
   clearMetroCache();
+
+  try {
+    await exportWebBuild(domain, expoPublicReplId);
+  } catch (error) {
+    exitWithError(`Web export failed: ${error.message}`);
+  }
 
   await startMetro(domain, expoPublicReplId);
 

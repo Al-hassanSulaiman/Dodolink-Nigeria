@@ -1,8 +1,8 @@
-const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+import { getApiBase } from "./apiBase";
 
 export function getImageUrl(objectPath: string): string {
   if (objectPath.startsWith("http")) return objectPath;
-  return `${API_BASE}/api/storage${objectPath}`;
+  return `${getApiBase()}/api/storage${objectPath}`;
 }
 
 export async function requestUploadUrl(opts: {
@@ -10,7 +10,7 @@ export async function requestUploadUrl(opts: {
   size: number;
   contentType: string;
 }): Promise<{ uploadURL: string; objectPath: string }> {
-  const res = await fetch(`${API_BASE}/api/storage/uploads/request-url`, {
+  const res = await fetch(`${getApiBase()}/api/storage/uploads/request-url`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(opts),

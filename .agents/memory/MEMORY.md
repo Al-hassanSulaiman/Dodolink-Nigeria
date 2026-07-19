@@ -3,3 +3,5 @@
 - [Replit iframe sandbox blocks dialogs and fonts](replit-iframe-limits.md) — Alert.alert is a no-op on ALL react-native-web (use utils/alerts.ts); iframe also blocks window.confirm/open, FontFaceObserver
 - [Orval query keys are URL-based](orval-query-keys.md) — hand-written keys like ['listStores'] never match; always invalidate with generated get*QueryKey helpers
 - [Clerk API auth needs explicit bearer token](clerk-api-auth.md) — session cookies never reach the API server; ALL clients (web too) must call setAuthTokenGetter(getToken)
+- [Expo web export in workspace](expo-web-export.md) — backgrounded builds get reaped; use the validation runner and free RAM first (needs ~2.5 GB+)
+- [Web API base URL dev vs prod](web-api-base.md) — window.location.origin is correct only in production web; dev web must use EXPO_PUBLIC_DOMAIN (getApiBase handles it)
