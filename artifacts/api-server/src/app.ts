@@ -13,6 +13,8 @@ import { logger } from "./lib/logger";
 
 const app: Express = express();
 
+app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
+
 app.use(
   pinoHttp({
     logger,
@@ -32,7 +34,7 @@ app.use(
     },
   }),
 );
-app.use(cors());
+app.use(cors({ credentials: true, origin: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
