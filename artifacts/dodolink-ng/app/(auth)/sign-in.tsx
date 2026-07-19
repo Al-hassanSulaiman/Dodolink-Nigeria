@@ -1,4 +1,4 @@
-import { useSignIn, useClerk } from "@clerk/expo";
+import { useSignIn, useClerk, useAuth } from "@clerk/expo";
 import { type Href, Link, useRouter } from "expo-router";
 import React from "react";
 import {
@@ -61,6 +61,7 @@ function buildSyncUrl(clerk: any): string | null {
 export default function SignInPage() {
   const { signIn, setActive, errors, fetchStatus } = useSignIn() as any;
   const clerk = useClerk() as any;
+  const { isSignedIn } = useAuth();
   const router = useRouter();
 
   const [emailAddress, setEmailAddress] = React.useState("");
@@ -68,10 +69,21 @@ export default function SignInPage() {
   const [showPassword, setShowPassword] = React.useState(false);
   const [syncUrl, setSyncUrl] = React.useState<string | null>(null);
 
+  const isAlreadySignedInError = (err: any): boolean => {
+    const code = err?.errors?.[0]?.code ?? err?.code;
+    return code === "session_exists";
+  };
+
   const handleSubmit = async () => {
     try {
       const { data, error } = await signIn.password({ emailAddress, password });
-      if (error) return;
+      if (error) {
+        // Already signed in? Just go straight into the app.
+        if (isAlreadySignedInError(error) || isSignedIn) {
+          router.replace("/(tabs)" as Href);
+        }
+        return;
+      }
 
       const result = data ?? signIn;
 
@@ -86,6 +98,11 @@ export default function SignInPage() {
         Alert.alert("Sign in incomplete", `Status: ${result.status ?? "unknown"}`);
       }
     } catch (err: any) {
+      // If the session was actually created despite the error, enter the app.
+      if (isAlreadySignedInError(err) || isSignedIn) {
+        router.replace("/(tabs)" as Href);
+        return;
+      }
       const msg = err?.errors?.[0]?.longMessage ?? err?.message ?? String(err);
       Alert.alert("Sign in error", msg);
     }
