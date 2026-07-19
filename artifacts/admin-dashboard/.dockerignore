@@ -1,8 +1,0 @@
-.git
-.replit
-.replit-artifact
-node_modules
-dist
-*.log
-.env*
-attached_assets
