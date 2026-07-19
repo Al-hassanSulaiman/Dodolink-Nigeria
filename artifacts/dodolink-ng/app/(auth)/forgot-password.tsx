@@ -155,9 +155,9 @@ export default function ForgotPasswordPage() {
                   )}
                 </View>
 
-                {errors.global && (
+                {!!errors.global?.length && (
                   <View style={styles.globalError}>
-                    <Text style={styles.globalErrorText}>{errors.global.message}</Text>
+                    <Text style={styles.globalErrorText}>{(errors.global?.[0] as any)?.longMessage ?? errors.global?.[0]?.message}</Text>
                   </View>
                 )}
 
@@ -197,9 +197,9 @@ export default function ForgotPasswordPage() {
                   )}
                 </View>
 
-                {errors.global && (
+                {!!errors.global?.length && (
                   <View style={styles.globalError}>
-                    <Text style={styles.globalErrorText}>{errors.global.message}</Text>
+                    <Text style={styles.globalErrorText}>{(errors.global?.[0] as any)?.longMessage ?? errors.global?.[0]?.message}</Text>
                   </View>
                 )}
 
@@ -268,9 +268,9 @@ export default function ForgotPasswordPage() {
                   )}
                 </View>
 
-                {errors.global && (
+                {!!errors.global?.length && (
                   <View style={styles.globalError}>
-                    <Text style={styles.globalErrorText}>{errors.global.message}</Text>
+                    <Text style={styles.globalErrorText}>{(errors.global?.[0] as any)?.longMessage ?? errors.global?.[0]?.message}</Text>
                   </View>
                 )}
 

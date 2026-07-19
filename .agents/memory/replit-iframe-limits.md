@@ -8,6 +8,7 @@ description: Browser APIs that silently fail inside the Replit preview iframe, a
 The preview pane is a sandboxed `<iframe>`. These APIs fail silently or throw:
 
 - `Alert.alert` / `window.alert` / `window.confirm` — sandbox blocks JS dialogs; the call returns immediately with no UI shown and no callback fired
+  - **Bigger issue:** `Alert.alert` is a no-op on react-native-web EVERYWHERE, not just the iframe — including the production website. Use `utils/alerts.ts` (`showAlert`/`confirmAlert`), which falls back to `window.alert`/`window.confirm` on web. Those work on the production domain; only inside the Replit preview iframe do they stay silent.
 - `window.open(url, '_blank')` — popup blocked by sandbox
 - `location.href = externalUrl` — "cannot set location.href" error
 - `<a target="_blank">` — link navigation blocked

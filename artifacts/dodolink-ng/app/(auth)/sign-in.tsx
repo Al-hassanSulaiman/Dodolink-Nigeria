@@ -3,7 +3,6 @@ import { type Href, Link, useRouter } from "expo-router";
 import React from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -13,6 +12,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { showAlert } from "@/utils/alerts";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 
@@ -95,7 +95,7 @@ export default function SignInPage() {
       } else if (result.status === "needs_client_trust") {
         setSyncUrl(buildSyncUrl(clerk));
       } else {
-        Alert.alert("Sign in incomplete", `Status: ${result.status ?? "unknown"}`);
+        showAlert("Sign in incomplete", `Status: ${result.status ?? "unknown"}`);
       }
     } catch (err: any) {
       // If the session was actually created despite the error, enter the app.
@@ -104,7 +104,7 @@ export default function SignInPage() {
         return;
       }
       const msg = err?.errors?.[0]?.longMessage ?? err?.message ?? String(err);
-      Alert.alert("Sign in error", msg);
+      showAlert("Sign in error", msg);
     }
   };
 
@@ -139,7 +139,7 @@ export default function SignInPage() {
               onPress={() => {
                 if (typeof navigator !== "undefined" && navigator.clipboard) {
                   navigator.clipboard.writeText(appUrl).then(() =>
-                    Alert.alert("Copied!", "URL copied to clipboard.")
+                    showAlert("Copied!", "URL copied to clipboard.")
                   );
                 }
               }}
@@ -247,9 +247,9 @@ export default function SignInPage() {
               )}
             </View>
 
-            {errors.global && (
+            {!!errors.global?.length && (
               <View style={styles.globalError}>
-                <Text style={styles.globalErrorText}>{errors.global.message}</Text>
+                <Text style={styles.globalErrorText}>{errors.global?.[0]?.longMessage ?? errors.global?.[0]?.message}</Text>
               </View>
             )}
 

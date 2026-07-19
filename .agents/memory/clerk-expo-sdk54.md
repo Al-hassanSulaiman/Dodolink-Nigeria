@@ -90,6 +90,12 @@ The sign-in page now shows a "One-time setup required" screen when `needs_client
 
 **For production Clerk keys (pk_live_*):** `needs_client_trust` never occurs. Auth works normally everywhere.
 
+## errors.global is an ARRAY
+
+`useSignIn()/useSignUp().errors.global` is `ClerkError[]`, not a single error. Rendering `errors.global.message` shows blank. Guard with `!!errors.global?.length` and render `errors.global[0]?.longMessage ?? errors.global[0]?.message`.
+
+Also: `useAuth()` returns only userId/sessionId/getToken — it has NO `user` object. For email/profile use `useUser()` (`user.primaryEmailAddress.emailAddress`).
+
 ## useUserIdentity → Clerk
 
 Replace the random-UUID hook with `useUser()` from `@clerk/expo`. Return `user.id`, derive `userName` from fullName / firstName+lastName / email prefix.

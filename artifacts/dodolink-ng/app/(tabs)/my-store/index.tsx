@@ -1,6 +1,8 @@
 import { StyleSheet, View, Text, ScrollView, RefreshControl, Image, Pressable } from 'react-native';
+import { confirmAlert } from '@/utils/alerts';
 import { useAuth } from '@clerk/expo';
-import { useListStores, useListStoreProducts, useDeleteProduct } from '@workspace/api-client-react';
+import { useListStores, useListStoreProducts, useDeleteProduct, getListProductsQueryKey } from '@workspace/api-client-react';
+import { ImagePlaceholder } from '@/components/ImagePlaceholder';
 import { useColors } from '@/hooks/useColors';
 import { useUserIdentity } from '@/hooks/useUserIdentity';
 import { LoadingScreen } from '@/components/Loading';
@@ -39,24 +41,19 @@ export default function MyStoreScreen() {
     mutation: {
       onSuccess: () => {
         refetchProducts();
-        queryClient.invalidateQueries({ queryKey: ['listProducts'] });
+        queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
       }
     }
   });
 
   const handleDeleteProduct = (productId: number, productName: string) => {
-    Alert.alert(
-      'Delete Product',
-      `Remove "${productName}" from your store? This cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => deleteProduct.mutate({ productId }),
-        },
-      ]
-    );
+    confirmAlert({
+      title: 'Delete Product',
+      message: `Remove "${productName}" from your store? This cannot be undone.`,
+      confirmText: 'Delete',
+      destructive: true,
+      onConfirm: () => deleteProduct.mutate({ productId }),
+    });
   };
 
   const refreshing = isLoading || productsLoading;

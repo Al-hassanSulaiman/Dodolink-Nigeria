@@ -5,14 +5,14 @@ import {
   ScrollView,
   RefreshControl,
   Switch,
-  Alert,
   ActivityIndicator,
   Pressable,
 } from 'react-native';
+import { showAlert, confirmAlert } from '@/utils/alerts';
 import { useState } from 'react';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useAuth } from '@clerk/expo';
+import { useUser } from '@clerk/expo';
 import { Feather } from '@expo/vector-icons';
 import {
   useGetSubscription,
@@ -54,13 +54,16 @@ export default function SubscriptionScreen() {
   const chargeMutation = useChargeSubscription();
   const autoPayMutation = useToggleAutoPay();
 
-  const { user } = useAuth() as any;
-  const userEmail = user?.primaryEmailAddress?.emailAddress ?? '';
+  const { user } = useUser();
+  const userEmail =
+    user?.primaryEmailAddress?.emailAddress ??
+    user?.emailAddresses?.[0]?.emailAddress ??
+    '';
 
   const handlePayManually = async () => {
     if (!myStore) return;
     if (!userEmail) {
-      Alert.alert('Email required', 'Your account has no email address. Please update your profile.');
+      showAlert('Email required', 'Your account has no email address. Please update your profile.');
       return;
     }
 
@@ -73,7 +76,7 @@ export default function SubscriptionScreen() {
       setPendingReference(data.reference);
       await WebBrowser.openBrowserAsync(data.checkoutUrl);
     } catch (err: any) {
-      Alert.alert('Error', err?.message ?? 'Could not initiate payment');
+      showAlert('Error', err?.message ?? 'Could not initiate payment');
     }
   };
 
@@ -87,33 +90,28 @@ export default function SubscriptionScreen() {
       });
       setPendingReference(null);
       await refetch();
-      Alert.alert('Success', 'Subscription activated! Your store is now active.');
+      showAlert('Success', 'Subscription activated! Your store is now active.');
     } catch (err: any) {
-      Alert.alert('Verification failed', err?.message ?? 'Could not verify payment. Try again.');
+      showAlert('Verification failed', err?.message ?? 'Could not verify payment. Try again.');
     }
   };
 
   const handleAutoCharge = async () => {
     if (!myStore) return;
-    Alert.alert(
-      'Renew subscription',
-      `Charge ${SUBSCRIPTION_FEE} using your saved card?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Charge now',
-          onPress: async () => {
-            try {
-              await chargeMutation.mutateAsync({ storeId: myStore.id });
-              await refetch();
-              Alert.alert('Success', 'Subscription renewed!');
-            } catch (err: any) {
-              Alert.alert('Charge failed', err?.message ?? 'Payment could not be processed.');
-            }
-          },
-        },
-      ]
-    );
+    confirmAlert({
+      title: 'Renew subscription',
+      message: `Charge ${SUBSCRIPTION_FEE} using your saved card?`,
+      confirmText: 'Charge now',
+      onConfirm: async () => {
+        try {
+          await chargeMutation.mutateAsync({ storeId: myStore.id });
+          await refetch();
+          showAlert('Success', 'Subscription renewed!');
+        } catch (err: any) {
+          showAlert('Charge failed', err?.message ?? 'Payment could not be processed.');
+        }
+      },
+    });
   };
 
   const handleToggleAutoPay = async (value: boolean) => {
@@ -125,7 +123,7 @@ export default function SubscriptionScreen() {
       });
       await refetch();
     } catch (err: any) {
-      Alert.alert('Error', err?.message ?? 'Could not update auto-pay setting.');
+      showAlert('Error', err?.message ?? 'Could not update auto-pay setting.');
     }
   };
 

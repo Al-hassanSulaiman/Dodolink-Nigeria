@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Platform,
   Pressable,
@@ -9,10 +8,11 @@ import {
   Text,
   View,
 } from "react-native";
+import { showAlert } from "@/utils/alerts";
 import * as ImagePicker from "expo-image-picker";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
-import { useUpdateStore, type Store } from "@workspace/api-client-react";
+import { useUpdateStore, getListStoresQueryKey, getGetStoreQueryKey, type Store } from "@workspace/api-client-react";
 import { uploadImageToStorage, getImageUrl } from "@/utils/storage";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -31,8 +31,8 @@ export function StoreAvatar({ store, size = 64, editable = false }: StoreAvatarP
   const updateStore = useUpdateStore({
     mutation: {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["listStores"] });
-        queryClient.invalidateQueries({ queryKey: ["getStore", store.id] });
+        queryClient.invalidateQueries({ queryKey: getListStoresQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetStoreQueryKey(store.id) });
       },
     },
   });
@@ -47,7 +47,7 @@ export function StoreAvatar({ store, size = 64, editable = false }: StoreAvatarP
     if (Platform.OS !== "web") {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert(
+        showAlert(
           "Permission needed",
           "Please allow access to your photo library to set a store photo."
         );
@@ -72,7 +72,7 @@ export function StoreAvatar({ store, size = 64, editable = false }: StoreAvatarP
       await updateStore.mutateAsync({ storeId: store.id, data: { imageUrl: objectPath } });
     } catch {
       setLocalUri(null);
-      Alert.alert("Upload failed", "Could not update the store photo. Please try again.");
+      showAlert("Upload failed", "Could not update the store photo. Please try again.");
     } finally {
       setUploading(false);
     }

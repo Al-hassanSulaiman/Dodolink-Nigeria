@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, Image, ScrollView, Pressable, Alert, ActivityIndicator, Platform, Switch } from 'react-native';
+import { StyleSheet, View, Text, Image, ScrollView, Pressable, ActivityIndicator, Platform, Switch } from 'react-native';
+import { showAlert } from '@/utils/alerts';
 import { useLocalSearchParams, router, Stack } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { useGetProduct, useUpdateProduct } from '@workspace/api-client-react';
+import { useGetProduct, useUpdateProduct, getGetProductQueryKey, getListStoreProductsQueryKey, getListProductsQueryKey } from '@workspace/api-client-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useColors } from '@/hooks/useColors';
 import { Input, Button } from '@/components/ui';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
@@ -36,9 +38,16 @@ export default function EditProductScreen() {
     query: { enabled: !!id }
   });
 
+  const queryClient = useQueryClient();
+
   const updateProduct = useUpdateProduct({
     mutation: {
       onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetProductQueryKey(id) });
+        if (product?.storeId) {
+          queryClient.invalidateQueries({ queryKey: getListStoreProductsQueryKey(product.storeId) });
+        }
+        queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
         router.back();
       }
     }
@@ -72,14 +81,14 @@ export default function EditProductScreen() {
     if (Platform.OS !== 'web') {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please allow access to your photo library to upload images.');
+        showAlert('Permission needed', 'Please allow access to your photo library to upload images.');
         return;
       }
     }
 
     const remaining = MAX_IMAGES - totalImages;
     if (remaining <= 0) {
-      Alert.alert('Limit reached', `You can have up to ${MAX_IMAGES} images.`);
+      showAlert('Limit reached', `You can have up to ${MAX_IMAGES} images.`);
       return;
     }
 
@@ -113,7 +122,7 @@ export default function EditProductScreen() {
       try {
         uploadedUrls = await Promise.all(newLocalImages.map(uploadImageToStorage));
       } catch {
-        Alert.alert('Upload failed', 'Could not upload one or more images. Please try again.');
+        showAlert('Upload failed', 'Could not upload one or more images. Please try again.');
         setUploading(false);
         return;
       } finally {

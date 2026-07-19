@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, View, Text } from 'react-native';
 import { router, Stack } from 'expo-router';
-import { useCreateStore } from '@workspace/api-client-react';
+import { useCreateStore, getListStoresQueryKey } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useColors } from '@/hooks/useColors';
 import { useUserIdentity } from '@/hooks/useUserIdentity';
@@ -26,7 +26,7 @@ export default function CreateStoreScreen() {
   const createStore = useCreateStore({
     mutation: {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['/api/stores'] });
+        queryClient.invalidateQueries({ queryKey: getListStoresQueryKey() });
         router.replace('/(tabs)/my-store');
       }
     }

@@ -1,9 +1,8 @@
-import { useSignUp } from "@clerk/expo";
+import { useSignUp, useAuth } from "@clerk/expo";
 import { type Href, Link, useRouter } from "expo-router";
 import React from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -13,11 +12,13 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { showAlert } from "@/utils/alerts";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 
 export default function SignUpPage() {
   const { signUp, errors, fetchStatus } = useSignUp();
+  const { isSignedIn } = useAuth();
   const router = useRouter();
 
   const [emailAddress, setEmailAddress] = React.useState("");
@@ -27,7 +28,14 @@ export default function SignUpPage() {
 
   const handleSubmit = async () => {
     const { error } = await signUp.password({ emailAddress, password });
-    if (error) return;
+    if (error) {
+      // Already signed in? Just go straight into the app.
+      const errCode = (error as any)?.errors?.[0]?.code ?? (error as any)?.code;
+      if (errCode === "session_exists" || isSignedIn) {
+        router.replace("/(tabs)" as Href);
+      }
+      return;
+    }
     await signUp.verifications.sendEmailCode();
   };
 
@@ -38,18 +46,18 @@ export default function SignUpPage() {
 
       if (result.status === "complete") {
         router.replace("/(tabs)" as Href);
-      } else if (result.status === "needs_client_trust") {
+      } else if ((result.status as string) === "needs_client_trust") {
         await result.finalize({
           navigate: ({ decorateUrl }: { decorateUrl: (url: string) => string }) => {
             (globalThis as any).location.href = decorateUrl("/");
           },
         });
       } else {
-        Alert.alert("Verification incomplete", `Status: ${result.status ?? "unknown"}`);
+        showAlert("Verification incomplete", `Status: ${result.status ?? "unknown"}`);
       }
     } catch (err: any) {
       const msg = err?.errors?.[0]?.longMessage ?? err?.message ?? String(err);
-      Alert.alert("Verification error", msg);
+      showAlert("Verification error", msg);
     }
   };
 
@@ -100,9 +108,9 @@ export default function SignUpPage() {
                 )}
               </View>
 
-              {errors.global && (
+              {!!errors.global?.length && (
                 <View style={styles.globalError}>
-                  <Text style={styles.globalErrorText}>{errors.global.message}</Text>
+                  <Text style={styles.globalErrorText}>{(errors.global?.[0] as any)?.longMessage ?? errors.global?.[0]?.message}</Text>
                 </View>
               )}
 
@@ -207,9 +215,9 @@ export default function SignUpPage() {
               )}
             </View>
 
-            {errors.global && (
+            {!!errors.global?.length && (
               <View style={styles.globalError}>
-                <Text style={styles.globalErrorText}>{errors.global.message}</Text>
+                <Text style={styles.globalErrorText}>{(errors.global?.[0] as any)?.longMessage ?? errors.global?.[0]?.message}</Text>
               </View>
             )}
 

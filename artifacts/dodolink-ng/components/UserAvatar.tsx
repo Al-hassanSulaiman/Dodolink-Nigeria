@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Platform,
   Pressable,
@@ -9,6 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { showAlert } from "@/utils/alerts";
 import * as ImagePicker from "expo-image-picker";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
@@ -34,7 +34,7 @@ export function UserAvatar({ size = 64, editable = false }: UserAvatarProps) {
     if (Platform.OS !== "web") {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert(
+        showAlert(
           "Permission needed",
           "Please allow access to your photo library to set a profile picture."
         );
@@ -58,7 +58,7 @@ export function UserAvatar({ size = 64, editable = false }: UserAvatarProps) {
       await updateProfileImage(asset.uri, asset.mimeType ?? "image/jpeg");
     } catch {
       setLocalUri(null);
-      Alert.alert("Upload failed", "Could not update your profile picture. Please try again.");
+      showAlert("Upload failed", "Could not update your profile picture. Please try again.");
     } finally {
       setUploading(false);
     }

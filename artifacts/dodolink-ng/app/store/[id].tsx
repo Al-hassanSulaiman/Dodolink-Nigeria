@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, RefreshControl, Pressable, Alert, Image } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, RefreshControl, Pressable, Image } from 'react-native';
+import { showAlert } from '@/utils/alerts';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import {
   useGetStore,
@@ -7,6 +8,9 @@ import {
   useListStoreReviews,
   useCreateReview,
   useUpdateStore,
+  getGetStoreQueryKey,
+  getListStoresQueryKey,
+  getListStoreReviewsQueryKey,
 } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { useUserIdentity } from '@/hooks/useUserIdentity';
@@ -57,6 +61,7 @@ export default function StoreScreen() {
         setRating(0);
         setComment('');
         refetchStore();
+        queryClient.invalidateQueries({ queryKey: getListStoreReviewsQueryKey(storeId) });
       }
     }
   });
@@ -64,12 +69,12 @@ export default function StoreScreen() {
   const updateStore = useUpdateStore({
     mutation: {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['listStores'] });
-        queryClient.invalidateQueries({ queryKey: ['getStore', storeId] });
+        queryClient.invalidateQueries({ queryKey: getListStoresQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetStoreQueryKey(storeId) });
         setIsEditing(false);
       },
       onError: () => {
-        Alert.alert('Save failed', 'Could not update the store. Please try again.');
+        showAlert('Save failed', 'Could not update the store. Please try again.');
       }
     }
   });

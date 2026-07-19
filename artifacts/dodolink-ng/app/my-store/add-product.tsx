@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { StyleSheet, View, Text, Image, ScrollView, Pressable, Alert, ActivityIndicator, Platform } from 'react-native';
+import { StyleSheet, View, Text, Image, ScrollView, Pressable, ActivityIndicator, Platform } from 'react-native';
+import { showAlert } from '@/utils/alerts';
 import { useLocalSearchParams, router, Stack } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { useCreateProduct } from '@workspace/api-client-react';
+import { useCreateProduct, getListStoreProductsQueryKey, getListProductsQueryKey } from '@workspace/api-client-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useColors } from '@/hooks/useColors';
 import { Input, Button } from '@/components/ui';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
@@ -25,9 +27,13 @@ export default function AddProductScreen() {
   const [localImages, setLocalImages] = useState<string[]>([]);
   const [uploadingImages, setUploadingImages] = useState(false);
 
+  const queryClient = useQueryClient();
+
   const createProduct = useCreateProduct({
     mutation: {
       onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListStoreProductsQueryKey(id) });
+        queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
         router.back();
       }
     }
@@ -37,14 +43,14 @@ export default function AddProductScreen() {
     if (Platform.OS !== 'web') {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please allow access to your photo library to upload images.');
+        showAlert('Permission needed', 'Please allow access to your photo library to upload images.');
         return;
       }
     }
 
     const remaining = MAX_IMAGES - localImages.length;
     if (remaining <= 0) {
-      Alert.alert('Limit reached', `You can upload up to ${MAX_IMAGES} images.`);
+      showAlert('Limit reached', `You can upload up to ${MAX_IMAGES} images.`);
       return;
     }
 
@@ -75,7 +81,7 @@ export default function AddProductScreen() {
       try {
         imageUrls = await Promise.all(localImages.map(uploadImageToStorage));
       } catch {
-        Alert.alert('Upload failed', 'Could not upload one or more images. Please try again.');
+        showAlert('Upload failed', 'Could not upload one or more images. Please try again.');
         setUploadingImages(false);
         return;
       } finally {
