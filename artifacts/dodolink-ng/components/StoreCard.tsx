@@ -19,9 +19,17 @@ export function StoreCard({ store }: { store: Store }) {
           <ImagePlaceholder name={store.name} size={64} borderRadius={32} />
         )}
         <View style={styles.content}>
-          <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>
-            {store.name}
-          </Text>
+          <View style={styles.nameRow}>
+            <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>
+              {store.name}
+            </Text>
+            {store.verificationStatus === 'verified' && (
+              <View style={[styles.verifiedBadge, { backgroundColor: colors.primary }]}>
+                <Feather name="check-circle" size={10} color="#fff" />
+                <Text style={styles.verifiedText}>Verified</Text>
+              </View>
+            )}
+          </View>
           <View style={styles.metaRow}>
             <Feather name="map-pin" size={12} color={colors.mutedForeground} />
             <Text style={[styles.location, { color: colors.mutedForeground }]} numberOfLines={1}>
@@ -61,10 +69,29 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 16,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+    marginBottom: 2,
+  },
   name: {
     fontFamily: 'Inter_600SemiBold',
     fontSize: 16,
-    marginBottom: 4,
+  },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  verifiedText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
+    color: '#fff',
   },
   metaRow: {
     flexDirection: 'row',

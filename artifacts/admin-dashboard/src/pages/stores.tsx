@@ -4,6 +4,8 @@ import {
   useAdminVerifyStore,
   useAdminRejectStore,
   useAdminUpdateStore,
+  useAdminHideStore,
+  useAdminRestoreStore,
   getAdminListStoresQueryKey,
   getAdminGetAnalyticsQueryKey,
 } from "@workspace/api-client-react";
@@ -35,6 +37,7 @@ import {
   ShieldCheck,
   CreditCard,
   EyeOff,
+  Eye,
   Clock,
   Pencil,
   Lock,
@@ -119,6 +122,26 @@ export default function StoresPage() {
     },
   });
 
+  const hideMutation = useAdminHideStore({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getAdminListStoresQueryKey() });
+        toast.success("Store hidden from customers");
+      },
+      onError: () => toast.error("Failed to hide store"),
+    },
+  });
+
+  const restoreMutation = useAdminRestoreStore({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getAdminListStoresQueryKey() });
+        toast.success("Store restored — visible to customers again");
+      },
+      onError: () => toast.error("Failed to restore store"),
+    },
+  });
+
   function handleVerify(storeId: number) {
     verifyMutation.mutate({ storeId });
   }
@@ -191,7 +214,10 @@ export default function StoresPage() {
       {!isLoading && stores && stores.length > 0 && (
         <div className="grid gap-4">
           {stores.map((store) => (
-            <Card key={store.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+            <Card
+              key={store.id}
+              className={`border-0 shadow-sm hover:shadow-md transition-shadow ${store.hiddenByAdmin ? "opacity-60" : ""}`}
+            >
               <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
@@ -209,6 +235,12 @@ export default function StoresPage() {
                       >
                         {store.verificationStatus}
                       </Badge>
+                      {store.hiddenByAdmin && (
+                        <Badge className="bg-gray-800 text-white border-gray-700" variant="outline">
+                          <EyeOff className="w-3 h-3 mr-1" />
+                          Hidden by admin
+                        </Badge>
+                      )}
                       {store.detailsLockedByAdmin && (
                         <Badge className="bg-gray-100 text-gray-700 border-gray-200" variant="outline">
                           <Lock className="w-3 h-3 mr-1" />
@@ -333,7 +365,7 @@ export default function StoresPage() {
                 </div>
 
                 {tab === "pending" && (
-                  <div className="flex gap-2 mt-4 pt-4 border-t border-gray-100">
+                  <div className="flex gap-2 mt-4 pt-4 border-t border-gray-100 flex-wrap">
                     <Button
                       size="sm"
                       className="bg-green-700 hover:bg-green-800 text-white"
@@ -356,11 +388,34 @@ export default function StoresPage() {
                       <Pencil className="w-4 h-4 mr-1.5" />
                       Edit name / location
                     </Button>
+                    {store.hiddenByAdmin ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-green-700 border-green-200 hover:bg-green-50"
+                        onClick={() => restoreMutation.mutate({ storeId: store.id })}
+                        disabled={restoreMutation.isPending}
+                      >
+                        <Eye className="w-4 h-4 mr-1.5" />
+                        Restore
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-gray-600 border-gray-300 hover:bg-gray-50"
+                        onClick={() => hideMutation.mutate({ storeId: store.id })}
+                        disabled={hideMutation.isPending}
+                      >
+                        <EyeOff className="w-4 h-4 mr-1.5" />
+                        Hide
+                      </Button>
+                    )}
                   </div>
                 )}
 
                 {tab === "verified" && (
-                  <div className="flex gap-2 mt-4 pt-4 border-t border-gray-100">
+                  <div className="flex gap-2 mt-4 pt-4 border-t border-gray-100 flex-wrap">
                     <Button
                       size="sm"
                       variant="outline"
@@ -374,11 +429,34 @@ export default function StoresPage() {
                       <Pencil className="w-4 h-4 mr-1.5" />
                       Edit name / location
                     </Button>
+                    {store.hiddenByAdmin ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-green-700 border-green-200 hover:bg-green-50"
+                        onClick={() => restoreMutation.mutate({ storeId: store.id })}
+                        disabled={restoreMutation.isPending}
+                      >
+                        <Eye className="w-4 h-4 mr-1.5" />
+                        Restore store
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-gray-600 border-gray-300 hover:bg-gray-50"
+                        onClick={() => hideMutation.mutate({ storeId: store.id })}
+                        disabled={hideMutation.isPending}
+                      >
+                        <EyeOff className="w-4 h-4 mr-1.5" />
+                        Hide from app
+                      </Button>
+                    )}
                   </div>
                 )}
 
                 {tab === "rejected" && (
-                  <div className="flex gap-2 mt-4 pt-4 border-t border-gray-100">
+                  <div className="flex gap-2 mt-4 pt-4 border-t border-gray-100 flex-wrap">
                     <Button
                       size="sm"
                       className="bg-green-700 hover:bg-green-800 text-white"
@@ -392,6 +470,29 @@ export default function StoresPage() {
                       <Pencil className="w-4 h-4 mr-1.5" />
                       Edit name / location
                     </Button>
+                    {store.hiddenByAdmin ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-green-700 border-green-200 hover:bg-green-50"
+                        onClick={() => restoreMutation.mutate({ storeId: store.id })}
+                        disabled={restoreMutation.isPending}
+                      >
+                        <Eye className="w-4 h-4 mr-1.5" />
+                        Restore
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-gray-600 border-gray-300 hover:bg-gray-50"
+                        onClick={() => hideMutation.mutate({ storeId: store.id })}
+                        disabled={hideMutation.isPending}
+                      >
+                        <EyeOff className="w-4 h-4 mr-1.5" />
+                        Hide
+                      </Button>
+                    )}
                   </div>
                 )}
               </CardContent>

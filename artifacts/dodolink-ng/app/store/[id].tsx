@@ -177,12 +177,20 @@ export default function StoreScreen() {
                 style={styles.editNameInput}
               />
             ) : (
-              <Text style={[styles.name, { color: colors.foreground }]}>
-                {store.name}
-                {isEditing && detailsLocked ? (
-                  <Text style={{ color: colors.mutedForeground }}> <Feather name="lock" size={14} /></Text>
-                ) : null}
-              </Text>
+              <View style={styles.nameRow}>
+                <Text style={[styles.name, { color: colors.foreground }]}>
+                  {store.name}
+                  {isEditing && detailsLocked ? (
+                    <Text style={{ color: colors.mutedForeground }}> <Feather name="lock" size={14} /></Text>
+                  ) : null}
+                </Text>
+                {store.verificationStatus === 'verified' && !isEditing && (
+                  <View style={[styles.verifiedBadge, { backgroundColor: colors.primary }]}>
+                    <Feather name="check-circle" size={11} color="#fff" />
+                    <Text style={styles.verifiedBadgeText}>Verified</Text>
+                  </View>
+                )}
+              </View>
             )}
             <View style={styles.statsRow}>
               <StarRating rating={store.avgRating || 0} size={14} />
@@ -366,10 +374,29 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     paddingBottom: 4,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 4,
+  },
   name: {
     fontFamily: 'Inter_700Bold',
     fontSize: 22,
-    marginBottom: 4,
+  },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  verifiedBadgeText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+    color: '#fff',
   },
   statsRow: {
     flexDirection: 'row',

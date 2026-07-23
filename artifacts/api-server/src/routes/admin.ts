@@ -72,6 +72,32 @@ router.patch("/admin/stores/:storeId", async (req, res): Promise<void> => {
   res.json(store);
 });
 
+router.post("/admin/stores/:storeId/hide", async (req, res): Promise<void> => {
+  const storeId = parseInt(req.params.storeId, 10);
+  if (isNaN(storeId)) { res.status(400).json({ error: "Invalid storeId" }); return; }
+
+  const [store] = await db
+    .update(storesTable)
+    .set({ hiddenByAdmin: true })
+    .where(eq(storesTable.id, storeId))
+    .returning();
+  if (!store) { res.status(404).json({ error: "Store not found" }); return; }
+  res.json(store);
+});
+
+router.post("/admin/stores/:storeId/restore", async (req, res): Promise<void> => {
+  const storeId = parseInt(req.params.storeId, 10);
+  if (isNaN(storeId)) { res.status(400).json({ error: "Invalid storeId" }); return; }
+
+  const [store] = await db
+    .update(storesTable)
+    .set({ hiddenByAdmin: false })
+    .where(eq(storesTable.id, storeId))
+    .returning();
+  if (!store) { res.status(404).json({ error: "Store not found" }); return; }
+  res.json(store);
+});
+
 router.post("/admin/stores/:storeId/verify", async (req, res): Promise<void> => {
   const { userId } = getAuth(req);
   const storeId = parseInt(req.params.storeId, 10);

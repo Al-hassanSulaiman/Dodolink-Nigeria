@@ -1,4 +1,5 @@
-import { StyleSheet, View, Text, ScrollView, RefreshControl, Image, Pressable } from 'react-native';
+import { useState, useRef } from 'react';
+import { StyleSheet, View, Text, ScrollView, RefreshControl, Image, Pressable, Dimensions } from 'react-native';
 import { useLocalSearchParams, Link, Stack } from 'expo-router';
 import { 
   useGetProduct, 
@@ -15,11 +16,15 @@ import { getImageUrl } from '@/utils/storage';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
 export default function ProductScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const productId = parseInt(id, 10);
   const colors = useColors();
   const { userId, userName } = useUserIdentity();
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
 
   const { data: product, isLoading: productLoading, refetch: refetchProduct } = useGetProduct(productId, {
     query: { enabled: !!productId, queryKey: getGetProductQueryKey(productId) }
@@ -47,10 +52,24 @@ export default function ProductScreen() {
     }});
   };
 
+  const handleScroll = (event: any) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(offsetX / SCREEN_WIDTH);
+    setActiveImageIndex(index);
+  };
+
   const refreshing = productLoading || storeLoading;
 
   if ((productLoading || storeLoading) && !product) return <LoadingScreen message="Loading product..." />;
   if (!product) return null;
+
+  // Build image list: prefer imageUrls array, fall back to single imageUrl
+  const images: string[] =
+    product.imageUrls && product.imageUrls.length > 0
+      ? product.imageUrls
+      : product.imageUrl
+      ? [product.imageUrl]
+      : [];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -59,10 +78,52 @@ export default function ProductScreen() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refetchProduct} />}
       >
-        {product.imageUrl ? (
-          <Image source={{ uri: getImageUrl(product.imageUrl) }} style={styles.image} resizeMode="cover" />
+        {/* Image gallery */}
+        {images.length > 0 ? (
+          <View style={styles.galleryContainer}>
+            <ScrollView
+              ref={scrollRef}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+            >
+              {images.map((img, index) => (
+                <Image
+                  key={index}
+                  source={{ uri: getImageUrl(img) }}
+                  style={[styles.galleryImage, { width: SCREEN_WIDTH }]}
+                  resizeMode="cover"
+                />
+              ))}
+            </ScrollView>
+            {/* Dot indicators — only show when there are multiple images */}
+            {images.length > 1 && (
+              <View style={styles.dotsContainer}>
+                {images.map((_, i) => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.dot,
+                      { backgroundColor: i === activeImageIndex ? colors.foreground : colors.mutedForeground },
+                      i === activeImageIndex && styles.dotActive,
+                    ]}
+                  />
+                ))}
+              </View>
+            )}
+            {/* Image counter badge */}
+            {images.length > 1 && (
+              <View style={[styles.counterBadge, { backgroundColor: 'rgba(0,0,0,0.55)' }]}>
+                <Text style={styles.counterText}>
+                  {activeImageIndex + 1} / {images.length}
+                </Text>
+              </View>
+            )}
+          </View>
         ) : (
-          <View style={[styles.imageContainer, { backgroundColor: colors.muted }]}>
+          <View style={[styles.imagePlaceholder, { backgroundColor: colors.muted }]}>
             <ImagePlaceholder name={product.name} size={120} borderRadius={0} />
           </View>
         )}
@@ -86,7 +147,15 @@ export default function ProductScreen() {
                   <ImagePlaceholder name={store.name} size={40} borderRadius={20} />
                 )}
                 <View style={styles.storeInfo}>
-                  <Text style={[styles.storeName, { color: colors.foreground }]}>{store.name}</Text>
+                  <View style={styles.storeNameRow}>
+                    <Text style={[styles.storeName, { color: colors.foreground }]}>{store.name}</Text>
+                    {store.verificationStatus === 'verified' && (
+                      <View style={[styles.verifiedBadge, { backgroundColor: colors.primary }]}>
+                        <Feather name="check-circle" size={10} color="#fff" />
+                        <Text style={styles.verifiedBadgeText}>Verified</Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={[styles.storeLocation, { color: colors.mutedForeground }]}>{store.location}</Text>
                 </View>
                 <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
@@ -119,15 +188,52 @@ const styles = StyleSheet.create({
   content: {
     paddingBottom: 100,
   },
-  image: {
-    width: '100%',
+  galleryContainer: {
+    position: 'relative',
+  },
+  galleryImage: {
     aspectRatio: 1,
   },
-  imageContainer: {
+  imagePlaceholder: {
     width: '100%',
     aspectRatio: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  dotsContainer: {
+    position: 'absolute',
+    bottom: 12,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    opacity: 0.5,
+  },
+  dotActive: {
+    opacity: 1,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  counterBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  counterText: {
+    color: '#fff',
+    fontFamily: 'Inter_500Medium',
+    fontSize: 13,
   },
   details: {
     padding: 16,
@@ -175,9 +281,28 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 12,
   },
+  storeNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
   storeName: {
     fontFamily: 'Inter_600SemiBold',
     fontSize: 16,
+  },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  verifiedBadgeText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
+    color: '#fff',
   },
   storeLocation: {
     fontFamily: 'Inter_400Regular',

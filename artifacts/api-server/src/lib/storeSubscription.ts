@@ -83,12 +83,15 @@ type StoreVisibilityFields = {
   qualifiedAt: Date | null;
   subscriptionStatus: string;
   subscriptionDueAt: Date | null;
+  hiddenByAdmin: boolean;
 };
 
 /** Drizzle OR-condition: store is publicly visible. */
 export function visibleStoresFilter() {
-  // Before launch date nothing is hidden — all stores visible
-  if (!isPaymentsLive()) return or(isNull(storesTable.id), eq(storesTable.id, storesTable.id));
+  const notHiddenByAdmin = eq(storesTable.hiddenByAdmin, false);
+
+  // Before launch date only admin-hidden stores are hidden
+  if (!isPaymentsLive()) return notHiddenByAdmin;
 
   const graceDeadline = new Date(Date.now() - GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
   // Adjust grace deadline to account for stores that qualified before launch
@@ -96,20 +99,26 @@ export function visibleStoresFilter() {
     Math.max(SUBSCRIPTION_LAUNCH_DATE.getTime(), graceDeadline.getTime())
   );
 
-  return or(
-    isNull(storesTable.qualifiedAt),
-    eq(storesTable.subscriptionStatus, "active"),
-    and(
-      eq(storesTable.subscriptionStatus, "inactive"),
-      gte(storesTable.qualifiedAt, effectiveLaunchGraceDeadline)
+  return and(
+    notHiddenByAdmin,
+    or(
+      isNull(storesTable.qualifiedAt),
+      eq(storesTable.subscriptionStatus, "active"),
+      and(
+        eq(storesTable.subscriptionStatus, "inactive"),
+        gte(storesTable.qualifiedAt, effectiveLaunchGraceDeadline)
+      )
+      // past_due = missed renewal → hidden immediately
     )
-    // past_due = missed renewal → hidden immediately
   );
 }
 
 /** Returns true when a store should be hidden from public view. */
 export function isStoreHidden(store: StoreVisibilityFields): boolean {
-  // Before launch date nothing is hidden
+  // Always hidden if admin explicitly hid it
+  if (store.hiddenByAdmin) return true;
+
+  // Before launch date nothing else is hidden
   if (!isPaymentsLive()) return false;
 
   if (!store.qualifiedAt) return false;

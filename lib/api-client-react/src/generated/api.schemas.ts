@@ -133,6 +133,7 @@ export interface Store {
   totalReviews: number;
   verificationStatus: StoreVerificationStatus;
   detailsLockedByAdmin: boolean;
+  hiddenByAdmin: boolean;
   /** @nullable */
   verifiedAt?: string | null;
   /** @nullable */

@@ -43,6 +43,7 @@ export const ListStoresResponseItem = zod.object({
   "totalReviews": zod.number(),
   "verificationStatus": zod.enum(['pending', 'verified', 'rejected']),
   "detailsLockedByAdmin": zod.boolean(),
+  "hiddenByAdmin": zod.boolean(),
   "verifiedAt": zod.coerce.date().nullish(),
   "verifiedBy": zod.string().nullish(),
   "rejectionReason": zod.string().nullish(),
@@ -94,6 +95,7 @@ export const GetStoreResponse = zod.object({
   "totalReviews": zod.number(),
   "verificationStatus": zod.enum(['pending', 'verified', 'rejected']),
   "detailsLockedByAdmin": zod.boolean(),
+  "hiddenByAdmin": zod.boolean(),
   "verifiedAt": zod.coerce.date().nullish(),
   "verifiedBy": zod.string().nullish(),
   "rejectionReason": zod.string().nullish(),
@@ -152,6 +154,7 @@ export const UpdateStoreResponse = zod.object({
   "totalReviews": zod.number(),
   "verificationStatus": zod.enum(['pending', 'verified', 'rejected']),
   "detailsLockedByAdmin": zod.boolean(),
+  "hiddenByAdmin": zod.boolean(),
   "verifiedAt": zod.coerce.date().nullish(),
   "verifiedBy": zod.string().nullish(),
   "rejectionReason": zod.string().nullish(),
@@ -355,6 +358,7 @@ export const SearchResponse = zod.object({
   "totalReviews": zod.number(),
   "verificationStatus": zod.enum(['pending', 'verified', 'rejected']),
   "detailsLockedByAdmin": zod.boolean(),
+  "hiddenByAdmin": zod.boolean(),
   "verifiedAt": zod.coerce.date().nullish(),
   "verifiedBy": zod.string().nullish(),
   "rejectionReason": zod.string().nullish(),
@@ -566,6 +570,7 @@ export const AdminListStoresResponseItem = zod.object({
   "totalReviews": zod.number(),
   "verificationStatus": zod.enum(['pending', 'verified', 'rejected']),
   "detailsLockedByAdmin": zod.boolean(),
+  "hiddenByAdmin": zod.boolean(),
   "verifiedAt": zod.coerce.date().nullish(),
   "verifiedBy": zod.string().nullish(),
   "rejectionReason": zod.string().nullish(),
@@ -610,6 +615,7 @@ export const AdminUpdateStoreResponse = zod.object({
   "totalReviews": zod.number(),
   "verificationStatus": zod.enum(['pending', 'verified', 'rejected']),
   "detailsLockedByAdmin": zod.boolean(),
+  "hiddenByAdmin": zod.boolean(),
   "verifiedAt": zod.coerce.date().nullish(),
   "verifiedBy": zod.string().nullish(),
   "rejectionReason": zod.string().nullish(),
@@ -644,6 +650,77 @@ export const AdminVerifyStoreResponse = zod.object({
   "totalReviews": zod.number(),
   "verificationStatus": zod.enum(['pending', 'verified', 'rejected']),
   "detailsLockedByAdmin": zod.boolean(),
+  "hiddenByAdmin": zod.boolean(),
+  "verifiedAt": zod.coerce.date().nullish(),
+  "verifiedBy": zod.string().nullish(),
+  "rejectionReason": zod.string().nullish(),
+  "qualifiedAt": zod.coerce.date().nullish(),
+  "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
+  "subscriptionDueAt": zod.coerce.date().nullish(),
+  "subscriptionLastPaidAt": zod.coerce.date().nullish(),
+  "autoPayEnabled": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Hide a store from customers (admin only)
+ */
+export const AdminHideStoreParams = zod.object({
+  "storeId": zod.coerce.number()
+})
+
+export const AdminHideStoreResponse = zod.object({
+  "id": zod.number(),
+  "ownerName": zod.string(),
+  "ownerUserId": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "category": zod.string(),
+  "location": zod.string(),
+  "phone": zod.string(),
+  "imageUrl": zod.string().nullish(),
+  "cacNumber": zod.string().nullish(),
+  "avgRating": zod.number().nullish(),
+  "totalReviews": zod.number(),
+  "verificationStatus": zod.enum(['pending', 'verified', 'rejected']),
+  "detailsLockedByAdmin": zod.boolean(),
+  "hiddenByAdmin": zod.boolean(),
+  "verifiedAt": zod.coerce.date().nullish(),
+  "verifiedBy": zod.string().nullish(),
+  "rejectionReason": zod.string().nullish(),
+  "qualifiedAt": zod.coerce.date().nullish(),
+  "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
+  "subscriptionDueAt": zod.coerce.date().nullish(),
+  "subscriptionLastPaidAt": zod.coerce.date().nullish(),
+  "autoPayEnabled": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Restore a hidden store to visible (admin only)
+ */
+export const AdminRestoreStoreParams = zod.object({
+  "storeId": zod.coerce.number()
+})
+
+export const AdminRestoreStoreResponse = zod.object({
+  "id": zod.number(),
+  "ownerName": zod.string(),
+  "ownerUserId": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "category": zod.string(),
+  "location": zod.string(),
+  "phone": zod.string(),
+  "imageUrl": zod.string().nullish(),
+  "cacNumber": zod.string().nullish(),
+  "avgRating": zod.number().nullish(),
+  "totalReviews": zod.number(),
+  "verificationStatus": zod.enum(['pending', 'verified', 'rejected']),
+  "detailsLockedByAdmin": zod.boolean(),
+  "hiddenByAdmin": zod.boolean(),
   "verifiedAt": zod.coerce.date().nullish(),
   "verifiedBy": zod.string().nullish(),
   "rejectionReason": zod.string().nullish(),
@@ -682,6 +759,7 @@ export const AdminRejectStoreResponse = zod.object({
   "totalReviews": zod.number(),
   "verificationStatus": zod.enum(['pending', 'verified', 'rejected']),
   "detailsLockedByAdmin": zod.boolean(),
+  "hiddenByAdmin": zod.boolean(),
   "verifiedAt": zod.coerce.date().nullish(),
   "verifiedBy": zod.string().nullish(),
   "rejectionReason": zod.string().nullish(),
@@ -719,6 +797,7 @@ export const AdminGetAnalyticsResponse = zod.object({
   "totalReviews": zod.number(),
   "verificationStatus": zod.enum(['pending', 'verified', 'rejected']),
   "detailsLockedByAdmin": zod.boolean(),
+  "hiddenByAdmin": zod.boolean(),
   "verifiedAt": zod.coerce.date().nullish(),
   "verifiedBy": zod.string().nullish(),
   "rejectionReason": zod.string().nullish(),

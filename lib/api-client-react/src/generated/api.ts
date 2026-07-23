@@ -2107,6 +2107,146 @@ export const useAdminVerifyStore = <TError = ErrorType<void>,
       return useMutation(getAdminVerifyStoreMutationOptions(options));
     }
 
+export const getAdminHideStoreUrl = (storeId: number,) => {
+
+
+
+
+  return `/api/admin/stores/${storeId}/hide`
+}
+
+/**
+ * @summary Hide a store from customers (admin only)
+ */
+export const adminHideStore = async (storeId: number, options?: RequestInit): Promise<Store> => {
+
+  return customFetch<Store>(getAdminHideStoreUrl(storeId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getAdminHideStoreMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminHideStore>>, TError,{storeId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminHideStore>>, TError,{storeId: number}, TContext> => {
+
+const mutationKey = ['adminHideStore'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminHideStore>>, {storeId: number}> = (props) => {
+          const {storeId} = props ?? {};
+
+          return  adminHideStore(storeId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminHideStoreMutationResult = NonNullable<Awaited<ReturnType<typeof adminHideStore>>>
+
+    export type AdminHideStoreMutationError = ErrorType<void>
+
+    /**
+ * @summary Hide a store from customers (admin only)
+ */
+export const useAdminHideStore = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminHideStore>>, TError,{storeId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminHideStore>>,
+        TError,
+        {storeId: number},
+        TContext
+      > => {
+      return useMutation(getAdminHideStoreMutationOptions(options));
+    }
+
+export const getAdminRestoreStoreUrl = (storeId: number,) => {
+
+
+
+
+  return `/api/admin/stores/${storeId}/restore`
+}
+
+/**
+ * @summary Restore a hidden store to visible (admin only)
+ */
+export const adminRestoreStore = async (storeId: number, options?: RequestInit): Promise<Store> => {
+
+  return customFetch<Store>(getAdminRestoreStoreUrl(storeId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getAdminRestoreStoreMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminRestoreStore>>, TError,{storeId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminRestoreStore>>, TError,{storeId: number}, TContext> => {
+
+const mutationKey = ['adminRestoreStore'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminRestoreStore>>, {storeId: number}> = (props) => {
+          const {storeId} = props ?? {};
+
+          return  adminRestoreStore(storeId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminRestoreStoreMutationResult = NonNullable<Awaited<ReturnType<typeof adminRestoreStore>>>
+
+    export type AdminRestoreStoreMutationError = ErrorType<void>
+
+    /**
+ * @summary Restore a hidden store to visible (admin only)
+ */
+export const useAdminRestoreStore = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminRestoreStore>>, TError,{storeId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminRestoreStore>>,
+        TError,
+        {storeId: number},
+        TContext
+      > => {
+      return useMutation(getAdminRestoreStoreMutationOptions(options));
+    }
+
 export const getAdminRejectStoreUrl = (storeId: number,) => {
 
 

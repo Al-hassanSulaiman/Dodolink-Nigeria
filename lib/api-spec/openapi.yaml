@@ -646,6 +646,56 @@ paths:
         "404":
           description: Store not found
 
+  /admin/stores/{storeId}/hide:
+    post:
+      operationId: adminHideStore
+      tags: [admin]
+      summary: Hide a store from customers (admin only)
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Store hidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Store"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Store not found
+
+  /admin/stores/{storeId}/restore:
+    post:
+      operationId: adminRestoreStore
+      tags: [admin]
+      summary: Restore a hidden store to visible (admin only)
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Store restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Store"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Store not found
+
   /admin/stores/{storeId}/reject:
     post:
       operationId: adminRejectStore
@@ -1183,6 +1233,8 @@ components:
           enum: [pending, verified, rejected]
         detailsLockedByAdmin:
           type: boolean
+        hiddenByAdmin:
+          type: boolean
         verifiedAt:
           type: ["string", "null"]
           format: date-time
@@ -1207,7 +1259,7 @@ components:
         createdAt:
           type: string
           format: date-time
-      required: [id, ownerName, ownerUserId, name, description, category, location, phone, totalReviews, verificationStatus, detailsLockedByAdmin, subscriptionStatus, autoPayEnabled, createdAt]
+      required: [id, ownerName, ownerUserId, name, description, category, location, phone, totalReviews, verificationStatus, detailsLockedByAdmin, hiddenByAdmin, subscriptionStatus, autoPayEnabled, createdAt]
 
     StoreDetail:
       allOf:
