@@ -7,6 +7,8 @@ import {
   Switch,
   ActivityIndicator,
   Pressable,
+  Platform,
+  Linking,
 } from 'react-native';
 import { showAlert, confirmAlert } from '@/utils/alerts';
 import { useState } from 'react';
@@ -315,6 +317,38 @@ export default function SubscriptionScreen() {
                   </Text>
                 </View>
               </View>
+            ) : Platform.OS === 'ios' ? (
+              /* iOS: Apple does not allow in-app payment initiation for this
+                 type of service. Direct the user to the website instead. */
+              <View style={[styles.webPayBanner, { backgroundColor: '#1B5E2010', borderColor: '#1B5E2044' }]}>
+                <Feather name="globe" size={20} color="#1B5E20" />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.webPayTitle, { color: '#1B5E20' }]}>
+                    Subscribe on our website
+                  </Text>
+                  <Text style={[styles.webPayBody, { color: '#1B5E2099' }]}>
+                    To subscribe or renew, visit your store's subscription page on the Dodolink website.
+                  </Text>
+                  <Pressable
+                    style={({ pressed }) => [styles.webPayBtn, pressed && { opacity: 0.75 }]}
+                    onPress={() => Linking.openURL('https://dodolink.com.ng/my-store/subscription')}
+                  >
+                    <Text style={styles.webPayBtnText}>Open dodolink.com.ng</Text>
+                    <Feather name="external-link" size={14} color="#fff" />
+                  </Pressable>
+                  {/* Auto-renew with saved card is still available on iOS */}
+                  {sub.hasAutoCharge && sub.subscriptionStatus !== 'active' && (
+                    <View style={{ marginTop: 12 }}>
+                      <Button
+                        title={chargeMutation.isPending ? 'Charging…' : 'Charge saved card'}
+                        variant="outline"
+                        onPress={handleAutoCharge}
+                        disabled={chargeMutation.isPending}
+                      />
+                    </View>
+                  )}
+                </View>
+              </View>
             ) : (
               <>
                 {/* Pending verification banner */}
@@ -512,6 +546,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 10,
+  },
+  webPayBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  webPayTitle: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  webPayBody: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 12,
+  },
+  webPayBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1B5E20',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    gap: 6,
+  },
+  webPayBtnText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+    color: '#fff',
   },
   infoText: {
     fontFamily: 'Inter_400Regular',

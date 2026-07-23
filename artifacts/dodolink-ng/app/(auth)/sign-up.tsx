@@ -1,4 +1,4 @@
-import { useSignUp, useAuth } from "@clerk/expo";
+import { useSignUp, useAuth, useOAuth } from "@clerk/expo";
 import { type Href, Link, useRouter } from "expo-router";
 import React from "react";
 import {
@@ -15,6 +15,7 @@ import {
 import { showAlert } from "@/utils/alerts";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { FontAwesome5 } from "@expo/vector-icons";
 
 export default function SignUpPage() {
   const { signUp, errors, fetchStatus } = useSignUp();
@@ -25,6 +26,25 @@ export default function SignUpPage() {
   const [password, setPassword] = React.useState("");
   const [code, setCode] = React.useState("");
   const [showPassword, setShowPassword] = React.useState(false);
+  const [appleLoading, setAppleLoading] = React.useState(false);
+
+  const { startOAuthFlow: startAppleOAuth } = useOAuth({ strategy: "oauth_apple" });
+
+  const handleAppleSignIn = async () => {
+    setAppleLoading(true);
+    try {
+      const { createdSessionId, setActive } = await startAppleOAuth();
+      if (createdSessionId && setActive) {
+        await setActive({ session: createdSessionId });
+        router.replace("/(tabs)" as Href);
+      }
+    } catch (err: any) {
+      const msg = err?.errors?.[0]?.longMessage ?? err?.message ?? "Apple sign in failed. Please try again.";
+      showAlert("Apple Sign In", msg);
+    } finally {
+      setAppleLoading(false);
+    }
+  };
 
   const handleSubmit = async () => {
     const { error } = await signUp.password({ emailAddress, password });
@@ -254,6 +274,34 @@ export default function SignUpPage() {
 
           <View nativeID="clerk-captcha" />
 
+          {Platform.OS === "ios" && (
+            <>
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>or</Text>
+                <View style={styles.dividerLine} />
+              </View>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.appleButton,
+                  pressed && styles.buttonPressed,
+                  appleLoading && styles.buttonDisabled,
+                ]}
+                onPress={handleAppleSignIn}
+                disabled={appleLoading}
+              >
+                {appleLoading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <>
+                    <FontAwesome5 name="apple" size={18} color="#fff" />
+                    <Text style={styles.appleButtonText}>Continue with Apple</Text>
+                  </>
+                )}
+              </Pressable>
+            </>
+          )}
+
           <View style={styles.footer}>
             <Text style={styles.footerText}>Already have an account? </Text>
             <Link href="/(auth)/sign-in" asChild>
@@ -401,6 +449,38 @@ const styles = StyleSheet.create({
   footerLink: {
     fontSize: 14,
     color: "#1B5E20",
+    fontWeight: "600",
+    fontFamily: "Inter_600SemiBold",
+  },
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 16,
+    gap: 10,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#E5E7EB",
+  },
+  dividerText: {
+    fontSize: 13,
+    color: "#9CA3AF",
+    fontFamily: "Inter_400Regular",
+  },
+  appleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#000",
+    borderRadius: 12,
+    paddingVertical: 16,
+    gap: 10,
+    marginBottom: 8,
+  },
+  appleButtonText: {
+    color: "#fff",
+    fontSize: 16,
     fontWeight: "600",
     fontFamily: "Inter_600SemiBold",
   },
