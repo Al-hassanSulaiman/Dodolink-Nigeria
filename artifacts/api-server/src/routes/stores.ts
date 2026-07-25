@@ -11,6 +11,16 @@ import { requireUser } from "../lib/auth";
 
 const router: IRouter = Router();
 
+/**
+ * Strip internal payment credentials before sending a store to any public
+ * endpoint.  These fields must never leave the server — they can be used to
+ * charge a seller's saved card.
+ */
+function toPublicStore<T extends Record<string, unknown>>(store: T) {
+  const { paystackAuthCode, paystackCustomerCode, paystackEmail, ...pub } = store as any;
+  return pub as Omit<T, "paystackAuthCode" | "paystackCustomerCode" | "paystackEmail">;
+}
+
 router.get("/stores", async (req, res): Promise<void> => {
   const { category, limit = 20, offset = 0, ownerUserId } = req.query;
 
@@ -29,7 +39,7 @@ router.get("/stores", async (req, res): Promise<void> => {
   }
 
   const stores = await query.limit(Number(limit)).offset(Number(offset)).orderBy(storesTable.createdAt);
-  res.json(stores);
+  res.json(stores.map(toPublicStore));
 });
 
 router.post("/stores", async (req, res): Promise<void> => {
@@ -57,7 +67,7 @@ router.post("/stores", async (req, res): Promise<void> => {
     .insert(storesTable)
     .values({ ...parsed.data, ownerUserId: userId })
     .returning();
-  res.status(201).json(store);
+  res.status(201).json(toPublicStore(store));
 });
 
 router.get("/stores/:storeId", async (req, res): Promise<void> => {
@@ -75,7 +85,7 @@ router.get("/stores/:storeId", async (req, res): Promise<void> => {
   }
 
   const products = await db.select().from(productsTable).where(eq(productsTable.storeId, storeId));
-  res.json({ ...store, products });
+  res.json({ ...toPublicStore(store), products });
 });
 
 router.patch("/stores/:storeId", async (req, res): Promise<void> => {
@@ -118,7 +128,7 @@ router.patch("/stores/:storeId", async (req, res): Promise<void> => {
   const [store] = await db.update(storesTable).set(updates).where(eq(storesTable.id, storeId)).returning();
   if (!store) { res.status(404).json({ error: "Store not found" }); return; }
 
-  res.json(store);
+  res.json(toPublicStore(store));
 });
 
 router.get("/stores/:storeId/stats", async (req, res): Promise<void> => {

@@ -125,25 +125,32 @@ router.post("/conversations/:conversationId/messages", async (req, res): Promise
     })
     .where(eq(conversationsTable.id, conversationId));
 
-  // Send push notification to the recipient
+  // Send push notification to the recipient.
+  // Derive sender role server-side from the conversation record — never trust
+  // the senderType the client submitted, which could be spoofed to misdirect
+  // notifications.
   const [conv] = await db.select().from(conversationsTable).where(eq(conversationsTable.id, conversationId));
   if (conv) {
-    // If sender is customer, notify the store owner; if sender is retailer, notify the customer
-    const recipientId = parsed.data.senderType === "customer" ? null : conv.customerId;
-    if (parsed.data.senderType === "customer") {
-      // Notify store owner — find store owner userId
-      const [store] = await db.select({ ownerUserId: storesTable.ownerUserId, name: storesTable.name }).from(storesTable).where(eq(storesTable.id, conv.storeId));
-      if (store) {
-        const tokens = await db.select({ token: pushTokensTable.token }).from(pushTokensTable).where(eq(pushTokensTable.userId, store.ownerUserId));
-        await notifyTokens(
-          tokens.map(t => t.token),
-          `New message from ${parsed.data.senderName}`,
-          parsed.data.body,
-          { conversationId },
-        );
-      }
-    } else if (recipientId) {
-      const tokens = await db.select({ token: pushTokensTable.token }).from(pushTokensTable).where(eq(pushTokensTable.userId, recipientId));
+    const [store] = await db
+      .select({ ownerUserId: storesTable.ownerUserId })
+      .from(storesTable)
+      .where(eq(storesTable.id, conv.storeId));
+
+    const senderIsCustomer = conv.customerId === authUserId;
+    const senderIsRetailer = store?.ownerUserId === authUserId;
+
+    if (senderIsCustomer && store) {
+      // Buyer sent a message → notify the store owner
+      const tokens = await db.select({ token: pushTokensTable.token }).from(pushTokensTable).where(eq(pushTokensTable.userId, store.ownerUserId));
+      await notifyTokens(
+        tokens.map(t => t.token),
+        `New message from ${parsed.data.senderName}`,
+        parsed.data.body,
+        { conversationId },
+      );
+    } else if (senderIsRetailer) {
+      // Store owner replied → notify the buyer
+      const tokens = await db.select({ token: pushTokensTable.token }).from(pushTokensTable).where(eq(pushTokensTable.userId, conv.customerId));
       await notifyTokens(
         tokens.map(t => t.token),
         `Reply from ${parsed.data.senderName}`,
