@@ -10,6 +10,7 @@ export const messagesTable = pgTable("messages", {
   senderName: text("sender_name").notNull(),
   senderType: text("sender_type").notNull(), // "customer" | "retailer"
   body: text("body").notNull(),
+  mediaUrl: text("media_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -270,6 +270,7 @@ export interface Message {
   senderName: string;
   senderType: MessageSenderType;
   body: string;
+  mediaUrl?: string | null;
   createdAt: string;
 }
 
@@ -286,6 +287,7 @@ export interface SendMessageBody {
   senderName: string;
   senderType: SendMessageBodySenderType;
   body: string;
+  mediaUrl?: string | null;
 }
 
 export interface StartConversationBody {

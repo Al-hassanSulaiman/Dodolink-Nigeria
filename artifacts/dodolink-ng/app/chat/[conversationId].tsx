@@ -1,9 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
-import { StyleSheet, View, Text, FlatList, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TextInput, Pressable, ActivityIndicator, Dimensions } from 'react-native';
+import { Image } from 'expo-image';
 import { useLocalSearchParams, Stack } from 'expo-router';
-import { 
-  useListMessages, 
-  useSendMessage, 
+import * as ImagePicker from 'expo-image-picker';
+import { VideoView, useVideoPlayer } from 'expo-video';
+import {
+  useListMessages,
+  useSendMessage,
   getListMessagesQueryKey,
   getListConversationsQueryKey,
   markConversationRead,
@@ -13,10 +16,27 @@ import { useColors } from '@/hooks/useColors';
 import { useUserIdentity } from '@/hooks/useUserIdentity';
 import { useQueryClient } from '@tanstack/react-query';
 import { LoadingScreen } from '@/components/Loading';
-import { getApiBase } from '@/utils/apiBase';
 import { Feather } from '@expo/vector-icons';
 import { KeyboardAvoidingView as KeyboardControllerView } from 'react-native-keyboard-controller';
-import { Pressable } from 'react-native';
+import { getImageUrl, uploadMediaToStorage } from '@/utils/storage';
+import { showAlert } from '@/utils/alerts';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const MEDIA_WIDTH = SCREEN_WIDTH * 0.65;
+
+// Small component so each video gets its own player instance
+function VideoBubble({ uri, isMe, colors }: { uri: string; isMe: boolean; colors: ReturnType<typeof useColors> }) {
+  const player = useVideoPlayer(uri, p => { p.loop = false; });
+  return (
+    <View style={{ borderRadius: 12, overflow: 'hidden', width: MEDIA_WIDTH, aspectRatio: 16 / 9 }}>
+      <VideoView
+        player={player}
+        style={{ width: '100%', height: '100%' }}
+        nativeControls
+      />
+    </View>
+  );
+}
 
 export default function ChatThreadScreen() {
   const { conversationId } = useLocalSearchParams<{ conversationId: string }>();
@@ -24,6 +44,7 @@ export default function ChatThreadScreen() {
   const colors = useColors();
   const { userId, userName } = useUserIdentity();
   const [message, setMessage] = useState('');
+  const [uploading, setUploading] = useState(false);
   const queryClient = useQueryClient();
   const inputRef = useRef<TextInput>(null);
 
@@ -44,44 +65,106 @@ export default function ChatThreadScreen() {
       onSuccess: () => {
         setMessage('');
         queryClient.invalidateQueries({ queryKey: getListMessagesQueryKey(id) });
-        // refocus
         inputRef.current?.focus();
       }
     }
   });
 
-  // Check if we are the retailer or the customer. Since we don't fetch conversation details directly here easily,
-  // we can infer from our userId matching any customerId or just assume 'customer' if it's the customer side.
-  // Actually, we should fetch conversation to know if we are the retailer.
-  // Wait, there's no useGetConversation. Let's just assume we are 'customer' unless our userId matches the store owner.
-  // For simplicity, let's just send senderType: 'customer'. If we are in my-store, we should be 'retailer'.
-  // We can pass senderType via params or determine it.
-  
   const handleSend = () => {
     if (!message.trim() || !userId || !userName) return;
     sendMessage.mutate({ conversationId: id, data: {
       senderId: userId,
       senderName: userName,
-      senderType: 'customer', // To make it perfect we'd need to know if we're retailer. Hardcode customer for now.
-      body: message.trim()
+      senderType: 'customer',
+      body: message.trim(),
     }});
+  };
+
+  const handlePickMedia = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      showAlert('Permission needed', 'Please allow access to your media library to send photos and videos.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images', 'videos'],
+      quality: 0.8,
+      videoMaxDuration: 120, // 2 minutes max
+      allowsEditing: false,
+    });
+
+    if (result.canceled || !result.assets?.length) return;
+    const asset = result.assets[0];
+
+    if (!userId || !userName) return;
+
+    setUploading(true);
+    try {
+      const isVideo = asset.type === 'video';
+      const mimeType = asset.mimeType ?? (isVideo ? 'video/mp4' : 'image/jpeg');
+      const objectPath = await uploadMediaToStorage(
+        asset.uri,
+        mimeType,
+        isVideo ? 'chat-vid' : 'chat-img'
+      );
+      const mediaUrl = getImageUrl(objectPath);
+
+      sendMessage.mutate({ conversationId: id, data: {
+        senderId: userId,
+        senderName: userName,
+        senderType: 'customer',
+        body: '',
+        mediaUrl,
+      }});
+    } catch (err: any) {
+      showAlert('Upload failed', err?.message ?? 'Could not upload media. Please try again.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   if (isLoading && !messages) return <LoadingScreen message="Loading messages..." />;
 
   const renderItem = ({ item }: { item: Message }) => {
     const isMe = item.senderId === userId;
+    const isVideo = !!item.mediaUrl && (
+      item.mediaUrl.includes('chat-vid') ||
+      item.mediaUrl.match(/\.(mp4|mov|avi|mkv|webm)$/i) !== null
+    );
+
     return (
       <View style={[
-        styles.messageBubble, 
-        isMe ? [styles.myMessage, { backgroundColor: colors.primary }] : [styles.theirMessage, { backgroundColor: colors.card, borderColor: colors.border }]
+        styles.messageBubble,
+        isMe
+          ? [styles.myMessage, { backgroundColor: colors.primary }]
+          : [styles.theirMessage, { backgroundColor: colors.card, borderColor: colors.border }]
       ]}>
-        <Text style={[styles.messageText, { color: isMe ? colors.primaryForeground : colors.foreground }]}>
-          {item.body}
-        </Text>
+        {item.mediaUrl ? (
+          isVideo ? (
+            <VideoBubble uri={item.mediaUrl} isMe={isMe} colors={colors} />
+          ) : (
+            <Image
+              source={{ uri: item.mediaUrl }}
+              style={{ width: MEDIA_WIDTH, aspectRatio: 1, borderRadius: 8 }}
+              contentFit="cover"
+            />
+          )
+        ) : null}
+        {item.body ? (
+          <Text style={[
+            styles.messageText,
+            { color: isMe ? colors.primaryForeground : colors.foreground },
+            item.mediaUrl ? { marginTop: 6 } : null,
+          ]}>
+            {item.body}
+          </Text>
+        ) : null}
       </View>
     );
   };
+
+  const isBusy = uploading || sendMessage.isPending;
 
   return (
     <KeyboardControllerView style={[styles.container, { backgroundColor: colors.background }]} behavior="padding" keyboardVerticalOffset={100}>
@@ -96,6 +179,18 @@ export default function ChatThreadScreen() {
         keyboardShouldPersistTaps="handled"
       />
       <View style={[styles.inputContainer, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
+        {/* + media button */}
+        <Pressable
+          style={[styles.mediaButton, { backgroundColor: colors.muted }]}
+          onPress={handlePickMedia}
+          disabled={isBusy}
+        >
+          {uploading
+            ? <ActivityIndicator size="small" color={colors.primary} />
+            : <Feather name="plus" size={22} color={colors.mutedForeground} />
+          }
+        </Pressable>
+
         <TextInput
           ref={inputRef}
           style={[styles.input, { backgroundColor: colors.background, color: colors.foreground, borderColor: colors.input }]}
@@ -105,10 +200,11 @@ export default function ChatThreadScreen() {
           onChangeText={setMessage}
           multiline
         />
-        <Pressable 
-          style={[styles.sendButton, { backgroundColor: message.trim() ? colors.primary : colors.muted }]} 
+
+        <Pressable
+          style={[styles.sendButton, { backgroundColor: message.trim() ? colors.primary : colors.muted }]}
           onPress={handleSend}
-          disabled={!message.trim() || sendMessage.isPending}
+          disabled={!message.trim() || isBusy}
         >
           <Feather name="send" size={20} color={message.trim() ? colors.primaryForeground : colors.mutedForeground} />
         </Pressable>
@@ -126,7 +222,7 @@ const styles = StyleSheet.create({
   },
   messageBubble: {
     maxWidth: '80%',
-    padding: 12,
+    padding: 10,
     borderRadius: 16,
     marginBottom: 8,
   },
@@ -148,6 +244,14 @@ const styles = StyleSheet.create({
     padding: 12,
     borderTopWidth: 1,
     alignItems: 'flex-end',
+    gap: 8,
+  },
+  mediaButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   input: {
     flex: 1,
@@ -160,7 +264,6 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     fontFamily: 'Inter_400Regular',
     fontSize: 16,
-    marginRight: 8,
   },
   sendButton: {
     width: 40,

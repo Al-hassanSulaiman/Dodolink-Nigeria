@@ -437,7 +437,8 @@ export const SendMessageBody = zod.object({
   "senderId": zod.string(),
   "senderName": zod.string(),
   "senderType": zod.enum(['customer', 'retailer']),
-  "body": zod.string()
+  "body": zod.string(),
+  "mediaUrl": zod.string().nullish()
 })
 
 

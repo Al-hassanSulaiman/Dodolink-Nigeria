@@ -140,11 +140,18 @@ router.post("/conversations/:conversationId/messages", async (req, res): Promise
   if (!conversation) { res.status(404).json({ error: "Conversation not found" }); return; }
   if (!allowed) { res.status(403).json({ error: "You are not a participant in this conversation" }); return; }
 
-  const [msg] = await db.insert(messagesTable).values({ ...parsed.data, conversationId }).returning();
+  const [msg] = await db.insert(messagesTable).values({
+    conversationId,
+    senderId: parsed.data.senderId,
+    senderName: parsed.data.senderName,
+    senderType: parsed.data.senderType,
+    body: parsed.data.body,
+    ...(parsed.data.mediaUrl ? { mediaUrl: parsed.data.mediaUrl } : {}),
+  }).returning();
 
   await db.update(conversationsTable)
     .set({
-      lastMessage: parsed.data.body,
+      lastMessage: parsed.data.body || '📷 Media',
       lastMessageAt: new Date(),
       unreadCount: sql`${conversationsTable.unreadCount} + 1`,
     })
