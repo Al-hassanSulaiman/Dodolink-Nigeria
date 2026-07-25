@@ -1521,7 +1521,7 @@ components:
           type: integer
         initialMessage:
           type: string
-      required: [customerId, customerName, storeId, initialMessage]
+      required: [customerId, customerName, storeId]
 
     Review:
       type: object

@@ -66,16 +66,23 @@ router.post("/conversations/start", async (req, res): Promise<void> => {
 
   const [conv] = await db
     .insert(conversationsTable)
-    .values({ customerId, customerName, storeId, lastMessage: initialMessage, lastMessageAt: new Date() })
+    .values({
+      customerId,
+      customerName,
+      storeId,
+      ...(initialMessage ? { lastMessage: initialMessage, lastMessageAt: new Date() } : {}),
+    })
     .returning();
 
-  await db.insert(messagesTable).values({
-    conversationId: conv.id,
-    senderId: customerId,
-    senderName: customerName,
-    senderType: "customer",
-    body: initialMessage,
-  });
+  if (initialMessage) {
+    await db.insert(messagesTable).values({
+      conversationId: conv.id,
+      senderId: customerId,
+      senderName: customerName,
+      senderType: "customer",
+      body: initialMessage,
+    });
+  }
 
   // Check if this conversation pushes the store to the engagement threshold
   await checkAndSetQualifiedAt(storeId).catch(() => undefined);

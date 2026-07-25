@@ -48,7 +48,6 @@ export default function ProductScreen() {
       customerId: userId,
       customerName: userName,
       storeId: product.storeId,
-      initialMessage: `Hi, I'm interested in ${product.name}.`
     }});
   };
 

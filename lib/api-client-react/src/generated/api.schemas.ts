@@ -292,7 +292,7 @@ export interface StartConversationBody {
   customerId: string;
   customerName: string;
   storeId: number;
-  initialMessage: string;
+  initialMessage?: string;
 }
 
 export interface Review {

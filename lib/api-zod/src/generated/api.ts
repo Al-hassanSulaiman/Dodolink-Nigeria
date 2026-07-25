@@ -460,7 +460,7 @@ export const StartConversationBody = zod.object({
   "customerId": zod.string(),
   "customerName": zod.string(),
   "storeId": zod.number(),
-  "initialMessage": zod.string()
+  "initialMessage": zod.string().optional()
 })
 
 
