@@ -1,8 +1,14 @@
 import { Router, type IRouter } from "express";
-import { ilike, or, eq } from "drizzle-orm";
+import { ilike, or, eq, and } from "drizzle-orm";
 import { db, storesTable, productsTable } from "@workspace/db";
+import { visibleStoresFilter } from "../lib/storeSubscription";
 
 const router: IRouter = Router();
+
+function toPublicStore<T extends Record<string, unknown>>(store: T) {
+  const { paystackAuthCode, paystackCustomerCode, paystackEmail, ...pub } = store as any;
+  return pub as Omit<T, "paystackAuthCode" | "paystackCustomerCode" | "paystackEmail">;
+}
 
 router.get("/search", async (req, res): Promise<void> => {
   const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
@@ -13,7 +19,10 @@ router.get("/search", async (req, res): Promise<void> => {
   const stores = await db
     .select()
     .from(storesTable)
-    .where(or(ilike(storesTable.name, pattern), ilike(storesTable.category, pattern), ilike(storesTable.location, pattern)));
+    .where(and(
+      visibleStoresFilter(),
+      or(ilike(storesTable.name, pattern), ilike(storesTable.category, pattern), ilike(storesTable.location, pattern))
+    ));
 
   const productRows = await db
     .select({
@@ -30,9 +39,16 @@ router.get("/search", async (req, res): Promise<void> => {
     })
     .from(productsTable)
     .leftJoin(storesTable, eq(productsTable.storeId, storesTable.id))
-    .where(or(ilike(productsTable.name, pattern), ilike(productsTable.category, pattern), ilike(productsTable.description, pattern)));
+    .where(and(
+      visibleStoresFilter(),
+      or(ilike(productsTable.name, pattern), ilike(productsTable.category, pattern), ilike(productsTable.description, pattern))
+    ));
 
-  res.json({ stores, products: productRows.map(p => ({ ...p, storeName: p.storeName ?? "" })), query: q });
+  res.json({
+    stores: stores.map(toPublicStore),
+    products: productRows.map(p => ({ ...p, storeName: p.storeName ?? "" })),
+    query: q,
+  });
 });
 
 export default router;
