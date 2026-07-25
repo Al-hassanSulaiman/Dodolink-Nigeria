@@ -1,8 +1,9 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db, productsTable, storesTable } from "@workspace/db";
 import { CreateProductBody, UpdateProductBody } from "@workspace/api-zod";
 import { requireUser } from "../lib/auth";
+import { visibleStoresFilter } from "../lib/storeSubscription";
 
 const router: IRouter = Router();
 
@@ -37,6 +38,7 @@ router.get("/products", async (req, res): Promise<void> => {
     .select(productSelect)
     .from(productsTable)
     .leftJoin(storesTable, eq(productsTable.storeId, storesTable.id))
+    .where(visibleStoresFilter())
     .limit(Number(limit))
     .offset(Number(offset));
 
@@ -88,7 +90,7 @@ router.get("/products/:productId", async (req, res): Promise<void> => {
     .select(productSelect)
     .from(productsTable)
     .leftJoin(storesTable, eq(productsTable.storeId, storesTable.id))
-    .where(eq(productsTable.id, productId));
+    .where(and(eq(productsTable.id, productId), visibleStoresFilter()));
 
   if (!rows[0]) { res.status(404).json({ error: "Product not found" }); return; }
   res.json({ ...rows[0], storeName: rows[0].storeName ?? "" });
