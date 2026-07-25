@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db, conversationsTable, messagesTable, storesTable, pushTokensTable } from "@workspace/db";
 import { SendMessageBody, StartConversationBody } from "@workspace/api-zod";
 import { notifyTokens } from "../lib/push";
@@ -63,6 +63,17 @@ router.post("/conversations/start", async (req, res): Promise<void> => {
 
   const [store] = await db.select({ name: storesTable.name }).from(storesTable).where(eq(storesTable.id, storeId));
   if (!store) { res.status(404).json({ error: "Store not found" }); return; }
+
+  // Return existing conversation if one already exists between this customer and store
+  const [existing] = await db
+    .select()
+    .from(conversationsTable)
+    .where(and(eq(conversationsTable.customerId, customerId), eq(conversationsTable.storeId, storeId)));
+
+  if (existing) {
+    res.status(200).json({ ...existing, storeName: store.name });
+    return;
+  }
 
   const [conv] = await db
     .insert(conversationsTable)
