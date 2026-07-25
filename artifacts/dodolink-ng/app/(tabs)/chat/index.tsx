@@ -51,12 +51,22 @@ export default function ChatsScreen() {
                     {displayName}
                   </Text>
                   {item.lastMessage ? (
-                    <Text style={[styles.lastMessage, { color: colors.mutedForeground }]} numberOfLines={1}>
+                    <Text style={[styles.lastMessage, { color: item.unreadCount > 0 ? colors.foreground : colors.mutedForeground, fontFamily: item.unreadCount > 0 ? 'Inter_600SemiBold' : 'Inter_400Regular' }]} numberOfLines={1}>
                       {item.lastMessage}
                     </Text>
                   ) : null}
                 </View>
-                <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
+                <View style={styles.rightCol}>
+                  {item.unreadCount > 0 ? (
+                    <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+                      <Text style={[styles.badgeText, { color: colors.primaryForeground }]}>
+                        {item.unreadCount > 99 ? '99+' : item.unreadCount}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
+                  )}
+                </View>
               </Pressable>
             </Link>
           );
@@ -97,7 +107,23 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   lastMessage: {
-    fontFamily: 'Inter_400Regular',
     fontSize: 14,
+  },
+  rightCol: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 28,
+  },
+  badge: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  badgeText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 12,
   },
 });

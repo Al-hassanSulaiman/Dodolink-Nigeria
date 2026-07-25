@@ -48,6 +48,13 @@ router.get("/conversations", async (req, res): Promise<void> => {
     })
   );
 
+  // Newest conversation (most recent message) first
+  enriched.sort((a, b) => {
+    const ta = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : new Date(a.createdAt).getTime();
+    const tb = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : new Date(b.createdAt).getTime();
+    return tb - ta;
+  });
+
   res.json(enriched);
 });
 
