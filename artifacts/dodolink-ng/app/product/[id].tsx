@@ -58,6 +58,7 @@ export default function ProductScreen() {
     setActiveImageIndex(index);
   };
 
+  const isOwner = !!userId && !!store && store.ownerUserId === userId;
   const refreshing = productLoading || storeLoading;
 
   if ((productLoading || storeLoading) && !product) return <LoadingScreen message="Loading product..." />;
@@ -165,18 +166,20 @@ export default function ProductScreen() {
         </View>
       </ScrollView>
 
-      <View style={[styles.bottomBar, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
-        <Pressable 
-          style={[styles.chatButton, { backgroundColor: colors.primary }]}
-          onPress={handleChat}
-          disabled={startConversation.isPending}
-        >
-          <Feather name="message-circle" size={20} color={colors.primaryForeground} style={styles.chatIcon} />
-          <Text style={[styles.chatButtonText, { color: colors.primaryForeground }]}>
-            {startConversation.isPending ? 'Starting chat...' : 'Chat with Seller'}
-          </Text>
-        </Pressable>
-      </View>
+      {!isOwner && (
+        <View style={[styles.bottomBar, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
+          <Pressable 
+            style={[styles.chatButton, { backgroundColor: colors.primary }]}
+            onPress={handleChat}
+            disabled={startConversation.isPending}
+          >
+            <Feather name="message-circle" size={20} color={colors.primaryForeground} style={styles.chatIcon} />
+            <Text style={[styles.chatButtonText, { color: colors.primaryForeground }]}>
+              {startConversation.isPending ? 'Starting chat...' : 'Chat with Seller'}
+            </Text>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }
