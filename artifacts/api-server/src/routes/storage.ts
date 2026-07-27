@@ -7,6 +7,17 @@ import {
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 import { ObjectPermission } from "../lib/objectAcl";
 import { requireUser } from "../lib/auth";
+import { rateLimit } from "../lib/rateLimit";
+
+const uploadUrlLimit = rateLimit({ name: "upload-url", max: 30, windowMs: 60 * 1000 });
+
+import {
+  ALLOWED_IMAGE_TYPES,
+  ALLOWED_VIDEO_TYPES,
+  MAX_IMAGE_BYTES,
+  MAX_VIDEO_BYTES,
+  validateStoredMedia,
+} from "../lib/mediaLimits";
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -18,7 +29,7 @@ const objectStorageService = new ObjectStorageService();
  * The client sends JSON metadata (name, size, contentType) — NOT the file.
  * Then uploads the file directly to the returned presigned URL.
  */
-router.post("/storage/uploads/request-url", async (req: Request, res: Response) => {
+router.post("/storage/uploads/request-url", uploadUrlLimit, async (req: Request, res: Response) => {
   const userId = requireUser(req, res);
   if (!userId) return;
 
@@ -28,9 +39,23 @@ router.post("/storage/uploads/request-url", async (req: Request, res: Response) 
     return;
   }
 
-  try {
-    const { name, size, contentType } = parsed.data;
+  const { name, size, contentType } = parsed.data;
 
+  const isImage = ALLOWED_IMAGE_TYPES.has(contentType);
+  const isVideo = ALLOWED_VIDEO_TYPES.has(contentType);
+  if (!isImage && !isVideo) {
+    res.status(400).json({ error: "Unsupported file type. Only images and videos are allowed." });
+    return;
+  }
+  const maxBytes = isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+  if (size > maxBytes) {
+    res.status(400).json({
+      error: `File too large. Maximum size is ${Math.round(maxBytes / (1024 * 1024))}MB for ${isVideo ? "videos" : "images"}.`,
+    });
+    return;
+  }
+
+  try {
     const uploadURL = await objectStorageService.getObjectEntityUploadURL();
     const objectPath = objectStorageService.normalizeObjectEntityPath(uploadURL);
 
@@ -94,6 +119,15 @@ router.get("/storage/objects/*path", async (req: Request, res: Response) => {
     const wildcardPath = Array.isArray(raw) ? raw.join("/") : raw;
     const objectPath = `/objects/${wildcardPath}`;
     const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
+
+    // Enforce media constraints on the actual stored object. Presigned PUT
+    // URLs can't carry size/type conditions, so this is the real gate: a
+    // mislabeled or oversized upload can never be retrieved through the app.
+    const mediaCheck = await validateStoredMedia(objectFile);
+    if (!mediaCheck.ok) {
+      res.status(403).json({ error: mediaCheck.reason });
+      return;
+    }
 
     // --- Protected route example (uncomment when using replit-auth) ---
     // if (!req.isAuthenticated()) {

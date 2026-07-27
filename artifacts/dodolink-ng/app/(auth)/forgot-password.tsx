@@ -1,6 +1,7 @@
 import { useSignIn } from "@clerk/expo";
 import { type Href, useRouter } from "expo-router";
 import React from "react";
+import { showAlert } from "../../utils/alerts";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -30,17 +31,27 @@ export default function ForgotPasswordPage() {
   const isLoading = fetchStatus === "fetching";
 
   const handleSendCode = async () => {
-    const { error } = await signIn.create({ identifier: emailAddress });
-    if (error) return;
-    const { error: sendError } = await signIn.resetPasswordEmailCode.sendCode();
-    if (sendError) return;
-    setStep("code");
+    try {
+      const { error } = await signIn.create({ identifier: emailAddress });
+      if (error) return;
+      const { error: sendError } = await signIn.resetPasswordEmailCode.sendCode();
+      if (sendError) return;
+      setStep("code");
+    } catch (err: any) {
+      const msg = err?.errors?.[0]?.longMessage ?? err?.message ?? "Something went wrong. Please try again.";
+      showAlert("Could not send code", msg);
+    }
   };
 
   const handleVerifyCode = async () => {
-    const { error } = await signIn.resetPasswordEmailCode.verifyCode({ code });
-    if (error) return;
-    setStep("password");
+    try {
+      const { error } = await signIn.resetPasswordEmailCode.verifyCode({ code });
+      if (error) return;
+      setStep("password");
+    } catch (err: any) {
+      const msg = err?.errors?.[0]?.longMessage ?? err?.message ?? "Something went wrong. Please try again.";
+      showAlert("Could not verify code", msg);
+    }
   };
 
   const handleResetPassword = async () => {
@@ -49,6 +60,15 @@ export default function ForgotPasswordPage() {
       return;
     }
     setPasswordMismatch(false);
+    try {
+      await doResetPassword();
+    } catch (err: any) {
+      const msg = err?.errors?.[0]?.longMessage ?? err?.message ?? "Something went wrong. Please try again.";
+      showAlert("Could not reset password", msg);
+    }
+  };
+
+  const doResetPassword = async () => {
     const { error } = await signIn.resetPasswordEmailCode.submitPassword({
       password: newPassword,
       signOutOfOtherSessions: true,
@@ -221,7 +241,15 @@ export default function ForgotPasswordPage() {
 
                 <Pressable
                   style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
-                  onPress={() => signIn.resetPasswordEmailCode.sendCode()}
+                  onPress={async () => {
+                    try {
+                      await signIn.resetPasswordEmailCode.sendCode();
+                      showAlert("Code sent", "A new reset code has been sent to your email.");
+                    } catch (err: any) {
+                      const msg = err?.errors?.[0]?.longMessage ?? err?.message ?? "Could not resend the code. Please try again.";
+                      showAlert("Resend failed", msg);
+                    }
+                  }}
                 >
                   <Text style={styles.secondaryButtonText}>Resend code</Text>
                 </Pressable>

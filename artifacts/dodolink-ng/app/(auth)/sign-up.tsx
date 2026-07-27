@@ -18,7 +18,7 @@ import { Feather } from "@expo/vector-icons";
 import { FontAwesome5 } from "@expo/vector-icons";
 
 export default function SignUpPage() {
-  const { signUp, errors, fetchStatus, isLoaded } = useSignUp() as any;
+  const { signUp, errors, fetchStatus } = useSignUp() as any;
   const { isSignedIn } = useAuth();
   const router = useRouter();
 
@@ -28,6 +28,7 @@ export default function SignUpPage() {
   const [showPassword, setShowPassword] = React.useState(false);
   const [appleLoading, setAppleLoading] = React.useState(false);
   const [pendingVerification, setPendingVerification] = React.useState(false);
+  const [finalizeFailed, setFinalizeFailed] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
 
   const { startOAuthFlow: startAppleOAuth } = useOAuth({ strategy: "oauth_apple" });
@@ -49,7 +50,7 @@ export default function SignUpPage() {
   };
 
   const handleSubmit = async () => {
-    if (!isLoaded || submitting) return;
+    if (submitting) return;
     setSubmitting(true);
     try {
       const { error } = await signUp.password({ emailAddress, password });
@@ -78,6 +79,7 @@ export default function SignUpPage() {
   };
 
   const handleVerify = async () => {
+    setFinalizeFailed(false);
     try {
       await signUp.verifications.verifyEmailCode({ code });
       const result = signUp;
@@ -93,6 +95,7 @@ export default function SignUpPage() {
               (finalizeError as any)?.longMessage ??
               (finalizeError as any)?.message ??
               "Could not complete sign up. Please try again.";
+            setFinalizeFailed(true);
             showAlert("Sign up error", msg);
             return;
           }
@@ -108,15 +111,66 @@ export default function SignUpPage() {
         showAlert("Verification incomplete", `Status: ${result.status ?? "unknown"}`);
       }
     } catch (err: any) {
+      if (signUp.status === "complete") setFinalizeFailed(true);
       const msg = err?.errors?.[0]?.longMessage ?? err?.message ?? String(err);
       showAlert("Verification error", msg);
+    }
+  };
+
+  const retryFinalize = async () => {
+    try {
+      const { error } = await signUp.finalize();
+      if (error) {
+        const errCode = (error as any)?.errors?.[0]?.code ?? (error as any)?.code;
+        if (errCode !== "session_exists") {
+          const msg =
+            (error as any)?.errors?.[0]?.longMessage ??
+            (error as any)?.longMessage ??
+            (error as any)?.message ??
+            "Could not complete sign up. Please try again.";
+          showAlert("Sign up error", msg);
+          return;
+        }
+      }
+      setFinalizeFailed(false);
+      router.replace("/(tabs)" as Href);
+    } catch (err: any) {
+      const msg = err?.errors?.[0]?.longMessage ?? err?.message ?? "Could not complete sign up. Please try again.";
+      showAlert("Sign up error", msg);
     }
   };
 
   const isLoading = fetchStatus === "fetching" || submitting;
   const showVerification = pendingVerification;
 
-  if (signUp.status === "complete") return null;
+  if (signUp.status === "complete") {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 16, paddingHorizontal: 32 }}>
+          {finalizeFailed ? (
+            <>
+              <Text style={styles.title}>Almost done!</Text>
+              <Text style={[styles.subtitle, { textAlign: "center" }]}>
+                Your email is verified, but we couldn't finish setting up your account.
+                Check your connection and try again.
+              </Text>
+              <Pressable
+                style={({ pressed }) => [styles.button, { alignSelf: "stretch" }, pressed && styles.buttonPressed]}
+                onPress={retryFinalize}
+              >
+                <Text style={styles.buttonText}>Try again</Text>
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <ActivityIndicator size="large" color="#1B5E20" />
+              <Text style={styles.subtitle}>Setting up your account...</Text>
+            </>
+          )}
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (showVerification) {
     return (
@@ -181,7 +235,15 @@ export default function SignUpPage() {
 
               <Pressable
                 style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
-                onPress={() => signUp.verifications.sendEmailCode()}
+                onPress={async () => {
+                  try {
+                    await signUp.verifications.sendEmailCode();
+                    showAlert("Code sent", "A new verification code has been sent to your email.");
+                  } catch (err: any) {
+                    const msg = err?.errors?.[0]?.longMessage ?? err?.message ?? "Could not resend the code. Please try again.";
+                    showAlert("Resend failed", msg);
+                  }
+                }}
               >
                 <Text style={styles.secondaryButtonText}>Resend code</Text>
               </Pressable>

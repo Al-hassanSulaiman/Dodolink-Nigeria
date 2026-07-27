@@ -4,6 +4,9 @@ import { clerkClient } from "@clerk/express";
 import { db, supportMessagesTable } from "@workspace/db";
 import { SendSupportMessageBody } from "@workspace/api-zod";
 import { requireUser } from "../lib/auth";
+import { rateLimit } from "../lib/rateLimit";
+
+const supportMessageLimit = rateLimit({ name: "support-send", max: 20, windowMs: 60 * 1000 });
 
 const router: IRouter = Router();
 
@@ -20,7 +23,7 @@ router.get("/support/messages", async (req, res): Promise<void> => {
   res.json(messages);
 });
 
-router.post("/support/messages", async (req, res): Promise<void> => {
+router.post("/support/messages", supportMessageLimit, async (req, res): Promise<void> => {
   const userId = requireUser(req, res);
   if (!userId) return;
 

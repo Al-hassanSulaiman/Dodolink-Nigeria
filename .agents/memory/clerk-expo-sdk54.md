@@ -96,6 +96,14 @@ The sign-in page now shows a "One-time setup required" screen when `needs_client
 
 **For production Clerk keys (pk_live_*):** `needs_client_trust` never occurs. Auth works normally everywhere.
 
+## Future hooks have NO isLoaded — only fetchStatus
+
+`useSignIn()`/`useSignUp()` (Core v3 future hooks) expose `fetchStatus: 'idle' | 'fetching'` but **no `isLoaded`** (that's a `useAuth()`/`useUser()` property). Destructuring `isLoaded` yields `undefined`, so a guard like `if (!isLoaded) return;` **always returns early and silently bricks the submit handler** — the button just does nothing. Guard with local `submitting` state and/or `fetchStatus === "fetching"` instead.
+
+## status === "complete" needs a recovery path
+
+Once `signUp.status === "complete"`, the resource stays complete even if `finalize()` fails (network blip). Any render branch keyed on `status === "complete"` must not be an unconditional spinner or `return null` — track finalize failure in state and show a "Try again" button that re-calls `signUp.finalize()`, or the user is trapped on a dead screen with a verified email and no session.
+
 ## errors.global is an ARRAY
 
 `useSignIn()/useSignUp().errors.global` is `ClerkError[]`, not a single error. Rendering `errors.global.message` shows blank. Guard with `!!errors.global?.length` and render `errors.global[0]?.longMessage ?? errors.global[0]?.message`.

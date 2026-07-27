@@ -5,8 +5,15 @@ import { SendMessageBody, StartConversationBody } from "@workspace/api-zod";
 import { notifyTokens } from "../lib/push";
 import { checkAndSetQualifiedAt } from "../lib/storeSubscription";
 import { requireUser } from "../lib/auth";
+import { rateLimit } from "../lib/rateLimit";
+import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
+import { validateStoredMedia } from "../lib/mediaLimits";
 
 const router: IRouter = Router();
+const objectStorage = new ObjectStorageService();
+
+const startConversationLimit = rateLimit({ name: "conv-start", max: 15, windowMs: 5 * 60 * 1000 });
+const sendMessageLimit = rateLimit({ name: "msg-send", max: 30, windowMs: 60 * 1000 });
 
 async function loadConversationIfParticipant(conversationId: number, userId: string) {
   const [conv] = await db.select().from(conversationsTable).where(eq(conversationsTable.id, conversationId));
@@ -58,7 +65,7 @@ router.get("/conversations", async (req, res): Promise<void> => {
   res.json(enriched);
 });
 
-router.post("/conversations/start", async (req, res): Promise<void> => {
+router.post("/conversations/start", startConversationLimit, async (req, res): Promise<void> => {
   const authUserId = requireUser(req, res);
   if (!authUserId) return;
 
@@ -124,7 +131,7 @@ router.get("/conversations/:conversationId/messages", async (req, res): Promise<
   res.json(msgs);
 });
 
-router.post("/conversations/:conversationId/messages", async (req, res): Promise<void> => {
+router.post("/conversations/:conversationId/messages", sendMessageLimit, async (req, res): Promise<void> => {
   const authUserId = requireUser(req, res);
   if (!authUserId) return;
 
@@ -139,6 +146,43 @@ router.post("/conversations/:conversationId/messages", async (req, res): Promise
   const { conv: conversation, allowed } = await loadConversationIfParticipant(conversationId, authUserId);
   if (!conversation) { res.status(404).json({ error: "Conversation not found" }); return; }
   if (!allowed) { res.status(403).json({ error: "You are not a participant in this conversation" }); return; }
+
+  // Verify attached media against the real uploaded object (type + size),
+  // since presigned upload URLs can't enforce these constraints themselves.
+  // The client may send a raw object path ("/objects/...") or a full URL
+  // pointing at the storage serve route — handle both.
+  if (parsed.data.mediaUrl) {
+    let objectPath: string | null = null;
+    if (parsed.data.mediaUrl.startsWith("/objects/")) {
+      objectPath = parsed.data.mediaUrl;
+    } else {
+      try {
+        const pathname = new URL(parsed.data.mediaUrl).pathname;
+        const idx = pathname.indexOf("/objects/");
+        if (idx !== -1) objectPath = pathname.slice(idx);
+      } catch {
+        objectPath = null;
+      }
+    }
+    if (!objectPath) {
+      res.status(400).json({ error: "Invalid media URL" });
+      return;
+    }
+    try {
+      const mediaFile = await objectStorage.getObjectEntityFile(objectPath);
+      const mediaCheck = await validateStoredMedia(mediaFile);
+      if (!mediaCheck.ok) {
+        res.status(400).json({ error: mediaCheck.reason });
+        return;
+      }
+    } catch (err) {
+      if (err instanceof ObjectNotFoundError) {
+        res.status(400).json({ error: "Media file not found. Please upload it again." });
+        return;
+      }
+      throw err;
+    }
+  }
 
   const [msg] = await db.insert(messagesTable).values({
     conversationId,

@@ -14,4 +14,11 @@ description: Auth/ownership rules for the Dodolink API and the Paystack verify h
 **GET /stores?ownerUserId=X intentionally bypasses the visibility filter** and returns only X's stores, including hidden past-due ones.
 **Why:** Owners of hidden stores must still reach their store on the subscription screen to pay and restore visibility; the OR-with-visibility variant silently locked owners out once >20 stores existed (default limit).
 
-**How to apply:** Any new route follows public-read/authed-write; any new payment flow needs amount + reference-binding + replay checks; client screens that look up "my store" must pass the ownerUserId filter (with matching orval queryKey).
+**Presigned uploads cannot enforce size/type — enforce at serve + attach time.** The Replit object-storage signing sidecar only takes bucket/object/method/expiry, so client-claimed size/contentType at request-url time is advisory (a client can claim "image/jpeg 5MB" then PUT anything). Real gates live in `lib/mediaLimits.ts` (`validateStoredMedia` reads actual GCS metadata): checked when serving `GET /storage/objects/*` (403) and when attaching `mediaUrl` to a message (400). A lying upload lands in the bucket but can never be retrieved or attached, making the bypass useless. Never delete objects based on attacker-supplied paths — reject only.
+**Why:** Code review found the request-url validation alone was bypassable; signed-URL policy conditions aren't available through the sidecar.
+
+**mediaUrl is stored as a FULL URL** (`getImageUrl()` bakes in the API base), not a raw `/objects/` path — server-side validation must extract the path via `pathname.indexOf("/objects/")`, and a strict `startsWith("/objects/")` check would reject every media message.
+
+**Rate limiting:** in-memory sliding-window limiter (`lib/rateLimit.ts`, keyed by Clerk userId, IP fallback) guards conversation-start, message-send, support-send, and upload-URL routes. Single-instance only — needs a shared store if the API ever scales horizontally.
+
+**How to apply:** Any new route follows public-read/authed-write; any new payment flow needs amount + reference-binding + replay checks; client screens that look up "my store" must pass the ownerUserId filter (with matching orval queryKey); any new user-supplied media reference must be validated with `validateStoredMedia` at the attach point.
