@@ -101,7 +101,15 @@ export default function SignInPage() {
         // Already signed in? Just go straight into the app.
         if (isAlreadySignedInError(error) || isSignedIn) {
           router.replace("/(tabs)" as Href);
+          return;
         }
+        // Surface the error explicitly (errors.global may not always update)
+        const msg =
+          (error as any)?.errors?.[0]?.longMessage ??
+          (error as any)?.longMessage ??
+          (error as any)?.message ??
+          "Sign in failed. Please check your email and password and try again.";
+        showAlert("Sign in failed", msg);
         return;
       }
 

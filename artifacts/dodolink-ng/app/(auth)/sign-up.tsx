@@ -18,7 +18,7 @@ import { Feather } from "@expo/vector-icons";
 import { FontAwesome5 } from "@expo/vector-icons";
 
 export default function SignUpPage() {
-  const { signUp, errors, fetchStatus } = useSignUp();
+  const { signUp, errors, fetchStatus, isLoaded } = useSignUp() as any;
   const { isSignedIn } = useAuth();
   const router = useRouter();
 
@@ -27,6 +27,8 @@ export default function SignUpPage() {
   const [code, setCode] = React.useState("");
   const [showPassword, setShowPassword] = React.useState(false);
   const [appleLoading, setAppleLoading] = React.useState(false);
+  const [pendingVerification, setPendingVerification] = React.useState(false);
+  const [submitting, setSubmitting] = React.useState(false);
 
   const { startOAuthFlow: startAppleOAuth } = useOAuth({ strategy: "oauth_apple" });
 
@@ -47,16 +49,32 @@ export default function SignUpPage() {
   };
 
   const handleSubmit = async () => {
-    const { error } = await signUp.password({ emailAddress, password });
-    if (error) {
-      // Already signed in? Just go straight into the app.
-      const errCode = (error as any)?.errors?.[0]?.code ?? (error as any)?.code;
-      if (errCode === "session_exists" || isSignedIn) {
-        router.replace("/(tabs)" as Href);
+    if (!isLoaded || submitting) return;
+    setSubmitting(true);
+    try {
+      const { error } = await signUp.password({ emailAddress, password });
+      if (error) {
+        const errCode = (error as any)?.errors?.[0]?.code ?? (error as any)?.code;
+        if (errCode === "session_exists" || isSignedIn) {
+          router.replace("/(tabs)" as Href);
+          return;
+        }
+        const msg =
+          (error as any)?.errors?.[0]?.longMessage ??
+          (error as any)?.longMessage ??
+          (error as any)?.message ??
+          "Sign up failed. Please try again.";
+        showAlert("Sign up failed", msg);
+        return;
       }
-      return;
+      await signUp.verifications.sendEmailCode();
+      setPendingVerification(true);
+    } catch (err: any) {
+      const msg = err?.errors?.[0]?.longMessage ?? err?.message ?? "Something went wrong. Please try again.";
+      showAlert("Sign up error", msg);
+    } finally {
+      setSubmitting(false);
     }
-    await signUp.verifications.sendEmailCode();
   };
 
   const handleVerify = async () => {
@@ -95,11 +113,8 @@ export default function SignUpPage() {
     }
   };
 
-  const isLoading = fetchStatus === "fetching";
-  const showVerification =
-    signUp.status === "missing_requirements" &&
-    signUp.unverifiedFields.includes("email_address") &&
-    signUp.missingFields.length === 0;
+  const isLoading = fetchStatus === "fetching" || submitting;
+  const showVerification = pendingVerification;
 
   if (signUp.status === "complete") return null;
 
