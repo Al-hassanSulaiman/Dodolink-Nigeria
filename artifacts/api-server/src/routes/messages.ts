@@ -51,7 +51,12 @@ router.get("/conversations", async (req, res): Promise<void> => {
         const [s] = await db.select({ name: storesTable.name }).from(storesTable).where(eq(storesTable.id, c.storeId));
         storeName = s?.name ?? "";
       }
-      return { ...c, storeName };
+      // Return the unread count relevant to the requester:
+      // - customer sees messages from store (unreadCount)
+      // - store owner sees messages from customer (storeUnreadCount)
+      const isStoreOwner = storeIds.includes(c.storeId) && c.customerId !== authUserId;
+      const unreadCount = isStoreOwner ? c.storeUnreadCount : c.unreadCount;
+      return { ...c, storeName, unreadCount };
     })
   );
 
@@ -193,11 +198,21 @@ router.post("/conversations/:conversationId/messages", sendMessageLimit, async (
     ...(parsed.data.mediaUrl ? { mediaUrl: parsed.data.mediaUrl } : {}),
   }).returning();
 
+  // Increment only the RECIPIENT's unread counter; reset the sender's to 0
+  // so the sender never sees their own message as outstanding.
+  const senderIsCustomer = conversation.customerId === authUserId;
   await db.update(conversationsTable)
     .set({
       lastMessage: parsed.data.body || '📷 Media',
       lastMessageAt: new Date(),
-      unreadCount: sql`${conversationsTable.unreadCount} + 1`,
+      // sender's counter → 0 (they just "read" by sending)
+      // recipient's counter → +1
+      unreadCount: senderIsCustomer
+        ? 0
+        : sql`${conversationsTable.unreadCount} + 1`,
+      storeUnreadCount: senderIsCustomer
+        ? sql`${conversationsTable.storeUnreadCount} + 1`
+        : 0,
     })
     .where(eq(conversationsTable.id, conversationId));
 
@@ -251,8 +266,10 @@ router.post("/conversations/:conversationId/read", async (req, res): Promise<voi
   if (!conv) { res.status(404).json({ error: "Conversation not found" }); return; }
   if (!allowed) { res.status(403).json({ error: "You are not a participant in this conversation" }); return; }
 
+  // Reset the counter for the person who read it
+  const readerIsCustomer = conv.customerId === authUserId;
   await db.update(conversationsTable)
-    .set({ unreadCount: 0 })
+    .set(readerIsCustomer ? { unreadCount: 0 } : { storeUnreadCount: 0 })
     .where(eq(conversationsTable.id, conversationId));
 
   res.json({ status: "ok" });

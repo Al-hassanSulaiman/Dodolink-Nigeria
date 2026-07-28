@@ -10,7 +10,8 @@ export const conversationsTable = pgTable("conversations", {
   storeId: integer("store_id").notNull().references(() => storesTable.id, { onDelete: "cascade" }),
   lastMessage: text("last_message"),
   lastMessageAt: timestamp("last_message_at", { withTimezone: true }),
-  unreadCount: integer("unread_count").notNull().default(0),
+  unreadCount: integer("unread_count").notNull().default(0),       // unread for customer (messages from store)
+  storeUnreadCount: integer("store_unread_count").notNull().default(0), // unread for store owner (messages from customer)
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
