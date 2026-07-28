@@ -6,6 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import {
   useListMessages,
+  useListConversations,
   useSendMessage,
   getListMessagesQueryKey,
   getListConversationsQueryKey,
@@ -42,7 +43,21 @@ export default function ChatThreadScreen() {
   const { conversationId } = useLocalSearchParams<{ conversationId: string }>();
   const id = parseInt(conversationId, 10);
   const colors = useColors();
-  const { userId, userName } = useUserIdentity();
+  const { userId, userName, userEmail } = useUserIdentity();
+
+  // Find this conversation from the cached list so we know the user's role.
+  // If they are the customer → send with their email; if they are the store
+  // owner (retailer) → send with the store name.
+  const { data: conversations } = useListConversations(
+    { userId: userId ?? '' },
+    { query: { enabled: !!userId, queryKey: getListConversationsQueryKey({ userId: userId ?? '' }) } }
+  );
+  const conversation = conversations?.find(c => c.id === id);
+  const isRetailer = !!conversation && conversation.customerId !== userId;
+  const senderType = isRetailer ? ('retailer' as const) : ('customer' as const);
+  const senderName = isRetailer
+    ? (conversation?.storeName ?? userName)
+    : (userEmail ?? userName);
   const [message, setMessage] = useState('');
   const [uploading, setUploading] = useState(false);
   const queryClient = useQueryClient();
@@ -74,8 +89,8 @@ export default function ChatThreadScreen() {
     if (!message.trim() || !userId || !userName) return;
     sendMessage.mutate({ conversationId: id, data: {
       senderId: userId,
-      senderName: userName,
-      senderType: 'customer',
+      senderName: senderName,
+      senderType: senderType,
       body: message.trim(),
     }});
   };
@@ -112,8 +127,8 @@ export default function ChatThreadScreen() {
 
       sendMessage.mutate({ conversationId: id, data: {
         senderId: userId,
-        senderName: userName,
-        senderType: 'customer',
+        senderName: senderName,
+        senderType: senderType,
         body: '',
         mediaUrl,
       }});

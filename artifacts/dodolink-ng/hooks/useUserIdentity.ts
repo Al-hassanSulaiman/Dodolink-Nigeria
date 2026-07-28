@@ -4,10 +4,11 @@ export function useUserIdentity() {
   const { user, isLoaded } = useUser();
 
   const userId = user?.id ?? null;
+  const userEmail = user?.primaryEmailAddress?.emailAddress ?? null;
   const userName =
     user?.fullName ||
     [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
-    user?.primaryEmailAddress?.emailAddress?.split("@")[0] ||
+    userEmail?.split("@")[0] ||
     "User";
 
   const imageUrl = user?.imageUrl ?? null;
@@ -30,5 +31,5 @@ export function useUserIdentity() {
     await user.setProfileImage({ file });
   };
 
-  return { userId, userName, imageUrl, updateUserName, updateProfileImage, isReady: isLoaded };
+  return { userId, userName, userEmail, imageUrl, updateUserName, updateProfileImage, isReady: isLoaded };
 }
