@@ -8,6 +8,7 @@ import { requireUser } from "../lib/auth";
 import { rateLimit } from "../lib/rateLimit";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 import { validateStoredMedia } from "../lib/mediaLimits";
+import { clerkClient } from "@clerk/express";
 
 const router: IRouter = Router();
 const objectStorage = new ObjectStorageService();
@@ -189,18 +190,39 @@ router.post("/conversations/:conversationId/messages", sendMessageLimit, async (
     }
   }
 
+  // Determine senderName server-side — never trust what the client sends.
+  // Customer  → their Clerk account email address
+  // Retailer  → the store's name (from the DB, not the client)
+  const senderIsCustomer = conversation.customerId === authUserId;
+  let resolvedSenderName: string;
+  if (senderIsCustomer) {
+    try {
+      const clerkUser = await clerkClient.users.getUser(authUserId);
+      const primaryId = clerkUser.primaryEmailAddressId;
+      const primary = clerkUser.emailAddresses.find((e: { id: string }) => e.id === primaryId);
+      resolvedSenderName = (primary as any)?.emailAddress
+        ?? clerkUser.emailAddresses[0]?.emailAddress
+        ?? parsed.data.senderName;
+    } catch {
+      resolvedSenderName = parsed.data.senderName;
+    }
+  } else {
+    const [store] = await db.select({ name: storesTable.name }).from(storesTable).where(eq(storesTable.id, conversation.storeId));
+    resolvedSenderName = store?.name ?? parsed.data.senderName;
+  }
+
   const [msg] = await db.insert(messagesTable).values({
     conversationId,
-    senderId: parsed.data.senderId,
-    senderName: parsed.data.senderName,
-    senderType: parsed.data.senderType,
+    senderId: authUserId,
+    senderName: resolvedSenderName,
+    senderType: senderIsCustomer ? "customer" : "retailer",
     body: parsed.data.body,
     ...(parsed.data.mediaUrl ? { mediaUrl: parsed.data.mediaUrl } : {}),
   }).returning();
 
   // Increment only the RECIPIENT's unread counter; reset the sender's to 0
   // so the sender never sees their own message as outstanding.
-  const senderIsCustomer = conversation.customerId === authUserId;
+  // (senderIsCustomer already declared above)
   await db.update(conversationsTable)
     .set({
       lastMessage: parsed.data.body || '📷 Media',
