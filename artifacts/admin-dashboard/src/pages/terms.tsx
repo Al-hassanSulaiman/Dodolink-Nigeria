@@ -207,17 +207,14 @@ export default function TermsOfServicePage() {
           <section>
             <h2 className="text-base font-semibold text-gray-900 mb-2">12. Contact Us</h2>
             <p className="text-gray-700">
-              Questions about these Terms? Reach us at:
+              Questions about these Terms? Reach us directly through the in-app support feature:
             </p>
             <div className="mt-2 p-4 bg-gray-50 rounded-xl text-gray-700 text-sm">
               <p className="font-medium">Dodolink NG</p>
               <p>
-                Email:{" "}
-                <a href="mailto:support@dodolink.com.ng" className="text-[#1B5E20] underline">
-                  support@dodolink.com.ng
-                </a>
+                In-app support: open the App, go to <span className="font-medium">Settings → Support</span>, and send us a message — we'll reply as soon as possible.
               </p>
-              <p>
+              <p className="mt-1">
                 Website:{" "}
                 <a
                   href="https://dodolink.com.ng"

@@ -125,12 +125,19 @@ export default function PrivacyPolicyPage() {
           <section>
             <h2 className="text-base font-semibold text-gray-900 mb-2">10. Contact Us</h2>
             <p className="text-gray-700">
-              If you have questions or concerns about this Privacy Policy or how we handle your data, please contact us at:
+              If you have questions or concerns about this Privacy Policy or how we handle your data, you can reach us directly through the in-app support feature:
             </p>
             <div className="mt-2 p-4 bg-gray-50 rounded-xl text-gray-700 text-sm">
               <p className="font-medium">Dodolink NG</p>
-              <p>Email: <a href="mailto:support@dodolink.com.ng" className="text-[#1B5E20] underline">support@dodolink.com.ng</a></p>
-              <p>Website: <a href="https://dodolink.com.ng" className="text-[#1B5E20] underline" target="_blank" rel="noopener noreferrer">dodolink.com.ng</a></p>
+              <p>
+                In-app support: open the App, go to <span className="font-medium">Settings → Support</span>, and send us a message — we'll reply as soon as possible.
+              </p>
+              <p className="mt-1">
+                Website:{" "}
+                <a href="https://dodolink.com.ng" className="text-[#1B5E20] underline" target="_blank" rel="noopener noreferrer">
+                  dodolink.com.ng
+                </a>
+              </p>
             </div>
           </section>
 
