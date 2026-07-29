@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { getAuth } from "@clerk/express";
-import { eq, ilike, and, sql } from "drizzle-orm";
-import { db, storesTable, productsTable } from "@workspace/db";
+import { eq, ilike, and, sql, inArray } from "drizzle-orm";
+import { db, storesTable, productsTable, conversationsTable, messagesTable } from "@workspace/db";
 import {
   CreateStoreBody,
   UpdateStoreBody,
@@ -127,6 +127,27 @@ router.patch("/stores/:storeId", async (req, res): Promise<void> => {
 
   const [store] = await db.update(storesTable).set(updates).where(eq(storesTable.id, storeId)).returning();
   if (!store) { res.status(404).json({ error: "Store not found" }); return; }
+
+  // When the store name changes, backfill senderName on all existing retailer
+  // messages so conversation history and future notification titles stay consistent.
+  if (updates.name !== undefined && updates.name !== existing.name) {
+    const storeConvs = await db
+      .select({ id: conversationsTable.id })
+      .from(conversationsTable)
+      .where(eq(conversationsTable.storeId, storeId));
+    if (storeConvs.length > 0) {
+      const convIds = storeConvs.map(c => c.id);
+      await db
+        .update(messagesTable)
+        .set({ senderName: updates.name })
+        .where(
+          and(
+            inArray(messagesTable.conversationId, convIds),
+            eq(messagesTable.senderType, "retailer"),
+          )
+        );
+    }
+  }
 
   res.json(toPublicStore(store));
 });
