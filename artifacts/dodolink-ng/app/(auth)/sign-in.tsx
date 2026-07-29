@@ -16,6 +16,9 @@ import { showAlert } from "@/utils/alerts";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { FontAwesome5 } from "@expo/vector-icons";
+import * as WebBrowser from "expo-web-browser";
+
+const PRIVACY_URL = "https://dodolink.com.ng/admin/privacy";
 
 function NativeAnchor({ href, children, style }: { href: string; children: React.ReactNode; style?: object }) {
   if (Platform.OS !== "web") return null;
@@ -343,6 +346,12 @@ export default function SignInPage() {
               </Pressable>
             </Link>
           </View>
+
+          <View style={styles.legalRow}>
+            <Pressable onPress={() => WebBrowser.openBrowserAsync(PRIVACY_URL)} hitSlop={6}>
+              <Text style={styles.legalLink}>Privacy Policy</Text>
+            </Pressable>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -599,6 +608,22 @@ const styles = StyleSheet.create({
   },
   copyBtnText: {
     fontSize: 13,
+    color: "#1B5E20",
+    fontFamily: "Inter_500Medium",
+    fontWeight: "500",
+  },
+  legalRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 16,
+  },
+  legalText: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    fontFamily: "Inter_400Regular",
+  },
+  legalLink: {
+    fontSize: 12,
     color: "#1B5E20",
     fontFamily: "Inter_500Medium",
     fontWeight: "500",
