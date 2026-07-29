@@ -19,6 +19,7 @@ import { FontAwesome5 } from "@expo/vector-icons";
 import * as WebBrowser from "expo-web-browser";
 
 const PRIVACY_URL = "https://dodolink.com.ng/admin/privacy";
+const TERMS_URL = "https://dodolink.com.ng/admin/terms";
 
 export default function SignUpPage() {
   const { signUp, errors, fetchStatus } = useSignUp() as any;
@@ -393,6 +394,10 @@ export default function SignUpPage() {
 
           <View style={styles.legalRow}>
             <Text style={styles.legalText}>By creating an account you agree to our </Text>
+            <Pressable onPress={() => WebBrowser.openBrowserAsync(TERMS_URL)} hitSlop={6}>
+              <Text style={styles.legalLink}>Terms of Service</Text>
+            </Pressable>
+            <Text style={styles.legalText}> and </Text>
             <Pressable onPress={() => WebBrowser.openBrowserAsync(PRIVACY_URL)} hitSlop={6}>
               <Text style={styles.legalLink}>Privacy Policy</Text>
             </Pressable>

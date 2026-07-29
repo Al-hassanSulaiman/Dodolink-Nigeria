@@ -19,6 +19,7 @@ import { FontAwesome5 } from "@expo/vector-icons";
 import * as WebBrowser from "expo-web-browser";
 
 const PRIVACY_URL = "https://dodolink.com.ng/admin/privacy";
+const TERMS_URL = "https://dodolink.com.ng/admin/terms";
 
 function NativeAnchor({ href, children, style }: { href: string; children: React.ReactNode; style?: object }) {
   if (Platform.OS !== "web") return null;
@@ -348,6 +349,10 @@ export default function SignInPage() {
           </View>
 
           <View style={styles.legalRow}>
+            <Pressable onPress={() => WebBrowser.openBrowserAsync(TERMS_URL)} hitSlop={6}>
+              <Text style={styles.legalLink}>Terms of Service</Text>
+            </Pressable>
+            <Text style={styles.legalText}> · </Text>
             <Pressable onPress={() => WebBrowser.openBrowserAsync(PRIVACY_URL)} hitSlop={6}>
               <Text style={styles.legalLink}>Privacy Policy</Text>
             </Pressable>
@@ -615,6 +620,7 @@ const styles = StyleSheet.create({
   legalRow: {
     flexDirection: "row",
     justifyContent: "center",
+    flexWrap: "wrap",
     marginTop: 16,
   },
   legalText: {
