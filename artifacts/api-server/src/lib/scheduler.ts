@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import { and, eq, gte, lte } from "drizzle-orm";
+import { and, eq, gte, lt, lte } from "drizzle-orm";
 import { db, storesTable, pushTokensTable, conversationsTable } from "@workspace/db";
 import { notifyTokens } from "./push";
 import { logger } from "./logger";
@@ -116,15 +116,38 @@ export async function backfillCustomerNames(): Promise<void> {
   logger.info({ updated }, "customerName backfill: complete");
 }
 
+async function expireOverdueSubscriptions(): Promise<void> {
+  const now = new Date();
+  const result = await db
+    .update(storesTable)
+    .set({ subscriptionStatus: "past_due" })
+    .where(
+      and(
+        eq(storesTable.subscriptionStatus, "active"),
+        lt(storesTable.subscriptionDueAt, now)
+      )
+    )
+    .returning({ id: storesTable.id, name: storesTable.name });
+
+  if (result.length > 0) {
+    logger.info({ count: result.length, stores: result.map((s) => s.id) }, "Subscription expiry: marked stores past_due");
+  } else {
+    logger.info("Subscription expiry: no overdue stores");
+  }
+}
+
 export function startScheduler(): void {
   // Run daily at 9:00 AM server time
   cron.schedule("0 9 * * *", () => {
     sendRenewalReminders().catch((err) => {
       logger.error({ err }, "Renewal reminder job failed");
     });
+    expireOverdueSubscriptions().catch((err) => {
+      logger.error({ err }, "Subscription expiry job failed");
+    });
   });
 
-  logger.info("Scheduler started — renewal reminders run daily at 09:00");
+  logger.info("Scheduler started — renewal reminders and expiry checks run daily at 09:00");
 
   // Best-effort one-time backfill to fix pre-existing conversation names.
   backfillCustomerNames().catch((err) => {

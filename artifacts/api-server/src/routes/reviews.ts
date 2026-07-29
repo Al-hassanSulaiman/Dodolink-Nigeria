@@ -5,6 +5,9 @@ import { CreateReviewBody } from "@workspace/api-zod";
 import { notifyTokens } from "../lib/push";
 import { checkAndSetQualifiedAt } from "../lib/storeSubscription";
 import { requireUser } from "../lib/auth";
+import { rateLimit } from "../lib/rateLimit";
+
+const reviewCreateLimit = rateLimit({ name: "review-create", max: 10, windowMs: 60 * 60 * 1000 });
 
 const router: IRouter = Router();
 
@@ -17,7 +20,7 @@ router.get("/stores/:storeId/reviews", async (req, res): Promise<void> => {
   res.json(reviews);
 });
 
-router.post("/stores/:storeId/reviews", async (req, res): Promise<void> => {
+router.post("/stores/:storeId/reviews", reviewCreateLimit, async (req, res): Promise<void> => {
   const userId = requireUser(req, res);
   if (!userId) return;
 

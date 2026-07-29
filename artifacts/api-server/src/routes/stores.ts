@@ -8,6 +8,9 @@ import {
 } from "@workspace/api-zod";
 import { visibleStoresFilter, isStoreHidden } from "../lib/storeSubscription";
 import { requireUser } from "../lib/auth";
+import { rateLimit } from "../lib/rateLimit";
+
+const storeCreateLimit = rateLimit({ name: "store-create", max: 5, windowMs: 60 * 60 * 1000 });
 
 const router: IRouter = Router();
 
@@ -42,7 +45,7 @@ router.get("/stores", async (req, res): Promise<void> => {
   res.json(stores.map(toPublicStore));
 });
 
-router.post("/stores", async (req, res): Promise<void> => {
+router.post("/stores", storeCreateLimit, async (req, res): Promise<void> => {
   const userId = requireUser(req, res);
   if (!userId) return;
 

@@ -33,9 +33,17 @@ export default function ForgotPasswordPage() {
   const handleSendCode = async () => {
     try {
       const { error } = await signIn.create({ identifier: emailAddress });
-      if (error) return;
+      if (error) {
+        const msg = (error as any)?.longMessage ?? (error as any)?.message ?? "Something went wrong. Please try again.";
+        showAlert("Could not send code", msg);
+        return;
+      }
       const { error: sendError } = await signIn.resetPasswordEmailCode.sendCode();
-      if (sendError) return;
+      if (sendError) {
+        const msg = (sendError as any)?.longMessage ?? (sendError as any)?.message ?? "Something went wrong. Please try again.";
+        showAlert("Could not send code", msg);
+        return;
+      }
       setStep("code");
     } catch (err: any) {
       const msg = err?.errors?.[0]?.longMessage ?? err?.message ?? "Something went wrong. Please try again.";
@@ -46,7 +54,11 @@ export default function ForgotPasswordPage() {
   const handleVerifyCode = async () => {
     try {
       const { error } = await signIn.resetPasswordEmailCode.verifyCode({ code });
-      if (error) return;
+      if (error) {
+        const msg = (error as any)?.longMessage ?? (error as any)?.message ?? "Invalid or expired code. Please try again.";
+        showAlert("Could not verify code", msg);
+        return;
+      }
       setStep("password");
     } catch (err: any) {
       const msg = err?.errors?.[0]?.longMessage ?? err?.message ?? "Something went wrong. Please try again.";
@@ -73,7 +85,11 @@ export default function ForgotPasswordPage() {
       password: newPassword,
       signOutOfOtherSessions: true,
     });
-    if (error) return;
+    if (error) {
+      const msg = (error as any)?.longMessage ?? (error as any)?.message ?? "Could not reset password. Please try again.";
+      showAlert("Password reset failed", msg);
+      return;
+    }
     if (signIn.status === "complete") {
       setStep("done");
       await signIn.finalize({
