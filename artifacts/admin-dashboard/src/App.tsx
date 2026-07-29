@@ -13,6 +13,7 @@ import StoresPage from "@/pages/stores";
 import UsersPage from "@/pages/users";
 import SupportPage from "@/pages/support";
 import PrivacyPolicyPage from "@/pages/privacy";
+import TermsOfServicePage from "@/pages/terms";
 import {
   useAdminListSupportThreads,
   getAdminListSupportThreadsQueryKey,
@@ -192,6 +193,7 @@ function Router() {
         <ProtectedRoute component={SupportPage} />
       </Route>
       <Route path="/privacy" component={PrivacyPolicyPage} />
+      <Route path="/terms" component={TermsOfServicePage} />
       <Route component={NotFound} />
     </Switch>
   );

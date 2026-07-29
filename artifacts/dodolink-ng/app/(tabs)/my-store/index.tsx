@@ -4,6 +4,7 @@ import { useAuth } from '@clerk/expo';
 import * as WebBrowser from 'expo-web-browser';
 
 const PRIVACY_URL = 'https://dodolink.com.ng/admin/privacy';
+const TERMS_URL = 'https://dodolink.com.ng/admin/terms';
 import { useListStores, useListStoreProducts, useDeleteProduct, getListProductsQueryKey, getListStoresQueryKey, getListStoreProductsQueryKey } from '@workspace/api-client-react';
 import { ImagePlaceholder } from '@/components/ImagePlaceholder';
 import { useColors } from '@/hooks/useColors';
@@ -82,14 +83,25 @@ export default function MyStoreScreen() {
           description="Create your store to reach customers across Nigeria. It's free and easy."
           action={<Button title="Create Store" onPress={() => router.push('/my-store/create')} />}
         />
-        <Pressable
-          style={styles.privacyRow}
-          onPress={() => WebBrowser.openBrowserAsync(PRIVACY_URL)}
-          hitSlop={8}
-        >
-          <Feather name="shield" size={14} color="#6B7280" />
-          <Text style={styles.privacyText}>Privacy Policy</Text>
-        </Pressable>
+        <View style={styles.legalRow}>
+          <Pressable
+            style={styles.privacyRow}
+            onPress={() => WebBrowser.openBrowserAsync(PRIVACY_URL)}
+            hitSlop={8}
+          >
+            <Feather name="shield" size={14} color="#6B7280" />
+            <Text style={styles.privacyText}>Privacy Policy</Text>
+          </Pressable>
+          <Text style={styles.legalSep}>·</Text>
+          <Pressable
+            style={styles.privacyRow}
+            onPress={() => WebBrowser.openBrowserAsync(TERMS_URL)}
+            hitSlop={8}
+          >
+            <Feather name="file-text" size={14} color="#6B7280" />
+            <Text style={styles.privacyText}>Terms of Service</Text>
+          </Pressable>
+        </View>
       </View>
     );
   }
@@ -229,14 +241,25 @@ export default function MyStoreScreen() {
           )}
         </View>
 
-        <Pressable
-          style={styles.privacyRow}
-          onPress={() => WebBrowser.openBrowserAsync(PRIVACY_URL)}
-          hitSlop={8}
-        >
-          <Feather name="shield" size={14} color="#6B7280" />
-          <Text style={styles.privacyText}>Privacy Policy</Text>
-        </Pressable>
+        <View style={styles.legalRow}>
+          <Pressable
+            style={styles.privacyRow}
+            onPress={() => WebBrowser.openBrowserAsync(PRIVACY_URL)}
+            hitSlop={8}
+          >
+            <Feather name="shield" size={14} color="#6B7280" />
+            <Text style={styles.privacyText}>Privacy Policy</Text>
+          </Pressable>
+          <Text style={styles.legalSep}>·</Text>
+          <Pressable
+            style={styles.privacyRow}
+            onPress={() => WebBrowser.openBrowserAsync(TERMS_URL)}
+            hitSlop={8}
+          >
+            <Feather name="file-text" size={14} color="#6B7280" />
+            <Text style={styles.privacyText}>Terms of Service</Text>
+          </Pressable>
+        </View>
       </View>
     </ScrollView>
   );
@@ -383,13 +406,25 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     fontSize: 13,
   },
-  privacyRow: {
+  legalRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 16,
+    flexWrap: 'wrap',
+    paddingVertical: 8,
     marginTop: 8,
+  },
+  legalSep: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    color: '#6B7280',
+    marginHorizontal: 4,
+  },
+  privacyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
   },
   privacyText: {
     fontFamily: 'Inter_400Regular',
