@@ -1,8 +1,9 @@
 import cron from "node-cron";
-import { and, eq, gte, lte, eq as drizzleEq } from "drizzle-orm";
-import { db, storesTable, pushTokensTable } from "@workspace/db";
+import { and, eq, gte, lte } from "drizzle-orm";
+import { db, storesTable, pushTokensTable, conversationsTable } from "@workspace/db";
 import { notifyTokens } from "./push";
 import { logger } from "./logger";
+import { clerkClient } from "@clerk/express";
 
 const RENEWAL_REMINDER_TITLE = "Subscription Expiry Reminder";
 const RENEWAL_REMINDER_BODY =
@@ -57,6 +58,64 @@ async function sendRenewalReminders(): Promise<void> {
   }
 }
 
+/**
+ * One-time startup backfill: update customerName for any conversation where
+ * the stored name is not already the customer's Clerk email address.
+ * Runs asynchronously in the background — failures are logged but never
+ * crash the server.
+ */
+export async function backfillCustomerNames(): Promise<void> {
+  logger.info("customerName backfill: starting");
+
+  // Fetch all conversations that still have a non-email customerName.
+  // A simple heuristic: if the name contains "@" it was already resolved.
+  const convs = await db.select().from(conversationsTable);
+  const toUpdate = convs.filter((c) => !c.customerName.includes("@"));
+
+  if (toUpdate.length === 0) {
+    logger.info("customerName backfill: nothing to update");
+    return;
+  }
+
+  logger.info({ count: toUpdate.length }, "customerName backfill: conversations to fix");
+
+  // Deduplicate by customerId so we only call Clerk once per user.
+  const uniqueCustomerIds = [...new Set(toUpdate.map((c) => c.customerId))];
+  const emailByUserId = new Map<string, string>();
+
+  for (const userId of uniqueCustomerIds) {
+    try {
+      const clerkUser = await clerkClient.users.getUser(userId);
+      const primaryId = clerkUser.primaryEmailAddressId;
+      const primary = clerkUser.emailAddresses.find((e: { id: string }) => e.id === primaryId);
+      const email =
+        (primary as any)?.emailAddress ??
+        clerkUser.emailAddresses[0]?.emailAddress ??
+        null;
+      if (email) emailByUserId.set(userId, email);
+    } catch (err) {
+      logger.warn({ userId, err }, "customerName backfill: Clerk lookup failed, skipping user");
+    }
+  }
+
+  let updated = 0;
+  for (const conv of toUpdate) {
+    const email = emailByUserId.get(conv.customerId);
+    if (!email || email === conv.customerName) continue;
+    try {
+      await db
+        .update(conversationsTable)
+        .set({ customerName: email })
+        .where(eq(conversationsTable.id, conv.id));
+      updated++;
+    } catch (err) {
+      logger.warn({ conversationId: conv.id, err }, "customerName backfill: update failed");
+    }
+  }
+
+  logger.info({ updated }, "customerName backfill: complete");
+}
+
 export function startScheduler(): void {
   // Run daily at 9:00 AM server time
   cron.schedule("0 9 * * *", () => {
@@ -66,4 +125,9 @@ export function startScheduler(): void {
   });
 
   logger.info("Scheduler started — renewal reminders run daily at 09:00");
+
+  // Best-effort one-time backfill to fix pre-existing conversation names.
+  backfillCustomerNames().catch((err) => {
+    logger.error({ err }, "customerName backfill failed");
+  });
 }
