@@ -78,11 +78,24 @@ router.post("/conversations/start", startConversationLimit, async (req, res): Pr
   const parsed = StartConversationBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-  const { customerId, customerName, storeId, initialMessage } = parsed.data;
+  const { customerId, storeId, initialMessage } = parsed.data;
   if (customerId !== authUserId) { res.status(403).json({ error: "customerId must match the authenticated user" }); return; }
 
   const [store] = await db.select({ name: storesTable.name }).from(storesTable).where(eq(storesTable.id, storeId));
   if (!store) { res.status(404).json({ error: "Store not found" }); return; }
+
+  // Look up the customer's email from Clerk — this is the name the retailer will see
+  let resolvedCustomerName: string;
+  try {
+    const clerkUser = await clerkClient.users.getUser(authUserId);
+    const primaryId = clerkUser.primaryEmailAddressId;
+    const primary = clerkUser.emailAddresses.find((e: { id: string }) => e.id === primaryId);
+    resolvedCustomerName = (primary as any)?.emailAddress
+      ?? clerkUser.emailAddresses[0]?.emailAddress
+      ?? authUserId;
+  } catch {
+    resolvedCustomerName = authUserId;
+  }
 
   // Return existing conversation if one already exists between this customer and store
   const [existing] = await db
@@ -91,7 +104,13 @@ router.post("/conversations/start", startConversationLimit, async (req, res): Pr
     .where(and(eq(conversationsTable.customerId, customerId), eq(conversationsTable.storeId, storeId)));
 
   if (existing) {
-    res.status(200).json({ ...existing, storeName: store.name });
+    // Update customerName to email in case it was saved with old display name
+    if (existing.customerName !== resolvedCustomerName) {
+      await db.update(conversationsTable)
+        .set({ customerName: resolvedCustomerName })
+        .where(eq(conversationsTable.id, existing.id));
+    }
+    res.status(200).json({ ...existing, customerName: resolvedCustomerName, storeName: store.name });
     return;
   }
 
@@ -99,7 +118,7 @@ router.post("/conversations/start", startConversationLimit, async (req, res): Pr
     .insert(conversationsTable)
     .values({
       customerId,
-      customerName,
+      customerName: resolvedCustomerName,
       storeId,
       ...(initialMessage ? { lastMessage: initialMessage, lastMessageAt: new Date() } : {}),
     })
@@ -109,7 +128,7 @@ router.post("/conversations/start", startConversationLimit, async (req, res): Pr
     await db.insert(messagesTable).values({
       conversationId: conv.id,
       senderId: customerId,
-      senderName: customerName,
+      senderName: resolvedCustomerName,
       senderType: "customer",
       body: initialMessage,
     });
@@ -257,7 +276,7 @@ router.post("/conversations/:conversationId/messages", sendMessageLimit, async (
       const tokens = await db.select({ token: pushTokensTable.token }).from(pushTokensTable).where(eq(pushTokensTable.userId, store.ownerUserId));
       await notifyTokens(
         tokens.map(t => t.token),
-        `New message from ${parsed.data.senderName}`,
+        `New message from ${resolvedSenderName}`,
         parsed.data.body,
         { conversationId },
       );
@@ -266,7 +285,7 @@ router.post("/conversations/:conversationId/messages", sendMessageLimit, async (
       const tokens = await db.select({ token: pushTokensTable.token }).from(pushTokensTable).where(eq(pushTokensTable.userId, conv.customerId));
       await notifyTokens(
         tokens.map(t => t.token),
-        `Reply from ${parsed.data.senderName}`,
+        `Reply from ${resolvedSenderName}`,
         parsed.data.body,
         { conversationId },
       );

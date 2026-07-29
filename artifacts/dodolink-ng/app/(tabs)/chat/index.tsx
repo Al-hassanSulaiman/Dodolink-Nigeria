@@ -39,8 +39,10 @@ export default function ChatsScreen() {
         data={conversations}
         keyExtractor={item => item.id.toString()}
         renderItem={({ item }) => {
-          const isStoreOwner = item.storeId.toString() === userId; // Not exactly right, but close enough for UI display
-          const displayName = isStoreOwner ? item.customerName : item.storeName;
+          // If the current user is the customer in this conversation, show the store name.
+          // If they are the retailer (store side), show the customer's email.
+          const isCustomer = item.customerId === userId;
+          const displayName = isCustomer ? item.storeName : item.customerName;
 
           return (
             <Link href={`/chat/${item.id}`} asChild>

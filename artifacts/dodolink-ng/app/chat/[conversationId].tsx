@@ -149,32 +149,39 @@ export default function ChatThreadScreen() {
     );
 
     return (
-      <View style={[
-        styles.messageBubble,
-        isMe
-          ? [styles.myMessage, { backgroundColor: colors.primary }]
-          : [styles.theirMessage, { backgroundColor: colors.card, borderColor: colors.border }]
-      ]}>
-        {item.mediaUrl ? (
-          isVideo ? (
-            <VideoBubble uri={item.mediaUrl} isMe={isMe} colors={colors} />
-          ) : (
-            <Image
-              source={{ uri: item.mediaUrl }}
-              style={{ width: MEDIA_WIDTH, aspectRatio: 1, borderRadius: 8 }}
-              contentFit="cover"
-            />
-          )
-        ) : null}
-        {item.body ? (
-          <Text style={[
-            styles.messageText,
-            { color: isMe ? colors.primaryForeground : colors.foreground },
-            item.mediaUrl ? { marginTop: 6 } : null,
-          ]}>
-            {item.body}
+      <View style={isMe ? styles.myRow : styles.theirRow}>
+        {!isMe && (
+          <Text style={[styles.senderLabel, { color: colors.mutedForeground }]}>
+            {item.senderName}
           </Text>
-        ) : null}
+        )}
+        <View style={[
+          styles.messageBubble,
+          isMe
+            ? [styles.myMessage, { backgroundColor: colors.primary }]
+            : [styles.theirMessage, { backgroundColor: colors.card, borderColor: colors.border }]
+        ]}>
+          {item.mediaUrl ? (
+            isVideo ? (
+              <VideoBubble uri={item.mediaUrl} isMe={isMe} colors={colors} />
+            ) : (
+              <Image
+                source={{ uri: item.mediaUrl }}
+                style={{ width: MEDIA_WIDTH, aspectRatio: 1, borderRadius: 8 }}
+                contentFit="cover"
+              />
+            )
+          ) : null}
+          {item.body ? (
+            <Text style={[
+              styles.messageText,
+              { color: isMe ? colors.primaryForeground : colors.foreground },
+              item.mediaUrl ? { marginTop: 6 } : null,
+            ]}>
+              {item.body}
+            </Text>
+          ) : null}
+        </View>
       </View>
     );
   };
@@ -183,7 +190,7 @@ export default function ChatThreadScreen() {
 
   return (
     <KeyboardControllerView style={[styles.container, { backgroundColor: colors.background }]} behavior="padding" keyboardVerticalOffset={100}>
-      <Stack.Screen options={{ title: "Chat" }} />
+      <Stack.Screen options={{ title: isRetailer ? (conversation?.customerName ?? "Chat") : (conversation?.storeName ?? "Chat") }} />
       <FlatList
         data={messages ? [...messages].reverse() : []}
         inverted
@@ -235,11 +242,24 @@ const styles = StyleSheet.create({
   listContent: {
     padding: 16,
   },
+  myRow: {
+    alignItems: 'flex-end',
+    marginBottom: 8,
+  },
+  theirRow: {
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  senderLabel: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 11,
+    marginBottom: 2,
+    marginLeft: 4,
+  },
   messageBubble: {
     maxWidth: '80%',
     padding: 10,
     borderRadius: 16,
-    marginBottom: 8,
   },
   myMessage: {
     alignSelf: 'flex-end',
