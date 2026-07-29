@@ -16,6 +16,9 @@ import { showAlert } from "@/utils/alerts";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { FontAwesome5 } from "@expo/vector-icons";
+import * as WebBrowser from "expo-web-browser";
+
+const PRIVACY_URL = "https://dodolink.com.ng/admin/privacy";
 
 export default function SignUpPage() {
   const { signUp, errors, fetchStatus } = useSignUp() as any;
@@ -387,6 +390,13 @@ export default function SignUpPage() {
               </Pressable>
             </Link>
           </View>
+
+          <View style={styles.legalRow}>
+            <Text style={styles.legalText}>By creating an account you agree to our </Text>
+            <Pressable onPress={() => WebBrowser.openBrowserAsync(PRIVACY_URL)} hitSlop={6}>
+              <Text style={styles.legalLink}>Privacy Policy</Text>
+            </Pressable>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -528,6 +538,25 @@ const styles = StyleSheet.create({
     color: "#1B5E20",
     fontWeight: "600",
     fontFamily: "Inter_600SemiBold",
+  },
+  legalRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    flexWrap: "wrap",
+    marginTop: 12,
+    paddingHorizontal: 8,
+  },
+  legalText: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+  },
+  legalLink: {
+    fontSize: 12,
+    color: "#1B5E20",
+    fontFamily: "Inter_500Medium",
+    textDecorationLine: "underline",
   },
   divider: {
     flexDirection: "row",
