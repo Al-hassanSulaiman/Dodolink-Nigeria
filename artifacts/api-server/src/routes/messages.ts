@@ -242,6 +242,8 @@ router.post("/conversations/:conversationId/messages", sendMessageLimit, async (
   // Increment only the RECIPIENT's unread counter; reset the sender's to 0
   // so the sender never sees their own message as outstanding.
   // (senderIsCustomer already declared above)
+  // Also refresh customerName so it stays current if the customer changed
+  // their primary email address in Clerk since the conversation was created.
   await db.update(conversationsTable)
     .set({
       lastMessage: parsed.data.body || '📷 Media',
@@ -254,6 +256,7 @@ router.post("/conversations/:conversationId/messages", sendMessageLimit, async (
       storeUnreadCount: senderIsCustomer
         ? sql`${conversationsTable.storeUnreadCount} + 1`
         : 0,
+      ...(senderIsCustomer ? { customerName: resolvedSenderName } : {}),
     })
     .where(eq(conversationsTable.id, conversationId));
 
