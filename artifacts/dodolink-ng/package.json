@@ -60,6 +60,7 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
+    "expo-build-properties": "^57.0.7",
     "expo-notifications": "^0.32.17",
     "expo-video": "^57.0.2"
   }
