@@ -4,6 +4,9 @@
       "eas": {
         "projectId": "af942ece-cc17-4802-b56a-3979711280d5"
       }
+    },
+    "android": {
+      "package": "com.dodolink.ng"
     }
   }
 }
