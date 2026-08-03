@@ -31,8 +31,13 @@ import { useListStores } from '@workspace/api-client-react';
 import { Button } from '@/components/ui';
 import { LoadingScreen } from '@/components/Loading';
 
-const SUBSCRIPTION_FEE = '₦5,000';
 const ENGAGEMENT_THRESHOLD = 7;
+const PREMIUM_THRESHOLD = 12;
+
+/** ₦2,000/month standard; ₦5,000/month once a store has 12+ interactions in 30 days. */
+function feeFor(engagementCount: number): string {
+  return engagementCount >= PREMIUM_THRESHOLD ? '₦5,000' : '₦2,000';
+}
 
 export default function SubscriptionScreen() {
   const colors = useColors();
@@ -112,7 +117,7 @@ export default function SubscriptionScreen() {
     if (!myStore) return;
     confirmAlert({
       title: 'Renew subscription',
-      message: `Charge ${SUBSCRIPTION_FEE} using your saved card?`,
+      message: `Charge ${feeFor(sub?.engagementCount ?? 0)} using your saved card?`,
       confirmText: 'Charge now',
       onConfirm: async () => {
         try {
@@ -279,7 +284,7 @@ export default function SubscriptionScreen() {
                     Auto-renew
                   </Text>
                   <Text style={[styles.autoPaySub, { color: colors.mutedForeground }]}>
-                    Automatically charge {SUBSCRIPTION_FEE} every 30 days
+                    Automatically charge {feeFor(sub?.engagementCount ?? 0)} every 30 days
                   </Text>
                 </View>
                 <Switch
@@ -301,10 +306,13 @@ export default function SubscriptionScreen() {
           >
             <Text style={[styles.cardTitle, { color: colors.foreground }]}>Payment</Text>
             <Text style={[styles.cardBody, { color: colors.mutedForeground, marginBottom: 16 }]}>
-              {SUBSCRIPTION_FEE}/month keeps your store visible and accepting orders.
+              {feeFor(sub?.engagementCount ?? 0)}/month keeps your store visible and accepting orders.
+              {(sub?.engagementCount ?? 0) < PREMIUM_THRESHOLD
+                ? ` Stores with ${PREMIUM_THRESHOLD}+ interactions in 30 days pay ₦5,000/month.`
+                : ''}
             </Text>
 
-            {/* Coming soon banner — shown before Jan 1 2027 */}
+            {/* Coming soon banner — shown only if billing is not yet live */}
             {!sub.paymentsLive ? (
               <View style={[styles.comingSoonBanner, { backgroundColor: '#16a34a18', borderColor: '#16a34a44' }]}>
                 <Feather name="calendar" size={20} color="#16a34a" />
@@ -376,8 +384,8 @@ export default function SubscriptionScreen() {
                         initMutation.isPending
                           ? 'Opening payment…'
                           : sub.subscriptionStatus === 'active'
-                          ? `Renew now (${SUBSCRIPTION_FEE})`
-                          : `Pay ${SUBSCRIPTION_FEE} to activate`
+                          ? `Renew now (${feeFor(sub?.engagementCount ?? 0)})`
+                          : `Pay ${feeFor(sub?.engagementCount ?? 0)} to activate`
                       }
                       onPress={handlePayManually}
                       disabled={initMutation.isPending}

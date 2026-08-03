@@ -13,8 +13,10 @@ import {
 } from "../lib/paystack";
 import {
   ENGAGEMENT_THRESHOLD,
+  PREMIUM_ENGAGEMENT_THRESHOLD,
   SUBSCRIPTION_LAUNCH_DATE,
   getEngagementCount,
+  getSubscriptionAmountKobo,
   isPaymentsLive,
   isStoreHidden,
   gracePeriodDaysRemaining,
@@ -44,13 +46,14 @@ async function loadOwnedStore(
   return store;
 }
 
-const SUBSCRIPTION_AMOUNT_KOBO = 500_000; // ₦5,000
 const SUBSCRIPTION_DAYS = 30;
 
 function buildStatus(store: typeof storesTable.$inferSelect, engagementCount: number) {
   return {
     storeId: store.id,
     engagementCount,
+    subscriptionAmountKobo: getSubscriptionAmountKobo(engagementCount),
+    premiumThreshold: PREMIUM_ENGAGEMENT_THRESHOLD,
     qualified: store.verificationStatus === "verified" && engagementCount >= ENGAGEMENT_THRESHOLD,
     subscriptionStatus: store.subscriptionStatus as "inactive" | "active" | "past_due",
     subscriptionDueAt: store.subscriptionDueAt?.toISOString() ?? null,
@@ -97,8 +100,10 @@ router.post("/stores/:storeId/subscription/initialize", async (req, res): Promis
   const reference = `dodolink_sub_${storeId}_${Date.now()}`;
   const { email } = parsed.data;
 
+  const amountKobo = getSubscriptionAmountKobo(engagementCount);
+
   try {
-    const data = await paystackInitialize(email, SUBSCRIPTION_AMOUNT_KOBO, reference, {
+    const data = await paystackInitialize(email, amountKobo, reference, {
       storeId,
       storeName: store.name,
       type: "subscription",
@@ -155,7 +160,12 @@ router.post("/stores/:storeId/subscription/verify", async (req, res): Promise<vo
       return;
     }
 
-    if (txn.amount !== SUBSCRIPTION_AMOUNT_KOBO) {
+    // The amount owed depends on the store's engagement tier. Accept the
+    // payment as long as it covers the tier owed right now (paying the higher
+    // tier is always fine).
+    const engagementNow = await getEngagementCount(storeId);
+    const expectedKobo = getSubscriptionAmountKobo(engagementNow);
+    if (txn.amount < expectedKobo) {
       res.status(400).json({ error: "Payment amount does not match the subscription fee" });
       return;
     }
@@ -207,11 +217,14 @@ router.post("/stores/:storeId/subscription/charge", async (req, res): Promise<vo
     return;
   }
 
+  const chargeEngagement = await getEngagementCount(storeId);
+  const chargeAmountKobo = getSubscriptionAmountKobo(chargeEngagement);
+
   try {
     const result = await paystackChargeAuthorization(
       store.paystackAuthCode,
       store.paystackEmail,
-      SUBSCRIPTION_AMOUNT_KOBO
+      chargeAmountKobo
     );
 
     if (result.status !== "success") {

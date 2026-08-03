@@ -10,7 +10,7 @@ const RENEWAL_REMINDER_BODY =
   "Dear Valued Retailer, your monthly subscription will expire in 3 days. " +
   "Renew before it expires to keep your Verified Retailer Status, Store Visibility, " +
   "Customer Messaging, and Secure Marketplace Access. " +
-  "Subscription Fee: ₦5,000/month. " +
+  "Subscription Fee: ₦2,000/month (₦5,000/month for high-engagement stores). " +
   "Thank you for choosing DodoLink. — Al-Hassan Sulaiman, Founder & CEO.";
 
 async function sendRenewalReminders(): Promise<void> {

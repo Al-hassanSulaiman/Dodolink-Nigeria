@@ -151,7 +151,7 @@ export default function MyStoreScreen() {
                   ? 'Active — renews in 30 days'
                   : myStore.subscriptionStatus === 'past_due'
                   ? '⚠️ Payment overdue'
-                  : 'Manage your ₦5,000/month plan'}
+                  : 'Manage your subscription plan'}
               </Text>
             </View>
           </View>

@@ -3,7 +3,21 @@ import { db, storesTable, reviewsTable, conversationsTable, pushTokensTable } fr
 import { notifyTokens } from "./push";
 
 export const ENGAGEMENT_THRESHOLD = 7;
+/** Stores with this many interactions in the window pay the premium rate. */
+export const PREMIUM_ENGAGEMENT_THRESHOLD = 12;
 export const GRACE_PERIOD_DAYS = 14;
+
+/** Standard tier: ₦2,000/month for stores with 7-11 interactions. */
+export const STANDARD_AMOUNT_KOBO = 200_000;
+/** Premium tier: ₦5,000/month for stores with 12+ interactions in 30 days. */
+export const PREMIUM_AMOUNT_KOBO = 500_000;
+
+/** Returns the monthly fee (in kobo) for a store's current engagement level. */
+export function getSubscriptionAmountKobo(engagementCount: number): number {
+  return engagementCount >= PREMIUM_ENGAGEMENT_THRESHOLD
+    ? PREMIUM_AMOUNT_KOBO
+    : STANDARD_AMOUNT_KOBO;
+}
 
 /** Payments are disabled until this date. On this date they auto-enable. */
 export const SUBSCRIPTION_LAUNCH_DATE = new Date("2027-01-01T00:00:00.000Z");
@@ -24,7 +38,7 @@ function effectiveQualifiedAt(qualifiedAt: Date): Date {
 const QUALIFICATION_PUSH_TITLE = "Important Notice";
 const QUALIFICATION_PUSH_BODY =
   "Dear Valued Retailer, your store has reached the qualifying threshold. " +
-  "Starting in 14 days, a monthly subscription fee of ₦5,000 will apply. " +
+  "Starting in 14 days, a monthly subscription fee will apply (₦2,000/month, or ₦5,000/month for stores with 12+ interactions in 30 days). " +
   "This helps us maintain a secure, reliable marketplace for your business. " +
   "Warm regards, Al-Hassan Sulaiman — Founder & CEO, DodoLink.";
 
