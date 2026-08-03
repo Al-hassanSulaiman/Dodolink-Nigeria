@@ -418,7 +418,7 @@ export default function SubscriptionScreen() {
           >
             <Feather name="lock" size={20} color={colors.mutedForeground} />
             <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
-              Subscription payment will be unlocked once your store reaches {ENGAGEMENT_THRESHOLD} customer interactions.
+              Subscription payment will be unlocked once your store reaches {ENGAGEMENT_THRESHOLD} customer interactions. Payments of ₦2,000 will start by January 1st, 2027 to all verified store owners, and ₦5,000 to stores with 12+ interactions in 30 days.
             </Text>
           </View>
         )}
