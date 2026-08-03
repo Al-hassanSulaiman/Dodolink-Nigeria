@@ -60,7 +60,15 @@ app.use(
     },
   }),
 );
-app.use(express.json());
+// Keep the raw request bytes so the Paystack webhook can verify its
+// HMAC signature against exactly what was sent.
+app.use(
+  express.json({
+    verify: (req, _res, buf) => {
+      (req as any).rawBody = buf;
+    },
+  }),
+);
 app.use(express.urlencoded({ extended: true }));
 
 // Resolve the publishable key from the incoming request host so the same

@@ -1,5 +1,21 @@
 const PAYSTACK_BASE = "https://api.paystack.co";
 
+/**
+ * Fail fast at startup if the Paystack key is missing or the wrong mode.
+ * In production a test key (sk_test_...) would silently make every "payment"
+ * fake, so we refuse to start.
+ */
+export function validatePaystackKey(): void {
+  const key = process.env.PAYSTACK_SECRET_KEY;
+  if (!key) throw new Error("PAYSTACK_SECRET_KEY is not set");
+  if (process.env.NODE_ENV === "production" && key.startsWith("sk_test_")) {
+    throw new Error(
+      "PAYSTACK_SECRET_KEY is a TEST key (sk_test_...) but this is a production deployment. " +
+        "Set the live secret key (sk_live_...) before deploying.",
+    );
+  }
+}
+
 function headers() {
   const key = process.env.PAYSTACK_SECRET_KEY;
   if (!key) throw new Error("PAYSTACK_SECRET_KEY is not set");
@@ -53,12 +69,18 @@ export async function paystackVerify(reference: string): Promise<PaystackTransac
 export async function paystackChargeAuthorization(
   authorizationCode: string,
   email: string,
-  amountKobo: number
+  amountKobo: number,
+  reference?: string
 ): Promise<{ status: string; reference: string }> {
   const res = await fetch(`${PAYSTACK_BASE}/transaction/charge_authorization`, {
     method: "POST",
     headers: headers(),
-    body: JSON.stringify({ authorization_code: authorizationCode, email, amount: amountKobo }),
+    body: JSON.stringify({
+      authorization_code: authorizationCode,
+      email,
+      amount: amountKobo,
+      ...(reference ? { reference } : {}),
+    }),
   });
   const json = (await res.json()) as {
     status: boolean;

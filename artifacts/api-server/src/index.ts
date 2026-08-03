@@ -1,6 +1,11 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { startScheduler } from "./lib/scheduler";
+import { validatePaystackKey } from "./lib/paystack";
+
+// Refuse to start a production deployment with a missing or test-mode
+// Paystack key — real checkouts would silently be fake otherwise.
+validatePaystackKey();
 
 const rawPort = process.env["PORT"];
 

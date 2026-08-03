@@ -1,6 +1,7 @@
 import cron from "node-cron";
-import { and, eq, gte, lt, lte } from "drizzle-orm";
+import { and, eq, gte, lt, lte, sql } from "drizzle-orm";
 import { db, storesTable, pushTokensTable, conversationsTable } from "@workspace/db";
+import { autoChargeDueSubscriptions } from "./subscriptionBilling";
 import { notifyTokens } from "./push";
 import { logger } from "./logger";
 import { clerkClient } from "@clerk/express";
@@ -136,18 +137,48 @@ async function expireOverdueSubscriptions(): Promise<void> {
   }
 }
 
-export function startScheduler(): void {
-  // Run daily at 9:00 AM server time
-  cron.schedule("0 9 * * *", () => {
-    sendRenewalReminders().catch((err) => {
+// Arbitrary but fixed lock id shared by all instances for the daily jobs.
+const DAILY_JOBS_LOCK_ID = 748_291_530;
+
+/**
+ * Run the daily jobs while holding a Postgres advisory lock so that if the
+ * deployment ever scales to multiple instances, only one of them executes
+ * the run (no duplicate reminders or double charges).
+ */
+async function runDailyJobs(): Promise<void> {
+  await db.transaction(async (tx) => {
+    const result = await tx.execute(
+      sql`select pg_try_advisory_xact_lock(${DAILY_JOBS_LOCK_ID}) as locked`,
+    );
+    const row = (result as any).rows?.[0] ?? (result as any)[0];
+    if (!row?.locked) {
+      logger.info("Daily jobs: another instance holds the lock, skipping this run");
+      return;
+    }
+
+    // Charge auto-pay cards first, so freshly renewed stores aren't expired
+    // or reminded in the same run.
+    await autoChargeDueSubscriptions().catch((err) => {
+      logger.error({ err }, "Auto-charge job failed");
+    });
+    await sendRenewalReminders().catch((err) => {
       logger.error({ err }, "Renewal reminder job failed");
     });
-    expireOverdueSubscriptions().catch((err) => {
+    await expireOverdueSubscriptions().catch((err) => {
       logger.error({ err }, "Subscription expiry job failed");
     });
   });
+}
 
-  logger.info("Scheduler started — renewal reminders and expiry checks run daily at 09:00");
+export function startScheduler(): void {
+  // Run daily at 9:00 AM server time
+  cron.schedule("0 9 * * *", () => {
+    runDailyJobs().catch((err) => {
+      logger.error({ err }, "Daily jobs run failed");
+    });
+  });
+
+  logger.info("Scheduler started — auto-charges, renewal reminders and expiry checks run daily at 09:00");
 
   // Best-effort one-time backfill to fix pre-existing conversation names.
   backfillCustomerNames().catch((err) => {

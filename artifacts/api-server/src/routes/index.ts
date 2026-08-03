@@ -10,6 +10,7 @@ import storageRouter from "./storage";
 import supportRouter from "./support";
 import adminRouter from "./admin";
 import subscriptionsRouter from "./subscriptions";
+import webhooksRouter from "./webhooks";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(pushTokensRouter);
 router.use(storageRouter);
 router.use(supportRouter);
 router.use(subscriptionsRouter);
+router.use(webhooksRouter);
 
 export default router;
