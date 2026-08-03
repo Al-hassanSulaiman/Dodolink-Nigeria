@@ -421,6 +421,7 @@ export const ListMessagesResponseItem = zod.object({
   "senderName": zod.string(),
   "senderType": zod.enum(['customer', 'retailer']),
   "body": zod.string(),
+  "mediaUrl": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
 export const ListMessagesResponse = zod.array(ListMessagesResponseItem)
@@ -912,6 +913,8 @@ export const GetSubscriptionParams = zod.object({
 export const GetSubscriptionResponse = zod.object({
   "storeId": zod.number(),
   "engagementCount": zod.number(),
+  "subscriptionAmountKobo": zod.number().describe('Monthly subscription fee in kobo, computed by the server'),
+  "premiumThreshold": zod.number().describe('Engagement count at which the premium fee applies'),
   "qualified": zod.boolean(),
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
   "subscriptionDueAt": zod.coerce.date().nullish(),
@@ -957,6 +960,8 @@ export const VerifySubscriptionBody = zod.object({
 export const VerifySubscriptionResponse = zod.object({
   "storeId": zod.number(),
   "engagementCount": zod.number(),
+  "subscriptionAmountKobo": zod.number().describe('Monthly subscription fee in kobo, computed by the server'),
+  "premiumThreshold": zod.number().describe('Engagement count at which the premium fee applies'),
   "qualified": zod.boolean(),
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
   "subscriptionDueAt": zod.coerce.date().nullish(),
@@ -981,6 +986,8 @@ export const ChargeSubscriptionParams = zod.object({
 export const ChargeSubscriptionResponse = zod.object({
   "storeId": zod.number(),
   "engagementCount": zod.number(),
+  "subscriptionAmountKobo": zod.number().describe('Monthly subscription fee in kobo, computed by the server'),
+  "premiumThreshold": zod.number().describe('Engagement count at which the premium fee applies'),
   "qualified": zod.boolean(),
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
   "subscriptionDueAt": zod.coerce.date().nullish(),
@@ -1009,6 +1016,8 @@ export const ToggleAutoPayBody = zod.object({
 export const ToggleAutoPayResponse = zod.object({
   "storeId": zod.number(),
   "engagementCount": zod.number(),
+  "subscriptionAmountKobo": zod.number().describe('Monthly subscription fee in kobo, computed by the server'),
+  "premiumThreshold": zod.number().describe('Engagement count at which the premium fee applies'),
   "qualified": zod.boolean(),
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
   "subscriptionDueAt": zod.coerce.date().nullish(),

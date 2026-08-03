@@ -1112,6 +1112,12 @@ components:
           type: integer
         engagementCount:
           type: integer
+        subscriptionAmountKobo:
+          type: integer
+          description: Monthly subscription fee in kobo, computed by the server
+        premiumThreshold:
+          type: integer
+          description: Engagement count at which the premium fee applies
         qualified:
           type: boolean
         subscriptionStatus:
@@ -1148,6 +1154,8 @@ components:
       required:
         - storeId
         - engagementCount
+        - subscriptionAmountKobo
+        - premiumThreshold
         - qualified
         - subscriptionStatus
         - isVisible

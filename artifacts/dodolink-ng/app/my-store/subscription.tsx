@@ -32,11 +32,11 @@ import { Button } from '@/components/ui';
 import { LoadingScreen } from '@/components/Loading';
 
 const ENGAGEMENT_THRESHOLD = 7;
-const PREMIUM_THRESHOLD = 12;
 
-/** ₦2,000/month standard; ₦5,000/month once a store has 12+ interactions in 30 days. */
-function feeFor(engagementCount: number): string {
-  return engagementCount >= PREMIUM_THRESHOLD ? '₦5,000' : '₦2,000';
+/** Format a kobo amount from the server as a naira string, e.g. 200000 → ₦2,000. */
+function formatNaira(kobo: number | undefined): string {
+  if (kobo == null) return '₦—';
+  return `₦${(kobo / 100).toLocaleString('en-NG')}`;
 }
 
 export default function SubscriptionScreen() {
@@ -117,7 +117,7 @@ export default function SubscriptionScreen() {
     if (!myStore) return;
     confirmAlert({
       title: 'Renew subscription',
-      message: `Charge ${feeFor(sub?.engagementCount ?? 0)} using your saved card?`,
+      message: `Charge ${formatNaira(sub?.subscriptionAmountKobo)} using your saved card?`,
       confirmText: 'Charge now',
       onConfirm: async () => {
         try {
@@ -284,7 +284,7 @@ export default function SubscriptionScreen() {
                     Auto-renew
                   </Text>
                   <Text style={[styles.autoPaySub, { color: colors.mutedForeground }]}>
-                    Automatically charge {feeFor(sub?.engagementCount ?? 0)} every 30 days
+                    Automatically charge {formatNaira(sub?.subscriptionAmountKobo)} every 30 days
                   </Text>
                 </View>
                 <Switch
@@ -306,9 +306,9 @@ export default function SubscriptionScreen() {
           >
             <Text style={[styles.cardTitle, { color: colors.foreground }]}>Payment</Text>
             <Text style={[styles.cardBody, { color: colors.mutedForeground, marginBottom: 16 }]}>
-              {feeFor(sub?.engagementCount ?? 0)}/month keeps your store visible and accepting orders.
-              {(sub?.engagementCount ?? 0) < PREMIUM_THRESHOLD
-                ? ` Stores with ${PREMIUM_THRESHOLD}+ interactions in 30 days pay ₦5,000/month.`
+              {formatNaira(sub?.subscriptionAmountKobo)}/month keeps your store visible and accepting orders.
+              {sub?.premiumThreshold != null && (sub?.engagementCount ?? 0) < sub.premiumThreshold
+                ? ` Stores with ${sub.premiumThreshold}+ interactions in 30 days pay a higher rate.`
                 : ''}
             </Text>
 
@@ -384,8 +384,8 @@ export default function SubscriptionScreen() {
                         initMutation.isPending
                           ? 'Opening payment…'
                           : sub.subscriptionStatus === 'active'
-                          ? `Renew now (${feeFor(sub?.engagementCount ?? 0)})`
-                          : `Pay ${feeFor(sub?.engagementCount ?? 0)} to activate`
+                          ? `Renew now (${formatNaira(sub?.subscriptionAmountKobo)})`
+                          : `Pay ${formatNaira(sub?.subscriptionAmountKobo)} to activate`
                       }
                       onPress={handlePayManually}
                       disabled={initMutation.isPending}
@@ -418,7 +418,7 @@ export default function SubscriptionScreen() {
           >
             <Feather name="lock" size={20} color={colors.mutedForeground} />
             <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
-              Subscription payment will be unlocked once your store reaches {ENGAGEMENT_THRESHOLD} customer interactions. Payments of ₦2,000 will start by January 1st, 2027 to all verified store owners, and ₦5,000 to stores with 12+ interactions in 30 days.
+              Subscription payment will be unlocked once your store reaches {ENGAGEMENT_THRESHOLD} customer interactions. Payments of {formatNaira(sub.subscriptionAmountKobo)} will start by January 1st, 2027 to all verified store owners, with a higher rate for stores with {sub.premiumThreshold}+ interactions in 30 days.
             </Text>
           </View>
         )}

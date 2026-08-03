@@ -57,6 +57,10 @@ export const SubscriptionStatusSubscriptionStatus = {
 export interface SubscriptionStatus {
   storeId: number;
   engagementCount: number;
+  /** Monthly subscription fee in kobo, computed by the server */
+  subscriptionAmountKobo: number;
+  /** Engagement count at which the premium fee applies */
+  premiumThreshold: number;
   qualified: boolean;
   subscriptionStatus: SubscriptionStatusSubscriptionStatus;
   subscriptionDueAt?: string | null;
