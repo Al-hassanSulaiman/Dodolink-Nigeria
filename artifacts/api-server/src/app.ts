@@ -34,7 +34,32 @@ app.use(
     },
   }),
 );
-app.use(cors({ credentials: true, origin: true }));
+// Only trust our own web origins with credentials. Native mobile apps send no
+// Origin header, so they are unaffected. Reflecting arbitrary origins with
+// credentials would let any website make authenticated calls as a logged-in
+// visitor.
+const ALLOWED_ORIGIN_HOSTS = new Set(
+  [
+    "dodolink.com.ng",
+    "www.dodolink.com.ng",
+    process.env.REPLIT_DEV_DOMAIN,
+    ...(process.env.REPLIT_DOMAINS?.split(",") ?? []),
+  ].filter((h): h is string => !!h),
+);
+app.use(
+  cors({
+    credentials: true,
+    origin(origin, callback) {
+      if (!origin) { callback(null, true); return; } // same-origin / native apps
+      try {
+        const { hostname } = new URL(origin);
+        callback(null, ALLOWED_ORIGIN_HOSTS.has(hostname) || hostname === "localhost");
+      } catch {
+        callback(null, false);
+      }
+    },
+  }),
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

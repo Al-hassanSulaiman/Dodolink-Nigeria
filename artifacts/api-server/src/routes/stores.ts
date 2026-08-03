@@ -27,12 +27,16 @@ function toPublicStore<T extends Record<string, unknown>>(store: T) {
 router.get("/stores", async (req, res): Promise<void> => {
   const { category, limit = 20, offset = 0, ownerUserId } = req.query;
 
-  // When filtering by owner, return only that owner's stores (including hidden
-  // ones, so owners can always reach their own store to pay). Otherwise apply
-  // the public visibility filter.
+  // When filtering by owner, hidden stores are only included when the caller
+  // IS that owner (so owners can always reach their own store to pay). Anyone
+  // else asking for a specific owner's stores still gets the public
+  // visibility filter applied — otherwise hidden/pending/rejected store data
+  // would be enumerable by unauthenticated callers.
   const visFilter = visibleStoresFilter();
   const ownerFilter = typeof ownerUserId === "string" ? eq(storesTable.ownerUserId, ownerUserId) : undefined;
-  const accessFilter = ownerFilter ?? visFilter;
+  const { userId: callerId } = getAuth(req);
+  const isOwnerRequest = ownerFilter !== undefined && callerId != null && callerId === ownerUserId;
+  const accessFilter = isOwnerRequest ? ownerFilter : ownerFilter ? and(ownerFilter, visFilter) : visFilter;
 
   let query = db.select().from(storesTable).$dynamic();
   if (category && typeof category === "string") {
@@ -124,7 +128,7 @@ router.patch("/stores/:storeId", async (req, res): Promise<void> => {
   }
 
   if (Object.keys(updates).length === 0) {
-    res.json(existing);
+    res.json(toPublicStore(existing));
     return;
   }
 

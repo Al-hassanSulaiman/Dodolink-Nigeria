@@ -29,6 +29,16 @@ async function requireAdmin(req: Request, res: Response, next: NextFunction): Pr
   }
 }
 
+/**
+ * Strip saved payment credentials before returning a store, even to admins.
+ * These fields can be used to charge a seller's saved card and must never
+ * leave the server.
+ */
+function toSafeStore<T extends Record<string, unknown>>(store: T) {
+  const { paystackAuthCode, paystackCustomerCode, paystackEmail, ...pub } = store as any;
+  return pub as Omit<T, "paystackAuthCode" | "paystackCustomerCode" | "paystackEmail">;
+}
+
 const router: IRouter = Router();
 
 router.use("/admin", requireAdmin);
@@ -43,7 +53,7 @@ router.get("/admin/stores", async (req, res): Promise<void> => {
     .orderBy(desc(storesTable.createdAt))
     .limit(Number(limit))
     .offset(Number(offset));
-  res.json(stores);
+  res.json(stores.map(toSafeStore));
 });
 
 router.patch("/admin/stores/:storeId", async (req, res): Promise<void> => {
@@ -69,7 +79,7 @@ router.patch("/admin/stores/:storeId", async (req, res): Promise<void> => {
     .where(eq(storesTable.id, storeId))
     .returning();
   if (!store) { res.status(404).json({ error: "Store not found" }); return; }
-  res.json(store);
+  res.json(toSafeStore(store));
 });
 
 router.post("/admin/stores/:storeId/hide", async (req, res): Promise<void> => {
@@ -82,7 +92,7 @@ router.post("/admin/stores/:storeId/hide", async (req, res): Promise<void> => {
     .where(eq(storesTable.id, storeId))
     .returning();
   if (!store) { res.status(404).json({ error: "Store not found" }); return; }
-  res.json(store);
+  res.json(toSafeStore(store));
 });
 
 router.post("/admin/stores/:storeId/restore", async (req, res): Promise<void> => {
@@ -95,7 +105,7 @@ router.post("/admin/stores/:storeId/restore", async (req, res): Promise<void> =>
     .where(eq(storesTable.id, storeId))
     .returning();
   if (!store) { res.status(404).json({ error: "Store not found" }); return; }
-  res.json(store);
+  res.json(toSafeStore(store));
 });
 
 router.post("/admin/stores/:storeId/verify", async (req, res): Promise<void> => {
@@ -114,7 +124,7 @@ router.post("/admin/stores/:storeId/verify", async (req, res): Promise<void> => 
     .where(eq(storesTable.id, storeId))
     .returning();
   if (!store) { res.status(404).json({ error: "Store not found" }); return; }
-  res.json(store);
+  res.json(toSafeStore(store));
 });
 
 router.post("/admin/stores/:storeId/reject", async (req, res): Promise<void> => {
@@ -135,7 +145,7 @@ router.post("/admin/stores/:storeId/reject", async (req, res): Promise<void> => 
     .where(eq(storesTable.id, storeId))
     .returning();
   if (!store) { res.status(404).json({ error: "Store not found" }); return; }
-  res.json(store);
+  res.json(toSafeStore(store));
 });
 
 router.get("/admin/analytics", async (req, res): Promise<void> => {
@@ -164,7 +174,7 @@ router.get("/admin/analytics", async (req, res): Promise<void> => {
     rejectedStores: Number(storeCounts.rejected),
     totalProducts: Number(totalProducts),
     totalConversations: Number(totalConversations),
-    recentStores,
+    recentStores: recentStores.map(toSafeStore),
   });
 });
 

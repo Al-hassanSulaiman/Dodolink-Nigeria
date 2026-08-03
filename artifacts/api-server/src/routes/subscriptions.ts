@@ -22,6 +22,11 @@ import {
   gracePeriodDaysRemaining,
 } from "../lib/storeSubscription";
 import { requireUser } from "../lib/auth";
+import { rateLimit } from "../lib/rateLimit";
+
+// Payment-provider routes are strictly limited: nobody needs to start or
+// verify more than a handful of payments per hour.
+const paymentLimit = rateLimit({ name: "subscription-payment", max: 10, windowMs: 60 * 60 * 1000 });
 
 const router: IRouter = Router();
 
@@ -78,7 +83,7 @@ router.get("/stores/:storeId/subscription", async (req, res): Promise<void> => {
 });
 
 // POST /stores/:storeId/subscription/initialize
-router.post("/stores/:storeId/subscription/initialize", async (req, res): Promise<void> => {
+router.post("/stores/:storeId/subscription/initialize", paymentLimit, async (req, res): Promise<void> => {
   if (!isPaymentsLive()) {
     res.status(403).json({ error: `Subscription billing is not active yet. It launches on ${SUBSCRIPTION_LAUNCH_DATE.toDateString()}.` });
     return;
@@ -123,7 +128,7 @@ router.post("/stores/:storeId/subscription/initialize", async (req, res): Promis
 });
 
 // POST /stores/:storeId/subscription/verify
-router.post("/stores/:storeId/subscription/verify", async (req, res): Promise<void> => {
+router.post("/stores/:storeId/subscription/verify", paymentLimit, async (req, res): Promise<void> => {
   const parsed = VerifySubscriptionBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
@@ -202,7 +207,7 @@ router.post("/stores/:storeId/subscription/verify", async (req, res): Promise<vo
 });
 
 // POST /stores/:storeId/subscription/charge
-router.post("/stores/:storeId/subscription/charge", async (req, res): Promise<void> => {
+router.post("/stores/:storeId/subscription/charge", paymentLimit, async (req, res): Promise<void> => {
   if (!isPaymentsLive()) {
     res.status(403).json({ error: `Subscription billing is not active yet. It launches on ${SUBSCRIPTION_LAUNCH_DATE.toDateString()}.` });
     return;
