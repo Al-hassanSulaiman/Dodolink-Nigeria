@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
-import { db, storesTable } from "@workspace/db";
+import { and, eq, isNull } from "drizzle-orm";
+import { db, storesTable, subscriptionPaymentsTable } from "@workspace/db";
 import {
   InitializeSubscriptionBody,
   VerifySubscriptionBody,
@@ -52,6 +52,9 @@ async function loadOwnedStore(
 }
 
 const SUBSCRIPTION_DAYS = 30;
+
+/** Verification failure that should surface as a 400 and roll back the transaction. */
+class VerifyRejection extends Error {}
 
 function buildStatus(store: typeof storesTable.$inferSelect, engagementCount: number) {
   return {
@@ -114,6 +117,14 @@ router.post("/stores/:storeId/subscription/initialize", paymentLimit, async (req
       type: "subscription",
     });
 
+    // Lock in the quoted price for this reference so verification checks
+    // against what was actually quoted, not a recomputed tier.
+    await db.insert(subscriptionPaymentsTable).values({
+      reference,
+      storeId,
+      quotedAmountKobo: amountKobo,
+    });
+
     // Save the email so we can use it for future auto-charges
     await db
       .update(storesTable)
@@ -165,16 +176,6 @@ router.post("/stores/:storeId/subscription/verify", paymentLimit, async (req, re
       return;
     }
 
-    // The amount owed depends on the store's engagement tier. Accept the
-    // payment as long as it covers the tier owed right now (paying the higher
-    // tier is always fine).
-    const engagementNow = await getEngagementCount(storeId);
-    const expectedKobo = getSubscriptionAmountKobo(engagementNow);
-    if (txn.amount < expectedKobo) {
-      res.status(400).json({ error: "Payment amount does not match the subscription fee" });
-      return;
-    }
-
     if (txn.currency && txn.currency !== "NGN") {
       res.status(400).json({ error: "Payment must be made in Nigerian Naira (NGN)" });
       return;
@@ -186,21 +187,71 @@ router.post("/stores/:storeId/subscription/verify", paymentLimit, async (req, re
     const authCode = txn.authorization?.reusable ? txn.authorization.authorization_code : null;
     const customerCode = txn.customer?.customer_code ?? null;
 
-    const [updated] = await db
-      .update(storesTable)
-      .set({
-        subscriptionStatus: "active",
-        subscriptionLastPaidAt: now,
-        subscriptionDueAt: dueAt,
-        ...(authCode && { paystackAuthCode: authCode }),
-        ...(customerCode && { paystackCustomerCode: customerCode }),
-      })
-      .where(eq(storesTable.id, storeId))
-      .returning();
+    // Consume the stored quote and activate the subscription in ONE
+    // transaction. The conditional UPDATE ... WHERE consumed_at IS NULL is the
+    // atomic gate: under concurrent verification only one request gets the
+    // row back; the others fail and roll back without touching the store.
+    const updated = await db.transaction(async (tx) => {
+      // Prefer the price quoted at checkout time for this exact reference
+      // (race-free and auditable). Old references created before quotes were
+      // stored fall back to recomputing the tier from current engagement.
+      const [quote] = await tx
+        .select()
+        .from(subscriptionPaymentsTable)
+        .where(eq(subscriptionPaymentsTable.reference, reference));
+
+      if (quote) {
+        if (quote.storeId !== storeId) {
+          throw new VerifyRejection("Payment reference does not belong to this store");
+        }
+        if (txn.amount < quote.quotedAmountKobo) {
+          throw new VerifyRejection("Payment amount does not match the subscription fee");
+        }
+        // Atomic single-use consume: only one concurrent request can win this.
+        const consumed = await tx
+          .update(subscriptionPaymentsTable)
+          .set({ consumedAt: now })
+          .where(
+            and(
+              eq(subscriptionPaymentsTable.reference, reference),
+              isNull(subscriptionPaymentsTable.consumedAt),
+            ),
+          )
+          .returning();
+        if (consumed.length === 0) {
+          throw new VerifyRejection("This payment reference has already been used");
+        }
+      } else {
+        // Fallback for references without a stored quote: accept the payment
+        // as long as it covers the tier owed right now (paying more is fine).
+        const engagementNow = await getEngagementCount(storeId);
+        const expectedKobo = getSubscriptionAmountKobo(engagementNow);
+        if (txn.amount < expectedKobo) {
+          throw new VerifyRejection("Payment amount does not match the subscription fee");
+        }
+      }
+
+      const [updatedStore] = await tx
+        .update(storesTable)
+        .set({
+          subscriptionStatus: "active",
+          subscriptionLastPaidAt: now,
+          subscriptionDueAt: dueAt,
+          ...(authCode && { paystackAuthCode: authCode }),
+          ...(customerCode && { paystackCustomerCode: customerCode }),
+        })
+        .where(eq(storesTable.id, storeId))
+        .returning();
+      return updatedStore;
+    });
 
     const engagementCount = await getEngagementCount(storeId);
     res.json(buildStatus(updated, engagementCount));
   } catch (err) {
+    if (err instanceof VerifyRejection) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
     req.log.error({ err }, "Paystack verify failed");
     res.status(502).json({ error: "Payment verification failed" });
   }
