@@ -116,11 +116,22 @@ vi.mock("@clerk/express", () => ({
 
 vi.mock("@workspace/api-zod", () => {
   const passthrough = { safeParse: (v: unknown) => ({ success: true, data: v }) };
+  // Lightweight stand-in for the real zod schema: requires a string email
+  // that looks like an address, mirroring z.object({ email: z.string().email() }).
+  const addAdminBody = {
+    safeParse: (v: unknown) => {
+      const email = (v as any)?.email;
+      if (typeof email !== "string" || !email.includes("@")) {
+        return { success: false, error: { message: "Invalid email" } };
+      }
+      return { success: true, data: { email } };
+    },
+  };
   return {
     AdminRejectStoreBody: passthrough,
     AdminUpdateStoreBody: passthrough,
     SendSupportMessageBody: passthrough,
-    AdminAddAdminBody: passthrough,
+    AdminAddAdminBody: addAdminBody,
   };
 });
 
@@ -217,6 +228,98 @@ describe("requireAdmin middleware", () => {
   });
 });
 
+describe("POST /admin/admins", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
+
+  it("returns 400 for an invalid body (missing/bad email)", async () => {
+    authedAs(ADMIN_USER_ID, [ADMIN_EMAIL]);
+    const { db } = await import("@workspace/db");
+    setupSelectMock(db as any, [
+      BOOTSTRAP_COUNT, // bootstrap count
+      [{ id: 1 }],     // requireAdmin match
+    ]);
+    (db as any).insert.mockImplementation(() => makeInsertChain());
+
+    const app = await buildApp();
+    const res = await request(app).post("/admin/admins").send({ email: "not-an-email" });
+    expect(res.status).toBe(400);
+    expect((db as any).insert).not.toHaveBeenCalled();
+  });
+
+  it("returns 409 when the email is already an admin", async () => {
+    authedAs(ADMIN_USER_ID, [ADMIN_EMAIL]);
+    const { db } = await import("@workspace/db");
+    setupSelectMock(db as any, [
+      BOOTSTRAP_COUNT,                              // bootstrap count
+      [{ id: 1 }],                                  // requireAdmin match
+      [{ id: OTHER_ADMIN_ID, email: OTHER_ADMIN_EMAIL }], // existing-admin lookup → found
+    ]);
+    (db as any).insert.mockImplementation(() => makeInsertChain());
+
+    const app = await buildApp();
+    const res = await request(app).post("/admin/admins").send({ email: OTHER_ADMIN_EMAIL });
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/already an admin/i);
+    expect((db as any).insert).not.toHaveBeenCalled();
+  });
+
+  it("treats a duplicate as duplicate even with different case/whitespace (409)", async () => {
+    authedAs(ADMIN_USER_ID, [ADMIN_EMAIL]);
+    const { db } = await import("@workspace/db");
+    const { eq } = await import("drizzle-orm");
+    setupSelectMock(db as any, [
+      BOOTSTRAP_COUNT,
+      [{ id: 1 }],
+      [{ id: OTHER_ADMIN_ID, email: OTHER_ADMIN_EMAIL }], // lookup with normalized email → found
+    ]);
+    (db as any).insert.mockImplementation(() => makeInsertChain());
+
+    const app = await buildApp();
+    const res = await request(app)
+      .post("/admin/admins")
+      .send({ email: `  ${OTHER_ADMIN_EMAIL.toUpperCase()}  ` });
+    expect(res.status).toBe(409);
+    // The duplicate lookup must use the normalized (trimmed, lowercased) email
+    const eqCalls = (eq as any).mock.calls.map((c: unknown[]) => c[1]);
+    expect(eqCalls).toContain(OTHER_ADMIN_EMAIL);
+    expect((db as any).insert).not.toHaveBeenCalled();
+  });
+
+  it("inserts with a trimmed, lowercased email (201)", async () => {
+    authedAs(ADMIN_USER_ID, [ADMIN_EMAIL]);
+    const { db } = await import("@workspace/db");
+    setupSelectMock(db as any, [
+      BOOTSTRAP_COUNT,
+      [{ id: 1 }],
+      [],              // existing-admin lookup → none
+    ]);
+    let insertedValues: any;
+    (db as any).insert.mockImplementation(() => {
+      const chain: any = {
+        values: (v: unknown) => {
+          insertedValues = v;
+          return chain;
+        },
+        returning: () =>
+          Promise.resolve([{ id: 3, email: insertedValues.email, addedBy: insertedValues.addedBy }]),
+      };
+      return chain;
+    });
+
+    const app = await buildApp();
+    const res = await request(app)
+      .post("/admin/admins")
+      .send({ email: "  New.Admin@Example.COM  " });
+    expect(res.status).toBe(201);
+    expect(insertedValues.email).toBe("new.admin@example.com");
+    expect(insertedValues.addedBy).toBe(ADMIN_USER_ID);
+    expect(res.body.email).toBe("new.admin@example.com");
+  });
+});
+
 describe("DELETE /admin/admins/:adminId protections", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -277,7 +380,7 @@ describe("DELETE /admin/admins/:adminId protections", () => {
     expect((db as any).delete).toHaveBeenCalledTimes(1);
   });
 
-  it("returns 404 when the target admin does not exist", async () => {
+  it("returns 404 when the target admin does not exist (delete)", async () => {
     authedAs(ADMIN_USER_ID, [ADMIN_EMAIL]);
     const { db } = await import("@workspace/db");
     setupSelectMock(db as any, [
