@@ -29,6 +29,30 @@ async function ensureBootstrapAdmins(): Promise<void> {
   bootstrapChecked = true;
 }
 
+/**
+ * Short-lived in-memory cache of the admin email set. Cuts a DB lookup on
+ * every admin request while keeping revokes fast: entries expire after
+ * ADMIN_CACHE_TTL_MS, and mutations through this server invalidate the cache
+ * immediately.
+ */
+const ADMIN_CACHE_TTL_MS = 30_000;
+let adminEmailCache: { emails: Set<string>; expiresAt: number } | null = null;
+
+async function getAdminEmailSet(): Promise<Set<string>> {
+  const now = Date.now();
+  if (adminEmailCache && adminEmailCache.expiresAt > now) {
+    return adminEmailCache.emails;
+  }
+  const rows = await db.select({ email: adminsTable.email }).from(adminsTable);
+  const emails = new Set(rows.map((r) => r.email.toLowerCase()));
+  adminEmailCache = { emails, expiresAt: now + ADMIN_CACHE_TTL_MS };
+  return emails;
+}
+
+function invalidateAdminEmailCache(): void {
+  adminEmailCache = null;
+}
+
 async function requireAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
   const { userId } = getAuth(req);
   if (!userId) {
@@ -39,10 +63,9 @@ async function requireAdmin(req: Request, res: Response, next: NextFunction): Pr
     await ensureBootstrapAdmins();
     const user = await clerkClient.users.getUser(userId);
     const emails = user.emailAddresses.map((e: { emailAddress: string }) => e.emailAddress.toLowerCase());
-    const matches = emails.length > 0
-      ? await db.select({ id: adminsTable.id }).from(adminsTable).where(inArray(adminsTable.email, emails)).limit(1)
-      : [];
-    if (matches.length === 0) {
+    const adminEmails = await getAdminEmailSet();
+    const isAdmin = emails.some((email) => adminEmails.has(email));
+    if (!isAdmin) {
       res.status(403).json({ error: "Forbidden – not an admin account" });
       return;
     }
@@ -274,6 +297,7 @@ router.post("/admin/admins", async (req, res): Promise<void> => {
     .insert(adminsTable)
     .values({ email, addedBy: userId ?? null })
     .returning();
+  invalidateAdminEmailCache();
   res.status(201).json(admin);
 });
 
@@ -307,6 +331,7 @@ router.delete("/admin/admins/:adminId", async (req, res): Promise<void> => {
   }
 
   await db.delete(adminsTable).where(eq(adminsTable.id, adminId));
+  invalidateAdminEmailCache();
   res.json({ status: "ok" });
 });
 

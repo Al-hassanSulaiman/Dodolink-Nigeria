@@ -187,8 +187,8 @@ describe("requireAdmin middleware", () => {
     authedAs("user_not_admin", ["stranger@example.com"]);
     const { db } = await import("@workspace/db");
     setupSelectMock(db as any, [
-      BOOTSTRAP_COUNT, // ensureBootstrapAdmins count
-      [],              // admins-table match → none
+      BOOTSTRAP_COUNT,               // ensureBootstrapAdmins count
+      [{ email: ADMIN_EMAIL }],      // cached admin email set → no match
     ]);
 
     const app = await buildApp();
@@ -204,9 +204,9 @@ describe("requireAdmin middleware", () => {
       { id: 1, email: ADMIN_EMAIL, addedBy: "bootstrap", createdAt: new Date().toISOString() },
     ];
     setupSelectMock(db as any, [
-      BOOTSTRAP_COUNT, // bootstrap count
-      [{ id: 1 }],     // admins-table match → found
-      adminRows,       // GET /admin/admins listing
+      BOOTSTRAP_COUNT,          // bootstrap count
+      [{ email: ADMIN_EMAIL }], // admin email set → match
+      adminRows,                // GET /admin/admins listing
     ]);
 
     const app = await buildApp();
@@ -331,7 +331,7 @@ describe("DELETE /admin/admins/:adminId protections", () => {
     const { db } = await import("@workspace/db");
     setupSelectMock(db as any, [
       BOOTSTRAP_COUNT,                       // bootstrap count
-      [{ id: 1 }],                           // requireAdmin match
+      [{ email: ADMIN_EMAIL }],              // admin email set → match
       [{ id: 1, email: ADMIN_EMAIL }],       // target admin lookup
       [{ total: 1 }],                        // total admins = 1 → last admin
     ]);
@@ -349,7 +349,7 @@ describe("DELETE /admin/admins/:adminId protections", () => {
     const { db } = await import("@workspace/db");
     setupSelectMock(db as any, [
       BOOTSTRAP_COUNT,                       // bootstrap count
-      [{ id: 1 }],                           // requireAdmin match
+      [{ email: ADMIN_EMAIL }],              // admin email set → match
       [{ id: 1, email: ADMIN_EMAIL }],       // target = caller's own email
       [{ total: 2 }],                        // more than one admin exists
     ]);
@@ -367,7 +367,7 @@ describe("DELETE /admin/admins/:adminId protections", () => {
     const { db } = await import("@workspace/db");
     setupSelectMock(db as any, [
       BOOTSTRAP_COUNT,                             // bootstrap count
-      [{ id: 1 }],                                 // requireAdmin match
+      [{ email: ADMIN_EMAIL }],                    // admin email set → match
       [{ id: OTHER_ADMIN_ID, email: OTHER_ADMIN_EMAIL }], // target ≠ caller
       [{ total: 2 }],                              // not the last admin
     ]);
@@ -384,9 +384,9 @@ describe("DELETE /admin/admins/:adminId protections", () => {
     authedAs(ADMIN_USER_ID, [ADMIN_EMAIL]);
     const { db } = await import("@workspace/db");
     setupSelectMock(db as any, [
-      BOOTSTRAP_COUNT, // bootstrap count
-      [{ id: 1 }],     // requireAdmin match
-      [],              // target lookup → not found
+      BOOTSTRAP_COUNT,          // bootstrap count
+      [{ email: ADMIN_EMAIL }], // admin email set → match
+      [],                       // target lookup → not found
     ]);
     (db as any).delete.mockImplementation(() => makeDeleteChain());
 
@@ -394,5 +394,76 @@ describe("DELETE /admin/admins/:adminId protections", () => {
     const res = await request(app).delete("/admin/admins/999");
     expect(res.status).toBe(404);
     expect((db as any).delete).not.toHaveBeenCalled();
+  });
+});
+
+describe("admin email cache", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
+
+  it("reuses the cached admin set on subsequent requests within the TTL", async () => {
+    authedAs(ADMIN_USER_ID, [ADMIN_EMAIL]);
+    const { db } = await import("@workspace/db");
+    setupSelectMock(db as any, [
+      BOOTSTRAP_COUNT,          // bootstrap count (request 1)
+      [{ email: ADMIN_EMAIL }], // admin email set fetch (request 1)
+      [],                       // GET /admin/admins listing (request 1)
+      [],                       // GET /admin/admins listing (request 2, cache hit)
+    ]);
+
+    const app = await buildApp();
+    expect((await request(app).get("/admin/admins")).status).toBe(200);
+    expect((await request(app).get("/admin/admins")).status).toBe(200);
+    // 4 selects total: the second request skipped bootstrap + email set fetch.
+    expect((db as any).select).toHaveBeenCalledTimes(4);
+  });
+
+  it("invalidates the cache when an admin is removed, locking them out immediately", async () => {
+    authedAs(ADMIN_USER_ID, [ADMIN_EMAIL]);
+    const { db } = await import("@workspace/db");
+    setupSelectMock(db as any, [
+      BOOTSTRAP_COUNT,                                     // bootstrap count
+      [{ email: ADMIN_EMAIL }, { email: OTHER_ADMIN_EMAIL }], // email set (both admins)
+      [{ id: OTHER_ADMIN_ID, email: OTHER_ADMIN_EMAIL }],  // target lookup
+      [{ total: 2 }],                                      // not the last admin
+      // After delete the cache was invalidated → next requireAdmin re-fetches:
+      [{ email: ADMIN_EMAIL }],                            // fresh email set (other removed)
+    ]);
+    (db as any).delete.mockImplementation(() => makeDeleteChain());
+
+    const app = await buildApp();
+    const del = await request(app).delete(`/admin/admins/${OTHER_ADMIN_ID}`);
+    expect(del.status).toBe(200);
+
+    // The removed admin is denied on their very next request.
+    authedAs("user_other", [OTHER_ADMIN_EMAIL]);
+    const res = await request(app).get("/admin/admins");
+    expect(res.status).toBe(403);
+  });
+
+  it("refetches the admin set after the TTL expires", async () => {
+    vi.useFakeTimers();
+    try {
+      authedAs(ADMIN_USER_ID, [ADMIN_EMAIL]);
+      const { db } = await import("@workspace/db");
+      setupSelectMock(db as any, [
+        BOOTSTRAP_COUNT,          // bootstrap count
+        [{ email: ADMIN_EMAIL }], // email set (request 1)
+        [],                       // listing (request 1)
+        [],                       // email set (request 2, after expiry) → revoked
+      ]);
+
+      const app = await buildApp();
+      expect((await request(app).get("/admin/admins")).status).toBe(200);
+
+      vi.advanceTimersByTime(61_000); // past the TTL
+
+      const res = await request(app).get("/admin/admins");
+      expect(res.status).toBe(403);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
