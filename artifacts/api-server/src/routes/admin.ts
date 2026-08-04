@@ -1,14 +1,33 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { getAuth, clerkClient } from "@clerk/express";
 import { and, asc, eq, count, desc, sql, inArray } from "drizzle-orm";
-import { db, storesTable, productsTable, conversationsTable, supportMessagesTable, pushTokensTable } from "@workspace/db";
-import { AdminRejectStoreBody, AdminUpdateStoreBody, SendSupportMessageBody } from "@workspace/api-zod";
+import { db, storesTable, productsTable, conversationsTable, supportMessagesTable, pushTokensTable, adminsTable } from "@workspace/db";
+import { AdminRejectStoreBody, AdminUpdateStoreBody, SendSupportMessageBody, AdminAddAdminBody } from "@workspace/api-zod";
 import { notifyTokens } from "../lib/push";
 
-const ADMIN_EMAILS = [
+/**
+ * Bootstrap seed only: if the admins table is empty (first run after the
+ * migration), these owner emails are inserted so the owner is never locked
+ * out. Ongoing admin management happens in the database via the dashboard.
+ */
+const BOOTSTRAP_ADMIN_EMAILS = [
   "alhassansulaiman1369@gmail.com",
   "alhassansulaiman5star@gmail.com",
 ];
+
+let bootstrapChecked = false;
+
+async function ensureBootstrapAdmins(): Promise<void> {
+  if (bootstrapChecked) return;
+  const [{ total }] = await db.select({ total: count() }).from(adminsTable);
+  if (Number(total) === 0) {
+    await db
+      .insert(adminsTable)
+      .values(BOOTSTRAP_ADMIN_EMAILS.map((email) => ({ email: email.toLowerCase(), addedBy: "bootstrap" })))
+      .onConflictDoNothing();
+  }
+  bootstrapChecked = true;
+}
 
 async function requireAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
   const { userId } = getAuth(req);
@@ -17,9 +36,13 @@ async function requireAdmin(req: Request, res: Response, next: NextFunction): Pr
     return;
   }
   try {
+    await ensureBootstrapAdmins();
     const user = await clerkClient.users.getUser(userId);
-    const emails = user.emailAddresses.map((e: { emailAddress: string }) => e.emailAddress);
-    if (!emails.some((e: string) => ADMIN_EMAILS.includes(e))) {
+    const emails = user.emailAddresses.map((e: { emailAddress: string }) => e.emailAddress.toLowerCase());
+    const matches = emails.length > 0
+      ? await db.select({ id: adminsTable.id }).from(adminsTable).where(inArray(adminsTable.email, emails)).limit(1)
+      : [];
+    if (matches.length === 0) {
       res.status(403).json({ error: "Forbidden – not an admin account" });
       return;
     }
@@ -230,6 +253,61 @@ router.get("/admin/users", async (req, res): Promise<void> => {
         : users;
 
   res.json(filtered);
+});
+
+router.get("/admin/admins", async (_req, res): Promise<void> => {
+  const admins = await db.select().from(adminsTable).orderBy(asc(adminsTable.createdAt));
+  res.json(admins);
+});
+
+router.post("/admin/admins", async (req, res): Promise<void> => {
+  const parsed = AdminAddAdminBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const email = parsed.data.email.trim().toLowerCase();
+  const { userId } = getAuth(req);
+
+  const [existing] = await db.select().from(adminsTable).where(eq(adminsTable.email, email)).limit(1);
+  if (existing) { res.status(409).json({ error: "This email is already an admin" }); return; }
+
+  const [admin] = await db
+    .insert(adminsTable)
+    .values({ email, addedBy: userId ?? null })
+    .returning();
+  res.status(201).json(admin);
+});
+
+router.delete("/admin/admins/:adminId", async (req, res): Promise<void> => {
+  const adminId = parseInt(req.params.adminId, 10);
+  if (isNaN(adminId)) { res.status(400).json({ error: "Invalid adminId" }); return; }
+
+  const [target] = await db.select().from(adminsTable).where(eq(adminsTable.id, adminId)).limit(1);
+  if (!target) { res.status(404).json({ error: "Admin not found" }); return; }
+
+  // Never allow removing the last admin — that would lock everyone out.
+  const [{ total }] = await db.select({ total: count() }).from(adminsTable);
+  if (Number(total) <= 1) {
+    res.status(400).json({ error: "Cannot remove the last admin" });
+    return;
+  }
+
+  // Prevent admins from revoking their own access by accident.
+  const { userId } = getAuth(req);
+  if (userId) {
+    try {
+      const user = await clerkClient.users.getUser(userId);
+      const ownEmails = user.emailAddresses.map((e: { emailAddress: string }) => e.emailAddress.toLowerCase());
+      if (ownEmails.includes(target.email)) {
+        res.status(400).json({ error: "You cannot remove your own admin access" });
+        return;
+      }
+    } catch {
+      // If Clerk lookup fails, fall through and allow the deletion.
+    }
+  }
+
+  await db.delete(adminsTable).where(eq(adminsTable.id, adminId));
+  res.json({ status: "ok" });
 });
 
 router.get("/admin/support/threads", async (_req, res): Promise<void> => {

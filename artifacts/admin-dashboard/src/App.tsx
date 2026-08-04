@@ -11,6 +11,7 @@ import SignInPage from "@/pages/sign-in";
 import DashboardPage from "@/pages/dashboard";
 import StoresPage from "@/pages/stores";
 import UsersPage from "@/pages/users";
+import AdminsPage from "@/pages/admins";
 import SupportPage from "@/pages/support";
 import PrivacyPolicyPage from "@/pages/privacy";
 import TermsOfServicePage from "@/pages/terms";
@@ -53,6 +54,7 @@ const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/stores", label: "Stores", icon: Store },
   { to: "/users", label: "Users", icon: Users },
+  { to: "/admins", label: "Admins", icon: ShieldCheck },
   { to: "/support", label: "Support", icon: HelpCircle },
 ];
 
@@ -188,6 +190,9 @@ function Router() {
       </Route>
       <Route path="/users">
         <ProtectedRoute component={UsersPage} />
+      </Route>
+      <Route path="/admins">
+        <ProtectedRoute component={AdminsPage} />
       </Route>
       <Route path="/support">
         <ProtectedRoute component={SupportPage} />

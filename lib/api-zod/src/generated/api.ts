@@ -840,6 +840,43 @@ export const AdminListUsersResponse = zod.array(AdminListUsersResponseItem)
 
 
 /**
+ * @summary List admin accounts (admin only)
+ */
+export const AdminListAdminsResponseItem = zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "addedBy": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const AdminListAdminsResponse = zod.array(AdminListAdminsResponseItem)
+
+
+/**
+ * @summary Grant admin access to an email (admin only)
+ */
+export const adminAddAdminBodyEmailMin = 3;
+export const adminAddAdminBodyEmailMax = 320;
+
+
+
+export const AdminAddAdminBody = zod.object({
+  "email": zod.string().email().min(adminAddAdminBodyEmailMin).max(adminAddAdminBodyEmailMax)
+})
+
+
+/**
+ * @summary Revoke admin access (admin only)
+ */
+export const AdminRemoveAdminParams = zod.object({
+  "adminId": zod.coerce.number()
+})
+
+export const AdminRemoveAdminResponse = zod.object({
+  "status": zod.string()
+})
+
+
+/**
  * @summary List support conversation threads (admin only)
  */
 export const AdminListSupportThreadsResponseItem = zod.object({

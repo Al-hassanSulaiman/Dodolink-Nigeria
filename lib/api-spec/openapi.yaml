@@ -774,6 +774,81 @@ paths:
         "403":
           description: Forbidden
 
+  /admin/admins:
+    get:
+      operationId: adminListAdmins
+      tags: [admin]
+      summary: List admin accounts (admin only)
+      responses:
+        "200":
+          description: Admin accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminEntry"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+    post:
+      operationId: adminAddAdmin
+      tags: [admin]
+      summary: Grant admin access to an email (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddAdminBody"
+      responses:
+        "201":
+          description: Admin added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminEntry"
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "409":
+          description: Email is already an admin
+
+  /admin/admins/{adminId}:
+    delete:
+      operationId: adminRemoveAdmin
+      tags: [admin]
+      summary: Revoke admin access (admin only)
+      parameters:
+        - name: adminId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Admin removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                required: [status]
+        "400":
+          description: Cannot remove this admin
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Admin not found
+
   /admin/support/threads:
     get:
       operationId: adminListSupportThreads
@@ -1332,6 +1407,30 @@ components:
           type: string
           nullable: true
       required: [ownerName, ownerUserId, name, description, category, location, phone]
+
+    AdminEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        addedBy:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, email, createdAt]
+
+    AddAdminBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 3
+          maxLength: 320
+      required: [email]
 
     AdminUpdateStoreBody:
       type: object

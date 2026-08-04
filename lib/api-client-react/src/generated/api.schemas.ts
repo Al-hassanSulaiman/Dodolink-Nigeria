@@ -202,6 +202,22 @@ export interface CreateStoreBody {
   cacNumber?: string | null;
 }
 
+export interface AdminEntry {
+  id: number;
+  email: string;
+  /** @nullable */
+  addedBy?: string | null;
+  createdAt: string;
+}
+
+export interface AddAdminBody {
+  /**
+     * @minLength 3
+     * @maxLength 320
+     */
+  email: string;
+}
+
 export interface AdminUpdateStoreBody {
   /** @minLength 1 */
   name?: string;
@@ -441,6 +457,10 @@ export const AdminListUsersStatus = {
   active: 'active',
   inactive: 'inactive',
 } as const;
+
+export type AdminRemoveAdmin200 = {
+  status: string;
+};
 
 export type AdminMarkSupportRead200 = {
   status: string;
