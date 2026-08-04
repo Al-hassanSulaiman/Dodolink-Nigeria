@@ -9,9 +9,12 @@ export function validatePaystackKey(): void {
   const key = process.env.PAYSTACK_SECRET_KEY;
   if (!key) throw new Error("PAYSTACK_SECRET_KEY is not set");
   if (process.env.NODE_ENV === "production" && key.startsWith("sk_test_")) {
-    throw new Error(
-      "PAYSTACK_SECRET_KEY is a TEST key (sk_test_...) but this is a production deployment. " +
-        "Set the live secret key (sk_live_...) before deploying.",
+    // Warn but do not crash — crashing takes the entire site down for users.
+    // Replace PAYSTACK_SECRET_KEY with the live sk_live_... key in Replit
+    // Secrets to resolve this warning.
+    console.warn(
+      "[WARN] PAYSTACK_SECRET_KEY is a TEST key in a production deployment. " +
+        "Real payments will not work until you set the live sk_live_... key in Replit Secrets.",
     );
   }
 }
