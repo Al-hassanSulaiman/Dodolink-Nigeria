@@ -1,0 +1,82 @@
+I am preparing DodoLink NG as my main professional portfolio project.
+
+Do NOT modify any files.
+
+Perform a HIGH-LEVEL technical audit of the existing project for portfolio documentation.
+
+IMPORTANT SECURITY RULES:
+
+- NEVER reveal passwords.
+- NEVER reveal API keys.
+- NEVER reveal access tokens.
+- NEVER reveal authentication secrets.
+- NEVER reveal JWT/session secrets.
+- NEVER reveal database passwords or connection strings.
+- NEVER reveal values from .env files or environment variables.
+- NEVER reveal private credentials.
+- NEVER reveal personal information belonging to users, customers, vendors or administrators.
+- NEVER reveal admin login credentials.
+- NEVER reveal private URLs containing credentials or tokens.
+- NEVER expose sensitive implementation details that would create a security risk.
+
+If you encounter sensitive information, simply write:
+"[SECRET/PRIVATE INFORMATION REDACTED]"
+
+I only want HIGH-LEVEL technical information.
+
+Please provide:
+
+1. TECHNOLOGY STACK
+- Frontend framework
+- Backend framework
+- Programming languages
+- Database technology
+- Major non-sensitive libraries
+- Hosting/deployment platforms
+
+2. APPLICATION ARCHITECTURE
+Give me a high-level explanation of how the frontend, backend and database communicate.
+
+3. MAIN FEATURES
+List the significant features that are actually implemented.
+
+For each feature classify it as:
+- Working
+- Partially implemented
+- UI only
+
+4. USER TYPES
+Describe the different user roles without providing any credentials or private user information.
+
+5. ADMIN DASHBOARD
+Describe what the admin dashboard does at a high level.
+
+6. DATABASE
+Give ONLY the names/categories of the major data entities or models.
+Do NOT provide:
+- database credentials
+- connection strings
+- real user data
+- private records
+- sensitive fields
+
+7. SECURITY
+Describe security mechanisms at a HIGH LEVEL only.
+Do not reveal secrets, credentials, tokens, or exploitable security details.
+
+8. DEPLOYMENT
+Describe where and how the application is deployed without revealing credentials, tokens or private configuration.
+
+9. ENGINEERING CHALLENGES
+Identify several meaningful technical challenges demonstrated by the existing project.
+
+10. PORTFOLIO SUMMARY
+Write a short professional summary of the project.
+
+IMPORTANT:
+- Do not modify the project.
+- Do not reveal secrets.
+- Do not reveal private user/customer information.
+- Do not expose credentials.
+- Do not invent features.
+- Only report what can be verified from the existing project.
