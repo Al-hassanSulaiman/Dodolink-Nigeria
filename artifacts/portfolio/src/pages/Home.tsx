@@ -3,13 +3,24 @@ import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Carousel, 
   CarouselContent, 
   CarouselItem, 
 } from '@/components/ui/carousel';
 import { 
-  Menu, X, ExternalLink, Mail, Download, 
+  Menu, X, ExternalLink, Mail, Download, Send, Loader2,
   Smartphone, ShoppingBag, Store, Tag, 
   MessageSquare, Star, LayoutDashboard, CheckCircle2
 } from 'lucide-react';
@@ -47,9 +58,55 @@ const skills = [
   'Admin Dashboards', 'Paystack Integration'
 ];
 
+const BUDGET_OPTIONS = [
+  'Under $500',
+  '$500 – $1,000',
+  '$1,000 – $3,000',
+  '$3,000 – $10,000',
+  '$10,000+',
+  "Let's discuss",
+];
+
 export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  // Contact form state
+  const [contactForm, setContactForm] = useState({ name: '', email: '', description: '', budget: '' });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!contactForm.name || !contactForm.email || !contactForm.description || !contactForm.budget) {
+      toast({ title: 'Please fill in all fields.', variant: 'destructive' });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const apiBase = window.location.origin;
+      const res = await fetch(`${apiBase}/api/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contactForm),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Something went wrong');
+      }
+      setSubmitted(true);
+      setContactForm({ name: '', email: '', description: '', budget: '' });
+    } catch (err) {
+      toast({
+        title: 'Failed to send message',
+        description: err instanceof Error ? err.message : 'Please try again later.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const scrollTo = (id: string) => {
     setMobileMenuOpen(false);
@@ -86,7 +143,7 @@ export default function Home() {
           </div>
 
           <div className="hidden md:block">
-            <Button onClick={() => window.location.href = 'mailto:alhassansulaiman1369@gmail.com'} className="rounded-full px-6 font-semibold">
+            <Button onClick={() => scrollTo('contact')} className="rounded-full px-6 font-semibold">
               Hire Me
             </Button>
           </div>
@@ -113,7 +170,7 @@ export default function Home() {
             <button onClick={() => scrollTo('work')} className="text-2xl font-display font-bold">Work</button>
             <button onClick={() => scrollTo('skills')} className="text-2xl font-display font-bold">Skills</button>
             <button onClick={() => scrollTo('contact')} className="text-2xl font-display font-bold">Contact</button>
-            <Button size="lg" onClick={() => window.location.href = 'mailto:alhassansulaiman1369@gmail.com'} className="rounded-full mt-4">
+            <Button size="lg" onClick={() => scrollTo('contact')} className="rounded-full mt-4">
               Hire Me
             </Button>
           </motion.div>
@@ -145,7 +202,7 @@ export default function Home() {
                 I'm <strong className="text-foreground font-semibold">Alhassan Sulaiman</strong>, a Full-Stack MVP Developer. I build production-ready apps at startup speed using AI assistance.
               </motion.p>
               <motion.div variants={fadeInUp} className="flex flex-wrap gap-4 pt-4">
-                <Button size="lg" className="rounded-full h-14 px-8 text-base font-semibold" onClick={() => window.location.href = 'mailto:alhassansulaiman1369@gmail.com'}>
+                <Button size="lg" className="rounded-full h-14 px-8 text-base font-semibold" onClick={() => scrollTo('contact')}>
                   Hire Me <Mail className="ml-2 h-5 w-5" />
                 </Button>
                 <Button size="lg" variant="outline" className="rounded-full h-14 px-8 text-base font-semibold border-2" onClick={() => scrollTo('work')}>
@@ -166,7 +223,7 @@ export default function Home() {
                 <img 
                   src={assets.headshot} 
                   alt="Alhassan Sulaiman" 
-                  className="w-full h-full object-cover rounded-full shadow-2xl relative z-10 filter contrast-105"
+                  className="w-full h-full object-cover rounded-full shadow-2xl relative z-10 filter contrast-105" style={{ objectPosition: '50% 5%' }}
                 />
               </div>
             </motion.div>
@@ -383,31 +440,121 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Contact CTA */}
+        {/* Contact Form */}
         <section id="contact" className="py-32">
           <div className="container mx-auto px-6">
-            <motion.div 
+            <motion.div
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true }}
               variants={fadeInUp}
-              className="max-w-3xl mx-auto text-center flex flex-col items-center"
+              className="max-w-2xl mx-auto"
             >
-              <h2 className="text-4xl md:text-6xl font-display font-bold mb-6 tracking-tight">Ready to build your MVP?</h2>
-              <p className="text-xl text-muted-foreground mb-10 max-w-xl">
-                Stop waiting for the perfect moment. Let's get your product in front of users this month.
-              </p>
-              
-              <div className="flex flex-col sm:flex-row gap-6 w-full sm:w-auto">
-                <Button size="lg" className="rounded-full h-16 px-10 text-lg font-bold w-full sm:w-auto" onClick={() => window.location.href = 'mailto:alhassansulaiman1369@gmail.com'}>
-                  Email Me <Mail className="ml-2 h-6 w-6" />
-                </Button>
-                <Button size="lg" variant="secondary" className="rounded-full h-16 px-10 text-lg font-bold border border-border w-full sm:w-auto" asChild>
-                  <a href={assets.cv} download>
-                    Download CV <Download className="ml-2 h-6 w-6" />
-                  </a>
-                </Button>
+              <div className="text-center mb-12">
+                <h2 className="text-4xl md:text-6xl font-display font-bold mb-6 tracking-tight">Ready to build your MVP?</h2>
+                <p className="text-xl text-muted-foreground max-w-xl mx-auto">
+                  Stop waiting for the perfect moment. Tell me about your project and let's get it in front of users this month.
+                </p>
               </div>
+
+              {submitted ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="rounded-2xl border border-border bg-card p-12 text-center flex flex-col items-center gap-4"
+                >
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-2">
+                    <CheckCircle2 className="h-8 w-8 text-primary" />
+                  </div>
+                  <h3 className="text-2xl font-display font-bold">Message sent!</h3>
+                  <p className="text-muted-foreground max-w-sm">
+                    Thanks for reaching out. I'll get back to you within 24 hours.
+                  </p>
+                  <Button variant="outline" className="rounded-full mt-4" onClick={() => setSubmitted(false)}>
+                    Send another message
+                  </Button>
+                </motion.div>
+              ) : (
+                <form onSubmit={handleContactSubmit} className="rounded-2xl border border-border bg-card p-8 md:p-10 flex flex-col gap-6">
+                  <div className="grid sm:grid-cols-2 gap-6">
+                    <div className="flex flex-col gap-2">
+                      <Label htmlFor="contact-name">Name</Label>
+                      <Input
+                        id="contact-name"
+                        placeholder="Your name"
+                        value={contactForm.name}
+                        onChange={e => setContactForm(f => ({ ...f, name: e.target.value }))}
+                        required
+                        disabled={submitting}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Label htmlFor="contact-email">Email</Label>
+                      <Input
+                        id="contact-email"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={contactForm.email}
+                        onChange={e => setContactForm(f => ({ ...f, email: e.target.value }))}
+                        required
+                        disabled={submitting}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="contact-description">Project description</Label>
+                    <Textarea
+                      id="contact-description"
+                      placeholder="Tell me about your idea — what it does, who it's for, and what you need built."
+                      rows={5}
+                      value={contactForm.description}
+                      onChange={e => setContactForm(f => ({ ...f, description: e.target.value }))}
+                      required
+                      disabled={submitting}
+                      className="resize-none"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="contact-budget">Budget range</Label>
+                    <Select
+                      value={contactForm.budget}
+                      onValueChange={val => setContactForm(f => ({ ...f, budget: val }))}
+                      disabled={submitting}
+                    >
+                      <SelectTrigger id="contact-budget">
+                        <SelectValue placeholder="Select a budget range" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {BUDGET_OPTIONS.map(opt => (
+                          <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-center gap-4 pt-2">
+                    <Button
+                      type="submit"
+                      size="lg"
+                      className="rounded-full h-14 px-10 text-base font-bold w-full sm:w-auto"
+                      disabled={submitting}
+                    >
+                      {submitting ? (
+                        <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Sending…</>
+                      ) : (
+                        <><Send className="mr-2 h-5 w-5" /> Send Message</>
+                      )}
+                    </Button>
+                    <Button size="lg" variant="secondary" className="rounded-full h-14 px-10 text-base font-bold border border-border w-full sm:w-auto" asChild>
+                      <a href={assets.cv} download>
+                        Download CV <Download className="ml-2 h-5 w-5" />
+                      </a>
+                    </Button>
+                  </div>
+                </form>
+              )}
             </motion.div>
           </div>
         </section>

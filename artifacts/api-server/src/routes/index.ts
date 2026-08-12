@@ -11,10 +11,12 @@ import supportRouter from "./support";
 import adminRouter from "./admin";
 import subscriptionsRouter from "./subscriptions";
 import webhooksRouter from "./webhooks";
+import contactRouter from "./contact";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(contactRouter);
 router.use(adminRouter);
 router.use(storesRouter);
 router.use(productsRouter);
