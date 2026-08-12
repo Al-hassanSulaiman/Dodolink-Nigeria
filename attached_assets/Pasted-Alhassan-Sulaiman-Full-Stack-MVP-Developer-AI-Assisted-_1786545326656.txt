@@ -1,0 +1,64 @@
+Alhassan Sulaiman
+Full-Stack MVP Developer | AI-Assisted Product Development
+
+DodoLink NG
+Nigerian Marketplace Platform
+
+  DodoLink NG is a marketplace platform designed to connect customers with businesses across Nigeria, allowing users to discover stores 
+and products and interact with businesses through a single platform.
+  Finding and interacting with local businesses can be fragmented. Customers may need to search across different platforms, contact sellers 
+separately, and manage different parts of the buying process independently. 
+ DodoLink NG brings these interactions into one marketplace experience. DodoLink NG provides a centralized platform where customers can discover 
+businesses and their products, while businesses can establish their own storefronts and manage their presence on the platform.
+
+Dodolink.com.ng
+
+Key Features
+
+Sign-up
+Customers use their email addresses to sign up an account on dodolink app
+
+Privacy Policy & Terms of Service
+The app includes privacy policy and terms of service that you can click and view when signing up/in
+Photo 1
+Marketplace
+Customers can browse products and discover businesses through the marketplace interface.
+Photo 2
+Business Stores
+Businesses can create their own storesand add products on DodoLink NG, allowing customers to discover their stores and products.
+Photo 3
+Product Listings
+Businesses can display products with information such as names and prices.
+photo 4
+Customer–Business Communication
+The platform includes a conversation/chat system allowing customers and businesses to communicate.
+Photo 5
+Reviews & Comments
+Dodolink app has Revies and comments features, and can be made to only a verified store owner
+Photo 6
+ Administration Dashboard
+The platform includes a dedicated administration dashboard for managing the marketplace.
+The dashboard provides visibility into:
+Stores
+Users
+Products
+Conversations
+Store verification
+Support
+Administrators
+
+Photo 7
+
+Store Verification
+
+DodoLink includes a store verification workflow, allowing administrators to review stores and mark them as:
+Pending
+Verified
+Rejected
+
+Photo 8
+
+The short video
+
+alhassansulaiman1369@gmail.com
+CV: The CV
