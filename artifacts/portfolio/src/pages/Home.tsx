@@ -223,7 +223,7 @@ export default function Home() {
                 <img 
                   src={assets.headshot} 
                   alt="Alhassan Sulaiman" 
-                  className="w-full h-full object-cover rounded-full shadow-2xl relative z-10 filter contrast-105" style={{ objectPosition: '50% 5%' }}
+                  className="w-full h-full object-cover rounded-full shadow-2xl relative z-10 filter contrast-105" style={{ objectPosition: '50% 0%' }}
                 />
               </div>
             </motion.div>
