@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/portfolio/"
+title = "Alhassan's Portfolio"
+description = "A personal portfolio website for Alhassan Sulaiman, a Full-Stack MVP Developer who uses AI-assisted product development. Showcases his DodoLink NG case study — a Nigerian marketplace platform — with screenshots, demo video, tech stack, and contact/CV download."
+version = "1.0.0"
+id = "artifacts/portfolio"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/portfolio/" ]
+localPort = 21113
+
+[services.development]
+run = "pnpm --filter @workspace/portfolio run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/portfolio", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/portfolio/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21113"
+BASE_PATH = "/portfolio/"
