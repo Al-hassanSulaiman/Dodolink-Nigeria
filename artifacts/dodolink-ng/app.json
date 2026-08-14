@@ -27,7 +27,7 @@
     },
     "android": {
       "package": "com.dodolink.ng",
-      "versionCode": 1,
+      "versionCode": 3,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
