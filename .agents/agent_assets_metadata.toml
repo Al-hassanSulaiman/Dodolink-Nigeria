@@ -18,3 +18,45 @@ uri = "file://attached_assets/dodolink_featured_graphic_1024x500.jpg"
 type = "image"
 title = "Dodolink NG — Featured Graphic (1024×500)"
 description = "Google Play Store featured graphic, ready to upload. JPEG, 1024×500px."
+
+[[outputs]]
+id = "ZlRPZQ-r8_MRSpNvQEjqe"
+uri = "file://attached_assets/screenshot-1.jpeg"
+type = "image"
+title = "Screenshot 1 — Sign Up (1080×1920)"
+description = "Phone screenshot, 9:16, ready for Play Store"
+
+[[outputs]]
+id = "KXcUrdHHunlV6YUvypLWj"
+uri = "file://attached_assets/screenshot-2.jpeg"
+type = "image"
+title = "Screenshot 2 — Marketplace Feed (1080×1920)"
+description = "Phone screenshot, 9:16, ready for Play Store"
+
+[[outputs]]
+id = "B_Pjfy4fuUk7PE4SFIwFb"
+uri = "file://attached_assets/screenshot-3.jpeg"
+type = "image"
+title = "Screenshot 3 — Create Store (1080×1920)"
+description = "Phone screenshot, 9:16, ready for Play Store"
+
+[[outputs]]
+id = "YhpeJP-DAYPiLvIbbhQRK"
+uri = "file://attached_assets/screenshot-4.jpeg"
+type = "image"
+title = "Screenshot 4 — Store Dashboard (1080×1920)"
+description = "Phone screenshot, 9:16, ready for Play Store"
+
+[[outputs]]
+id = "2Rh3Q9D0R2Kh7Mtcz4kwb"
+uri = "file://attached_assets/screenshot-5.jpeg"
+type = "image"
+title = "Screenshot 5 — In-app Chat (1080×1920)"
+description = "Phone screenshot, 9:16, ready for Play Store"
+
+[[outputs]]
+id = "aystbODOLBVPj_nrOubs2"
+uri = "file://attached_assets/screenshot-6.jpeg"
+type = "image"
+title = "Screenshot 6 — Reviews & Ratings (1080×1920)"
+description = "Phone screenshot, 9:16, ready for Play Store"
