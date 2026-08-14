@@ -22,36 +22,38 @@ import {
 import { 
   Menu, X, ExternalLink, Mail, Download, Send, Loader2,
   Smartphone, ShoppingBag, Store, Tag, 
-  MessageSquare, Star, LayoutDashboard, CheckCircle2
+  MessageSquare, Star, LayoutDashboard, CheckCircle2,
+  Users, Shield, TrendingUp, ClipboardList, Settings2
 } from 'lucide-react';
 
 const assets = {
   headshot: '/portfolio/assets/headshot.jpeg',
   video: '/portfolio/assets/demo.mp4',
   cv: '/portfolio/assets/cv.pdf',
-  screenshots: [
-    { src: '/portfolio/assets/screenshot-1.jpeg', alt: 'DodoLink Sign-up', type: 'mobile' },
-    { src: '/portfolio/assets/screenshot-2.jpeg', alt: 'Marketplace Feed', type: 'mobile' },
-    { src: '/portfolio/assets/screenshot-3.jpeg', alt: 'Create Store', type: 'mobile' },
-    { src: '/portfolio/assets/screenshot-4.jpeg', alt: 'Store Dashboard', type: 'mobile' },
-    { src: '/portfolio/assets/screenshot-5.jpeg', alt: 'In-app Chat', type: 'mobile' },
-    { src: '/portfolio/assets/screenshot-6.jpeg', alt: 'Reviews & Ratings', type: 'mobile' },
-    { src: '/portfolio/assets/screenshot-7.png', alt: 'Admin Dashboard', type: 'desktop' },
-    { src: '/portfolio/assets/screenshot-8.png', alt: 'Store Verification', type: 'desktop' },
-  ]
+  mobileScreenshots: [
+    { src: '/portfolio/assets/screenshot-1.jpeg', alt: 'DodoLink Sign-up' },
+    { src: '/portfolio/assets/screenshot-2.jpeg', alt: 'Marketplace Feed' },
+    { src: '/portfolio/assets/screenshot-3.jpeg', alt: 'Create Store' },
+    { src: '/portfolio/assets/screenshot-4.jpeg', alt: 'Store Dashboard' },
+    { src: '/portfolio/assets/screenshot-5.jpeg', alt: 'In-app Chat' },
+    { src: '/portfolio/assets/screenshot-6.jpeg', alt: 'Reviews & Ratings' },
+  ],
+  adminScreenshots: [
+    { src: '/portfolio/assets/screenshot-7.png', alt: 'Admin Dashboard Overview' },
+    { src: '/portfolio/assets/screenshot-8.png', alt: 'Store Verification Queue' },
+  ],
 };
 
-const features = [
+const dodoFeatures = [
   { icon: <Smartphone className="h-5 w-5" />, title: 'Sign-up', desc: 'Seamless email-based account creation' },
   { icon: <ShoppingBag className="h-5 w-5" />, title: 'Marketplace', desc: 'Browse products and discover local businesses' },
   { icon: <Store className="h-5 w-5" />, title: 'Business Stores', desc: 'Create and manage digital storefronts' },
   { icon: <Tag className="h-5 w-5" />, title: 'Product Listings', desc: 'Rich product display with names, prices, and images' },
   { icon: <MessageSquare className="h-5 w-5" />, title: 'Chat', desc: 'Real-time buyer-seller messaging built in' },
   { icon: <Star className="h-5 w-5" />, title: 'Reviews & Ratings', desc: 'Verified store reviews to build trust' },
-  { icon: <LayoutDashboard className="h-5 w-5" />, title: 'Admin Dashboard', desc: 'Comprehensive platform overview and management' },
-  { icon: <CheckCircle2 className="h-5 w-5" />, title: 'Store Verification', desc: 'Admin review workflow for store applications' },
+  { icon: <LayoutDashboard className="h-5 w-5" />, title: 'Store Dashboard', desc: 'Sellers track orders, inventory, and revenue' },
+  { icon: <CheckCircle2 className="h-5 w-5" />, title: 'Push Notifications', desc: 'Real-time alerts for orders, messages, and activity' },
 ];
-
 const skills = [
   'React Native', 'Expo', 'TypeScript', 'Node.js', 'Express', 
   'PostgreSQL', 'REST APIs', 'AI-Assisted Development', 
@@ -248,166 +250,246 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Work / Case Study Section */}
+        {/* Work Section — Case Studies */}
         <section id="work" className="py-32">
           <div className="container mx-auto px-6">
-            <motion.div 
+
+            {/* Section header */}
+            <motion.div
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true }}
               variants={fadeInUp}
-              className="mb-16 md:flex justify-between items-end gap-6"
+              className="mb-20"
             >
-              <div>
-                <h2 className="text-4xl md:text-6xl font-display font-bold mb-4 tracking-tight">Flagship MVP</h2>
-                <div className="flex items-center gap-4">
-                  <h3 className="text-2xl font-semibold">DodoLink NG</h3>
-                  <a href="https://dodolink.com.ng" target="_blank" rel="noreferrer" className="inline-flex items-center px-3 py-1 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-colors rounded-full text-sm font-medium border border-primary/20">
-                    dodolink.com.ng <ExternalLink className="ml-1 h-3 w-3" />
-                  </a>
-                </div>
-                <p className="mt-4 text-lg text-muted-foreground max-w-2xl">
-                  A comprehensive Nigerian marketplace platform connecting customers with businesses. Built completely solo from zero to production.
-                </p>
-              </div>
+              <p className="text-sm font-semibold tracking-widest text-primary uppercase mb-3">Selected Work</p>
+              <h2 className="text-4xl md:text-6xl font-display font-bold tracking-tight">What I've built</h2>
             </motion.div>
 
-            {/* Video Demo */}
-            <motion.div 
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={fadeInUp}
-              className="mb-24 rounded-2xl overflow-hidden border border-border shadow-2xl bg-card"
-            >
-              <div className="p-4 border-b border-border bg-secondary/50 flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-destructive/60" />
-                <div className="w-3 h-3 rounded-full bg-amber-500/60" />
-                <div className="w-3 h-3 rounded-full bg-primary/60" />
-                <span className="ml-4 text-sm font-medium text-muted-foreground font-mono">Platform Demo</span>
-              </div>
-              <video 
-                src={assets.video} 
-                controls 
-                preload="metadata"
-                className="w-full max-h-[70vh] object-contain bg-black"
-              />
-            </motion.div>
-
-            {/* Features Grid */}
-            <div className="mb-24">
-              <h4 className="text-2xl font-display font-bold mb-8">Core Features</h4>
+            {/* ── Case Study 01: DodoLink NG ── */}
+            <div className="mb-32">
               <motion.div 
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true }}
-                variants={stagger}
-                className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6"
+                variants={fadeInUp}
+                className="mb-12 md:flex justify-between items-end gap-6"
               >
-                {features.map((feature, idx) => (
-                  <motion.div key={idx} variants={fadeInUp}>
-                    <Card className="h-full bg-card hover:border-primary/50 transition-colors">
-                      <CardContent className="p-6 flex flex-col gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                          {feature.icon}
-                        </div>
-                        <div>
-                          <h5 className="font-bold text-lg mb-1">{feature.title}</h5>
-                          <p className="text-sm text-muted-foreground">{feature.desc}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
-              </motion.div>
-            </div>
-
-            {/* Screenshots Gallery */}
-            <div>
-              <h4 className="text-2xl font-display font-bold mb-8">Platform Walkthrough</h4>
-              
-              {/* Mobile Swipeable Gallery */}
-              <div className="lg:hidden mb-12 relative px-4">
-                <Carousel
-                  opts={{
-                    align: "center",
-                  }}
-                  className="w-full"
-                >
-                  <CarouselContent>
-                    {assets.screenshots.filter(s => s.type === 'mobile').map((shot, idx) => (
-                      <CarouselItem key={idx} className="basis-4/5 sm:basis-1/2">
-                        <motion.div 
-                          initial="hidden"
-                          whileInView="visible"
-                          viewport={{ once: true }}
-                          variants={fadeInUp}
-                          className="cursor-pointer group h-full"
-                          onClick={() => setLightboxImg(shot.src)}
-                        >
-                          <div className="rounded-2xl overflow-hidden border border-border bg-card shadow-lg h-full flex flex-col">
-                            <div className="aspect-[9/19] relative w-full">
-                              <img src={shot.src} alt={shot.alt} className="absolute inset-0 w-full h-full object-cover" />
-                            </div>
-                            <div className="p-4 bg-card border-t border-border mt-auto">
-                              <p className="font-medium text-sm text-center">{shot.alt}</p>
-                            </div>
-                          </div>
-                        </motion.div>
-                      </CarouselItem>
+                <div>
+                  <p className="text-xs font-bold tracking-widest text-muted-foreground uppercase mb-3">Case Study 01 — Mobile Marketplace</p>
+                  <div className="flex items-center gap-4 mb-4">
+                    <h3 className="text-3xl md:text-4xl font-display font-bold">DodoLink NG</h3>
+                    <a href="https://dodolink.com.ng" target="_blank" rel="noreferrer" className="inline-flex items-center px-3 py-1 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-colors rounded-full text-sm font-medium border border-primary/20">
+                      dodolink.com.ng <ExternalLink className="ml-1 h-3 w-3" />
+                    </a>
+                  </div>
+                  <p className="text-lg text-muted-foreground max-w-2xl">
+                    A comprehensive Nigerian marketplace platform connecting customers with local businesses. React Native mobile app with real-time chat, in-app payments, and a full seller toolkit — built solo from zero to production.
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-5">
+                    {['React Native', 'Expo', 'TypeScript', 'Node.js', 'PostgreSQL', 'Paystack', 'WebSockets'].map(t => (
+                      <Badge key={t} variant="secondary" className="rounded-full px-3 py-1 text-xs font-medium">{t}</Badge>
                     ))}
-                  </CarouselContent>
-                </Carousel>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Video Demo */}
+              <motion.div 
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                variants={fadeInUp}
+                className="mb-16 rounded-2xl overflow-hidden border border-border shadow-2xl bg-card"
+              >
+                <div className="p-4 border-b border-border bg-secondary/50 flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-destructive/60" />
+                  <div className="w-3 h-3 rounded-full bg-amber-500/60" />
+                  <div className="w-3 h-3 rounded-full bg-primary/60" />
+                  <span className="ml-4 text-sm font-medium text-muted-foreground font-mono">Platform Demo</span>
+                </div>
+                <video 
+                  src={assets.video} 
+                  controls 
+                  preload="metadata"
+                  className="w-full max-h-[70vh] object-contain bg-black"
+                />
+              </motion.div>
+
+              {/* Features Grid */}
+              <div className="mb-16">
+                <h4 className="text-xl font-display font-bold mb-8">Core Features</h4>
+                <motion.div 
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true }}
+                  variants={stagger}
+                  className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5"
+                >
+                  {dodoFeatures.map((feature, idx) => (
+                    <motion.div key={idx} variants={fadeInUp}>
+                      <Card className="h-full bg-card hover:border-primary/50 transition-colors">
+                        <CardContent className="p-6 flex flex-col gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                            {feature.icon}
+                          </div>
+                          <div>
+                            <h5 className="font-bold text-lg mb-1">{feature.title}</h5>
+                            <p className="text-sm text-muted-foreground">{feature.desc}</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </motion.div>
               </div>
 
-              {/* Desktop view of Mobile Screenshots */}
-              <div className="hidden lg:grid lg:grid-cols-4 lg:gap-8 mb-12">
-                {assets.screenshots.filter(s => s.type === 'mobile').map((shot, idx) => (
-                  <motion.div 
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={{ once: true }}
-                    variants={fadeInUp}
-                    key={idx} 
-                    className="cursor-pointer group"
-                    onClick={() => setLightboxImg(shot.src)}
-                  >
-                    <div className="rounded-2xl overflow-hidden border border-border bg-card shadow-lg transition-transform group-hover:-translate-y-2 h-full flex flex-col">
-                      <div className="aspect-[9/19] relative w-full">
-                        <img src={shot.src} alt={shot.alt} className="absolute inset-0 w-full h-full object-cover" />
-                      </div>
-                      <div className="p-4 bg-card border-t border-border mt-auto">
-                        <p className="font-medium text-sm text-center">{shot.alt}</p>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+              {/* Screenshots Gallery */}
+              <div>
+                <h4 className="text-xl font-display font-bold mb-8">App Walkthrough</h4>
+                
+                {/* Mobile Swipeable Gallery */}
+                <div className="lg:hidden mb-4 relative px-4">
+                  <Carousel opts={{ align: "center" }} className="w-full">
+                    <CarouselContent>
+                      {assets.mobileScreenshots.map((shot, idx) => (
+                        <CarouselItem key={idx} className="basis-4/5 sm:basis-1/2">
+                          <motion.div 
+                            initial="hidden"
+                            whileInView="visible"
+                            viewport={{ once: true }}
+                            variants={fadeInUp}
+                            className="cursor-pointer group h-full"
+                            onClick={() => setLightboxImg(shot.src)}
+                          >
+                            <div className="rounded-2xl overflow-hidden border border-border bg-card shadow-lg h-full flex flex-col">
+                              <div className="aspect-[9/19] relative w-full">
+                                <img src={shot.src} alt={shot.alt} className="absolute inset-0 w-full h-full object-cover" />
+                              </div>
+                              <div className="p-4 bg-card border-t border-border mt-auto">
+                                <p className="font-medium text-sm text-center">{shot.alt}</p>
+                              </div>
+                            </div>
+                          </motion.div>
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                  </Carousel>
+                </div>
 
-              {/* Desktop Screenshots */}
-              <div className="grid md:grid-cols-2 gap-8 mt-8">
-                {assets.screenshots.filter(s => s.type === 'desktop').map((shot, idx) => (
-                  <motion.div 
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={{ once: true }}
-                    variants={fadeInUp}
-                    key={idx} 
-                    className="cursor-pointer group"
-                    onClick={() => setLightboxImg(shot.src)}
-                  >
-                    <div className="rounded-2xl overflow-hidden border border-border bg-card shadow-lg transition-transform group-hover:-translate-y-2">
-                      <div className="aspect-video relative bg-black/5">
-                        <img src={shot.src} alt={shot.alt} className="absolute inset-0 w-full h-full object-cover object-top" />
+                {/* Desktop grid */}
+                <div className="hidden lg:grid lg:grid-cols-3 lg:gap-6">
+                  {assets.mobileScreenshots.map((shot, idx) => (
+                    <motion.div 
+                      initial="hidden"
+                      whileInView="visible"
+                      viewport={{ once: true }}
+                      variants={fadeInUp}
+                      key={idx} 
+                      className="cursor-pointer group"
+                      onClick={() => setLightboxImg(shot.src)}
+                    >
+                      <div className="rounded-2xl overflow-hidden border border-border bg-card shadow-lg transition-transform group-hover:-translate-y-2 h-full flex flex-col">
+                        <div className="aspect-[9/19] relative w-full">
+                          <img src={shot.src} alt={shot.alt} className="absolute inset-0 w-full h-full object-cover" />
+                        </div>
+                        <div className="p-4 bg-card border-t border-border mt-auto">
+                          <p className="font-medium text-sm text-center">{shot.alt}</p>
+                        </div>
                       </div>
-                      <div className="p-4 bg-card border-t border-border">
-                        <p className="font-medium text-center">{shot.alt}</p>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  ))}
+                </div>
               </div>
             </div>
+
+            {/* ── Divider ── */}
+            <div className="border-t border-border/60 mb-32" />
+
+            {/* ── Case Study 02: Dodolink Admin ── */}
+            <div>
+              <motion.div 
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                variants={fadeInUp}
+                className="mb-12 md:flex justify-between items-end gap-6"
+              >
+                <div>
+                  <p className="text-xs font-bold tracking-widest text-muted-foreground uppercase mb-3">Case Study 02 — Web Operations Platform</p>
+                  <div className="flex items-center gap-4 mb-4">
+                    <h3 className="text-3xl md:text-4xl font-display font-bold">Dodolink Admin</h3>
+                    <span className="inline-flex items-center px-3 py-1 bg-secondary text-muted-foreground rounded-full text-sm font-medium border border-border">
+                      Internal Tool
+                    </span>
+                  </div>
+                  <p className="text-lg text-muted-foreground max-w-2xl">
+                    The web-based command centre powering DodoLink NG behind the scenes. A secure operations dashboard for store verification, platform analytics, user oversight, admin access control, and in-dashboard support — built with React, Express, and PostgreSQL.
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-5">
+                    {['React', 'TypeScript', 'TanStack Query', 'Node.js', 'Express', 'PostgreSQL', 'Clerk Auth'].map(t => (
+                      <Badge key={t} variant="secondary" className="rounded-full px-3 py-1 text-xs font-medium">{t}</Badge>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Admin Features Grid */}
+              <div className="mb-16">
+                <h4 className="text-xl font-display font-bold mb-8">Platform Capabilities</h4>
+                <motion.div 
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true }}
+                  variants={stagger}
+                  className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5"
+                >
+                  {adminFeatures.map((feature, idx) => (
+                    <motion.div key={idx} variants={fadeInUp}>
+                      <Card className="h-full bg-card hover:border-primary/50 transition-colors">
+                        <CardContent className="p-6 flex flex-col gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                            {feature.icon}
+                          </div>
+                          <div>
+                            <h5 className="font-bold text-lg mb-1">{feature.title}</h5>
+                            <p className="text-sm text-muted-foreground">{feature.desc}</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </div>
+
+              {/* Admin Screenshots */}
+              <div>
+                <h4 className="text-xl font-display font-bold mb-8">Dashboard Views</h4>
+                <div className="grid md:grid-cols-2 gap-8">
+                  {assets.adminScreenshots.map((shot, idx) => (
+                    <motion.div 
+                      initial="hidden"
+                      whileInView="visible"
+                      viewport={{ once: true }}
+                      variants={fadeInUp}
+                      key={idx} 
+                      className="cursor-pointer group"
+                      onClick={() => setLightboxImg(shot.src)}
+                    >
+                      <div className="rounded-2xl overflow-hidden border border-border bg-card shadow-lg transition-transform group-hover:-translate-y-2">
+                        <div className="aspect-video relative bg-black/5">
+                          <img src={shot.src} alt={shot.alt} className="absolute inset-0 w-full h-full object-cover object-top" />
+                        </div>
+                        <div className="p-4 bg-card border-t border-border">
+                          <p className="font-medium text-center">{shot.alt}</p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
           </div>
         </section>
 
@@ -605,3 +687,12 @@ export default function Home() {
     </div>
   );
 }
+
+const adminFeatures = [
+  { icon: <Shield className="h-5 w-5" />, title: 'Store Verification', desc: 'Review, approve, or reject store applications with mandatory reason capture on rejection' },
+  { icon: <TrendingUp className="h-5 w-5" />, title: 'Platform Analytics', desc: 'Live KPI cards for store counts, product totals, and conversation volumes with a verification status donut chart' },
+  { icon: <Users className="h-5 w-5" />, title: 'User Overview', desc: 'Browse all buyers and sellers with active/inactive filters and real-time client-side search' },
+  { icon: <Settings2 className="h-5 w-5" />, title: 'Admin Management', desc: 'Grant or revoke admin access by email with single-admin safeguards and confirmation dialogs' },
+  { icon: <MessageSquare className="h-5 w-5" />, title: 'Support Inbox', desc: 'Real-time support threads with per-user conversation history and in-dashboard reply' },
+  { icon: <ClipboardList className="h-5 w-5" />, title: 'Subscription Monitoring', desc: 'Track store subscription status, grace-period countdowns, and auto-hide past-due stores' },
+];
