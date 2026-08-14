@@ -13,6 +13,11 @@ import { logger } from "./lib/logger";
 
 const app: Express = express();
 
+// Trust exactly one proxy hop (the Replit / deployment reverse proxy) so that
+// req.ip reflects the real visitor address from X-Forwarded-For rather than
+// the proxy's internal socket address. express-rate-limit relies on req.ip.
+app.set("trust proxy", 1);
+
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 
 app.use(

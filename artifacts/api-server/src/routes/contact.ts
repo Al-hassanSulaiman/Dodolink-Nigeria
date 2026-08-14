@@ -1,8 +1,17 @@
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
 import nodemailer from "nodemailer";
 import { z } from "zod";
 
 const router = Router();
+
+const contactLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  limit: 5,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { error: "Too many contact requests. Please try again in an hour." },
+});
 
 const contactSchema = z.object({
   name: z.string().min(1).max(100),
@@ -27,7 +36,7 @@ function createTransport() {
   });
 }
 
-router.post("/contact", async (req, res) => {
+router.post("/contact", contactLimiter, async (req, res) => {
   const parsed = contactSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
