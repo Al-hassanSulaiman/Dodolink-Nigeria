@@ -15,6 +15,7 @@ import AdminsPage from "@/pages/admins";
 import SupportPage from "@/pages/support";
 import PrivacyPolicyPage from "@/pages/privacy";
 import TermsOfServicePage from "@/pages/terms";
+import DeleteAccountPage from "@/pages/delete-account";
 import {
   useAdminListSupportThreads,
   getAdminListSupportThreadsQueryKey,
@@ -199,6 +200,7 @@ function Router() {
       </Route>
       <Route path="/privacy" component={PrivacyPolicyPage} />
       <Route path="/terms" component={TermsOfServicePage} />
+      <Route path="/delete-account" component={DeleteAccountPage} />
       <Route component={NotFound} />
     </Switch>
   );
