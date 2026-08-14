@@ -1,5 +1,4 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "u1ZF8zBfkRjv3W79jrSW3"
@@ -12,3 +11,10 @@ id = "5SS9h7AyXA5cE0yeclAo9"
 uri = "file://artifacts/dodolink-ng/assets/images/splash.png"
 type = "image"
 title = "generated_image"
+
+[[outputs]]
+id = "jtfh7ETavJSRYGxIQLM2w"
+uri = "file://attached_assets/dodolink_featured_graphic_1024x500.jpg"
+type = "image"
+title = "Dodolink NG — Featured Graphic (1024×500)"
+description = "Google Play Store featured graphic, ready to upload. JPEG, 1024×500px."
