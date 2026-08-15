@@ -877,6 +877,20 @@ export const AdminRemoveAdminResponse = zod.object({
 
 
 /**
+ * @summary List all contact form leads (admin only)
+ */
+export const AdminListLeadsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "description": zod.string(),
+  "budget": zod.string(),
+  "submittedAt": zod.coerce.date()
+})
+export const AdminListLeadsResponse = zod.array(AdminListLeadsResponseItem)
+
+
+/**
  * @summary List support conversation threads (admin only)
  */
 export const AdminListSupportThreadsResponseItem = zod.object({

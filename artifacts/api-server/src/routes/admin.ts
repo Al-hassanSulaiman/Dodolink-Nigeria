@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { getAuth, clerkClient } from "@clerk/express";
 import { and, asc, eq, count, desc, sql, inArray } from "drizzle-orm";
-import { db, storesTable, productsTable, conversationsTable, supportMessagesTable, pushTokensTable, adminsTable } from "@workspace/db";
+import { db, storesTable, productsTable, conversationsTable, supportMessagesTable, pushTokensTable, adminsTable, contactLeadsTable } from "@workspace/db";
 import { AdminRejectStoreBody, AdminUpdateStoreBody, SendSupportMessageBody, AdminAddAdminBody } from "@workspace/api-zod";
 import { notifyTokens } from "../lib/push";
 
@@ -438,6 +438,14 @@ router.post("/admin/support/threads/:userId/read", async (req, res): Promise<voi
     .set({ readByAdmin: true })
     .where(and(eq(supportMessagesTable.userId, targetUserId), eq(supportMessagesTable.senderRole, "user")));
   res.json({ status: "ok" });
+});
+
+router.get("/admin/leads", requireAdmin, async (_req, res): Promise<void> => {
+  const leads = await db
+    .select()
+    .from(contactLeadsTable)
+    .orderBy(desc(contactLeadsTable.submittedAt));
+  res.json(leads);
 });
 
 export default router;

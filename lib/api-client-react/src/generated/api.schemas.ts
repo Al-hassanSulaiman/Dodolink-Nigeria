@@ -5,6 +5,15 @@
  * Dodolink NG API - Nigerian marketplace connecting retailers and customers
  * OpenAPI spec version: 0.1.0
  */
+export interface ContactLead {
+  id: number;
+  name: string;
+  email: string;
+  description: string;
+  budget: string;
+  submittedAt: string;
+}
+
 export type SupportMessageSenderRole = typeof SupportMessageSenderRole[keyof typeof SupportMessageSenderRole];
 
 

@@ -13,6 +13,7 @@ import StoresPage from "@/pages/stores";
 import UsersPage from "@/pages/users";
 import AdminsPage from "@/pages/admins";
 import SupportPage from "@/pages/support";
+import LeadsPage from "@/pages/leads";
 import PrivacyPolicyPage from "@/pages/privacy";
 import TermsOfServicePage from "@/pages/terms";
 import DeleteAccountPage from "@/pages/delete-account";
@@ -20,7 +21,7 @@ import {
   useAdminListSupportThreads,
   getAdminListSupportThreadsQueryKey,
 } from "@workspace/api-client-react";
-import { LayoutDashboard, Store, LogOut, ShieldCheck, Users, HelpCircle } from "lucide-react";
+import { LayoutDashboard, Store, LogOut, ShieldCheck, Users, HelpCircle, Inbox } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const queryClient = new QueryClient({
@@ -57,6 +58,7 @@ const NAV = [
   { to: "/users", label: "Users", icon: Users },
   { to: "/admins", label: "Admins", icon: ShieldCheck },
   { to: "/support", label: "Support", icon: HelpCircle },
+  { to: "/leads", label: "Leads", icon: Inbox },
 ];
 
 function Sidebar() {
@@ -197,6 +199,9 @@ function Router() {
       </Route>
       <Route path="/support">
         <ProtectedRoute component={SupportPage} />
+      </Route>
+      <Route path="/leads">
+        <ProtectedRoute component={LeadsPage} />
       </Route>
       <Route path="/privacy" component={PrivacyPolicyPage} />
       <Route path="/terms" component={TermsOfServicePage} />

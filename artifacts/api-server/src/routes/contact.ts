@@ -2,6 +2,7 @@ import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import nodemailer from "nodemailer";
 import { z } from "zod";
+import { db, contactLeadsTable } from "@workspace/db";
 
 const router = Router();
 
@@ -45,6 +46,18 @@ router.post("/contact", contactLimiter, async (req, res) => {
 
   const { name, email, description, budget } = parsed.data;
 
+  // Persist to DB first — this is the reliable record.
+  // A failure here means the lead would be lost, so we return 5xx.
+  try {
+    await db.insert(contactLeadsTable).values({ name, email, description, budget });
+  } catch (dbErr) {
+    console.error("Failed to save contact lead to database:", dbErr);
+    res.status(500).json({ error: "Could not save your enquiry. Please try again later." });
+    return;
+  }
+
+  // Send email — best-effort after the lead is safely stored.
+  // Email failure does NOT affect the response; the lead is already preserved.
   try {
     const transporter = createTransport();
 
@@ -86,12 +99,12 @@ router.post("/contact", contactLimiter, async (req, res) => {
       `,
       text: `New project inquiry\n\nName: ${name}\nEmail: ${email}\nBudget: ${budget}\n\nProject description:\n${description}`,
     });
-
-    res.json({ ok: true });
-  } catch (err) {
-    console.error("Failed to send contact email:", err);
-    res.status(500).json({ error: "Failed to send email. Please try again later." });
+  } catch (emailErr) {
+    console.error("Failed to send contact email (lead is already saved):", emailErr);
+    // Do not return an error — the lead is persisted; email is non-critical.
   }
+
+  res.json({ ok: true });
 });
 
 function escapeHtml(str: string): string {

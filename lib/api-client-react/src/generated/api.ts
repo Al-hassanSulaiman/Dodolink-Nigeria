@@ -30,6 +30,7 @@ import type {
   AdminUpdateStoreBody,
   AdminUser,
   AutoPayToggleInput,
+  ContactLead,
   Conversation,
   CreateProductBody,
   CreateReviewBody,
@@ -2700,6 +2701,83 @@ export const useAdminRemoveAdmin = <TError = ErrorType<void>,
       > => {
       return useMutation(getAdminRemoveAdminMutationOptions(options));
     }
+
+export const getAdminListLeadsUrl = () => {
+
+
+
+
+  return `/api/admin/leads`
+}
+
+/**
+ * @summary List all contact form leads (admin only)
+ */
+export const adminListLeads = async ( options?: RequestInit): Promise<ContactLead[]> => {
+
+  return customFetch<ContactLead[]>(getAdminListLeadsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminListLeadsQueryKey = () => {
+    return [
+    `/api/admin/leads`
+    ] as const;
+    }
+
+
+export const getAdminListLeadsQueryOptions = <TData = Awaited<ReturnType<typeof adminListLeads>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListLeads>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListLeadsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListLeads>>> = ({ signal }) => adminListLeads({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListLeads>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminListLeadsQueryResult = NonNullable<Awaited<ReturnType<typeof adminListLeads>>>
+export type AdminListLeadsQueryError = ErrorType<void>
+
+
+/**
+ * @summary List all contact form leads (admin only)
+ */
+
+export function useAdminListLeads<TData = Awaited<ReturnType<typeof adminListLeads>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListLeads>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminListLeadsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getAdminListSupportThreadsUrl = () => {
 
