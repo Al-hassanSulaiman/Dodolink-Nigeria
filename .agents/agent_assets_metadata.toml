@@ -88,3 +88,52 @@ uri = "file://attached_assets/play_screenshot_forgot.jpg"
 type = "image"
 title = "Screenshot 3 — Reset Password (1080×1920)"
 description = "Real screenshot from the live app."
+
+[[outputs]]
+id = "2WSBq1V4gGRnZ5gFtwfNf"
+uri = "file://attached_assets/apple_1290x2796_signin.jpg"
+type = "image"
+title = "Apple Screenshot — Sign In (6.7\" 1290×2796)"
+description = "Upload to App Store Connect → Screenshots → iPhone 6.7\" Display"
+
+[[outputs]]
+id = "QO5ecFTgmGHuJgLvU1jdy"
+uri = "file://attached_assets/apple_1290x2796_signup.jpg"
+type = "image"
+title = "Apple Screenshot — Create Account (6.7\" 1290×2796)"
+description = "Upload to App Store Connect → Screenshots → iPhone 6.7\" Display"
+
+[[outputs]]
+id = "szasTlCNK4hy2ofFvwyyu"
+uri = "file://attached_assets/apple_1290x2796_forgot.jpg"
+type = "image"
+title = "Apple Screenshot — Reset Password (6.7\" 1290×2796)"
+description = "Upload to App Store Connect → Screenshots → iPhone 6.7\" Display"
+
+[[outputs]]
+id = "KMvBkpsoEvydsVYdIlf1n"
+uri = "file://attached_assets/apple_1242x2688_signin.jpg"
+type = "image"
+title = "Apple Screenshot — Sign In (6.5\" 1242×2688)"
+description = "Upload to App Store Connect → Screenshots → iPhone 6.5\" Display"
+
+[[outputs]]
+id = "jP0DZTxjhlukObdHAFSBV"
+uri = "file://attached_assets/apple_1242x2688_signup.jpg"
+type = "image"
+title = "Apple Screenshot — Create Account (6.5\" 1242×2688)"
+description = "Upload to App Store Connect → Screenshots → iPhone 6.5\" Display"
+
+[[outputs]]
+id = "1A912W_bKbReEhqAaqulM"
+uri = "file://attached_assets/apple_1242x2688_forgot.jpg"
+type = "image"
+title = "Apple Screenshot — Reset Password (6.5\" 1242×2688)"
+description = "Upload to App Store Connect → Screenshots → iPhone 6.5\" Display"
+
+[[outputs]]
+id = "ja3JhwRle7HMhSOq747Gb"
+uri = "file://attached_assets/apple_icon_1024x1024.png"
+type = "image"
+title = "Apple App Icon — 1024×1024 PNG"
+description = "Upload this to App Store Connect → App Information → App Icon"
