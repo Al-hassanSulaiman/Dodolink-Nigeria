@@ -60,3 +60,31 @@ uri = "file://attached_assets/screenshot-6.jpeg"
 type = "image"
 title = "Screenshot 6 — Reviews & Ratings (1080×1920)"
 description = "Phone screenshot, 9:16, ready for Play Store"
+
+[[outputs]]
+id = "7-rD54TYiqyaRcf3_PCrL"
+uri = "file://attached_assets/dodolink_icon_512x512.png"
+type = "image"
+title = "App Icon — 512×512 PNG"
+description = "Upload this to Play Console → Store listings → App icon. Replaces the 1024×1024 that was rejected."
+
+[[outputs]]
+id = "MvNDHayqYp_hIoheZH6fF"
+uri = "file://attached_assets/play_screenshot_signin.jpg"
+type = "image"
+title = "Screenshot 1 — Sign In (1080×1920)"
+description = "Real screenshot from the live app. Upload to Play Console → Screenshots."
+
+[[outputs]]
+id = "0C7sbF85fbOhv8iVC6ikh"
+uri = "file://attached_assets/play_screenshot_signup.jpg"
+type = "image"
+title = "Screenshot 2 — Create Account (1080×1920)"
+description = "Real screenshot from the live app."
+
+[[outputs]]
+id = "XoX0wZPZ_GA3z6dGOu622"
+uri = "file://attached_assets/play_screenshot_forgot.jpg"
+type = "image"
+title = "Screenshot 3 — Reset Password (1080×1920)"
+description = "Real screenshot from the live app."
