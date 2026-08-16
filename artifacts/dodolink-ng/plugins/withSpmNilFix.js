@@ -18,15 +18,18 @@ const SPM_PATCH = `
 # ---- withSpmNilFix: nil-target guard for react-native spm.rb ----
 # Triggered when @clerk/expo registers ClerkKit/ClerkKitUI as SPM dependencies
 # but no matching Pods project target exists for those pod names.
-class SPMManager
-  private
-
+#
+# IMPORTANT: The Podfile DSL evaluates inside Pod::Podfile namespace, so we must
+# use ::SPMManager (top-level constant) to reopen the class defined by spm.rb.
+class ::SPMManager
   alias_method :add_spm_to_target_without_nil_guard, :add_spm_to_target
 
   def add_spm_to_target(project, target, url, requirement, products)
     return if target.nil?
     add_spm_to_target_without_nil_guard(project, target, url, requirement, products)
   end
+
+  private :add_spm_to_target_without_nil_guard, :add_spm_to_target
 end
 # ---- end withSpmNilFix ----
 `;
