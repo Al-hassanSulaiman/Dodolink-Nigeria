@@ -16,20 +16,26 @@ const path = require('path');
 
 const SPM_PATCH = `
 # ---- withSpmNilFix: nil-target guard for react-native spm.rb ----
-# Triggered when @clerk/expo registers ClerkKit/ClerkKitUI as SPM dependencies
-# but no matching Pods project target exists for those pod names.
+# @clerk/expo registers ClerkKit/ClerkKitUI as SPM dependencies under pod names
+# that have no matching Pods project target. spm.rb's apply_on_post_install then
+# crashes in TWO places (lines 27 and 33) when project.targets.find returns nil.
 #
-# IMPORTANT: The Podfile DSL evaluates inside Pod::Podfile namespace, so we must
-# use ::SPMManager (top-level constant) to reopen the class defined by spm.rb.
+# Fix: override apply_on_post_install to strip unresolvable pod entries from
+# @dependencies_by_pod before the original method runs, so every target lookup
+# is guaranteed to find a real object.
+#
+# IMPORTANT: Use ::SPMManager (top-level constant) — the Podfile DSL evaluates
+# inside Pod::Podfile, so a bare 'class SPMManager' would create the wrong class.
 class ::SPMManager
-  alias_method :add_spm_to_target_without_nil_guard, :add_spm_to_target
+  alias_method :apply_on_post_install_without_nil_guard, :apply_on_post_install
 
-  def add_spm_to_target(project, target, url, requirement, products)
-    return if target.nil?
-    add_spm_to_target_without_nil_guard(project, target, url, requirement, products)
+  def apply_on_post_install(installer)
+    project = installer.pods_project
+    @dependencies_by_pod.reject! do |pod_name, _|
+      project.targets.none? { |t| t.name == pod_name }
+    end
+    apply_on_post_install_without_nil_guard(installer)
   end
-
-  private :add_spm_to_target_without_nil_guard, :add_spm_to_target
 end
 # ---- end withSpmNilFix ----
 `;
