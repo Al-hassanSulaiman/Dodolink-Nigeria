@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import Home from '@/pages/Home';
+import PrivacyPolicy from '@/pages/PrivacyPolicy';
 import {
   Route,
   Switch,
@@ -21,6 +22,7 @@ function Router() {
     <RoutedErrorBoundary>
       <Switch>
         <Route path="/" component={Home} />
+        <Route path="/privacy" component={PrivacyPolicy} />
         <Route component={NotFound} />
       </Switch>
     </RoutedErrorBoundary>
