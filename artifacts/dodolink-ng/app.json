@@ -22,7 +22,8 @@
         "NSPhotoLibraryAddUsageDescription": "Dodolink needs permission to save images to your photo library.",
         "NSCameraUsageDescription": "Dodolink uses your camera so you can take product photos directly.",
         "NSLocationWhenInUseUsageDescription": "Dodolink uses your location to show nearby stores and help customers find you.",
-        "NSUserNotificationsUsageDescription": "Dodolink sends you notifications for new orders, messages, and store activity."
+        "NSUserNotificationsUsageDescription": "Dodolink sends you notifications for new orders, messages, and store activity.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
