@@ -1,36 +1,28 @@
 ---
-name: Clerk + React Native spm.rb nil crash
-description: @clerk/expo causes "undefined method 'package_product_dependencies' for nil:NilClass" during pod install on Expo SDK 54 iOS builds
+name: Clerk + Expo iOS build failures (spm.rb nil crash, missing ClerkExpo module)
+description: "@clerk/expo iOS builds fail unless its config plugin is registered in app.json; nil crash in spm.rb is a symptom, not the root cause"
 ---
 
 ## The Rule
-When `@clerk/expo` is installed, Expo iOS builds crash in `pod install` with:
-`undefined method 'package_product_dependencies' for nil:NilClass`
-in `react-native/scripts/cocoapods/spm.rb:80`
+`@clerk/expo` MUST be listed in the `plugins` array of `app.json`. Its config plugin bumps the
+iOS deployment target to 17.0 (Clerk's native iOS SDK requires iOS 17). Without it:
 
-This affects react-native 0.81.5 AND 0.81.6 — it is NOT a react-native version issue.
+1. The `ClerkExpo` pod is never installed into the Pods project (deployment target too low),
+2. but Expo autolinking still generates `import ClerkExpo` in ExpoModulesProvider.swift,
+3. and react-native's `spm.rb` crashes with `undefined method ... for nil:NilClass` because
+   `project.targets.find { |t| t.name == "ClerkExpo" }` returns nil — the target doesn't exist.
 
 ## Why
-`@clerk/expo` registers `ClerkKit` and `ClerkKitUI` as SPM dependencies on its pod.
-In `spm.rb#apply_on_post_install`, RN calls:
-`project.targets.find { |t| t.name == pod_name }`
-When `pod_name` is the Clerk pod name and no matching Pods project target exists,
-`find` returns nil. `add_spm_to_target` is then called with nil target and crashes
-at `target.package_product_dependencies`.
-
-## Fix
-A config plugin (`plugins/withSpmNilFix.js`) monkey-patches `SPMManager#add_spm_to_target`
-in the generated Podfile to add `return if target.nil?` before the crash site.
-Register it as the FIRST plugin in `app.json` so it runs during Expo prebuild on EAS.
-
-The plugin uses `withDangerousMod` for iOS to append the Ruby patch to the Podfile.
-The patch reopens `SPMManager`, aliases the original private method, and redefines it
-with a nil guard.
-
-**Why:** Bumping react-native patch versions does NOT fix this — the bug exists in both
-0.81.5 and 0.81.6. The only viable fix without editing node_modules is a config plugin
-that patches the generated Podfile.
+The nil crash in `spm.rb` looked like a react-native bug and was chased through several
+symptom patches (nil guards, `reject!` of unresolvable pods). Those made pod install pass but
+moved the failure to Swift compile: `no such module 'ClerkExpo'`. The real cause was always
+the missing pod, caused by the missing Clerk config plugin. Bumping react-native patch
+versions (0.81.5 → 0.81.6) does NOT help.
 
 ## How to apply
-Ensure `artifacts/dodolink-ng/plugins/withSpmNilFix.js` exists and is registered as
-the first entry in the `plugins` array in `app.json`.
+- Keep `"@clerk/expo"` in `app.json` plugins (near the top).
+- `plugins/withSpmNilFix.js` (Podfile monkey-patch that strips SPM entries with no matching
+  target) is retained as a harmless safety net — it becomes a no-op once the ClerkExpo target
+  exists. If ClerkExpo ever silently disappears from a build again, check deployment target /
+  plugin registration first.
+- Note: this makes the app require iOS 17+.
