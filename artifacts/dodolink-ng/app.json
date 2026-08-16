@@ -44,6 +44,7 @@
       "favicon": "./assets/images/icon.png"
     },
     "plugins": [
+      "./plugins/withSpmNilFix",
       [
         "expo-router",
         {
