@@ -13,7 +13,11 @@
     },
     "production": {
       "autoIncrement": true,
-      "credentialsSource": "local"
+      "credentialsSource": "local",
+      "env": {
+        "EXPO_PUBLIC_DOMAIN": "dodolink.com.ng",
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_ZXhhY3QtcGVsaWNhbi03OC5jbGVyay5hY2NvdW50cy5kZXYk"
+      }
     }
   },
   "submit": {
