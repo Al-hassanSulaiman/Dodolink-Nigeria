@@ -7,4 +7,5 @@
 - [Web API base URL dev vs prod](web-api-base.md) — window.location.origin is correct only in production web; dev web must use EXPO_PUBLIC_DOMAIN (getApiBase handles it)
 - [Clerk proxy URL in Expo prod builds](clerk-expo-prod-proxy.md) — every export bake site needs EXPO_PUBLIC_CLERK_PROXY_URL or prod blank-screens; rebase onto window origin for custom domains
 - [API security model](api-security-model.md) — public reads / authed writes, never trust bodies; Paystack verify hardening; presigned uploads enforced at serve/attach time, not request-url
+- [EAS native env baking](eas-native-env-baking.md) — eas.json build profile needs env block with EXPO_PUBLIC_* vars or TestFlight build crashes on launch; duplicate build numbers error eas submit
 - [Clerk + RN spm.rb nil crash](clerk-spm-nil-crash.md) — @clerk/expo causes pod install crash; fix is a config plugin nil-guard, NOT a RN version bump
