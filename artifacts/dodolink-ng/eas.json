@@ -12,11 +12,13 @@
       "distribution": "internal"
     },
     "production": {
-      "credentialsSource": "local",
       "env": {
         "EXPO_PUBLIC_DOMAIN": "dodolink.com.ng",
         "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsuZG9kb2xpbmsuY29tLm5nJA",
         "EXPO_PUBLIC_CLERK_PROXY_URL": "https://dodolink.com.ng/api/__clerk"
+      },
+      "ios": {
+        "credentialsSource": "local"
       }
     }
   },
