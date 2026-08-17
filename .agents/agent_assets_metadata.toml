@@ -137,3 +137,10 @@ uri = "file://attached_assets/apple_icon_1024x1024.png"
 type = "image"
 title = "Apple App Icon — 1024×1024 PNG"
 description = "Upload this to App Store Connect → App Information → App Icon"
+
+[[outputs]]
+id = "9qP9PRzuYPNfnGCdkZ4OE"
+uri = "file://dodolink-ng.aab"
+type = "unspecified"
+title = "dodolink-ng.aab"
+description = "Android App Bundle — versionCode 4, production Clerk key + proxy baked in. Upload to Play Console → closed test track → Create new release."
