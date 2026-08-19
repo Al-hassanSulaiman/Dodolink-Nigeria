@@ -18,7 +18,7 @@
         "EXPO_PUBLIC_CLERK_PROXY_URL": "https://dodolink.com.ng/api/__clerk"
       },
       "ios": {
-        "credentialsSource": "local"
+        "credentialsSource": "remote"
       }
     }
   },
