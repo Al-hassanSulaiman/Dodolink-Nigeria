@@ -16,8 +16,12 @@ export async function requestUploadUrl(opts: {
   return { uploadURL: res.uploadURL, objectPath: res.objectPath };
 }
 
+const FETCH_TIMEOUT_MS = 30_000;
+const UPLOAD_TIMEOUT_MS = 30_000;
+
 export async function uploadImageToStorage(imageUri: string): Promise<string> {
-  const fileRes = await fetch(imageUri);
+  const fileRes = await fetch(imageUri, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+  if (!fileRes.ok) throw new Error("Could not read the selected image. Please try again.");
   const blob = await fileRes.blob();
   const size = blob.size;
   const contentType = blob.type || "image/jpeg";
@@ -29,6 +33,7 @@ export async function uploadImageToStorage(imageUri: string): Promise<string> {
     method: "PUT",
     headers: { "Content-Type": contentType },
     body: blob,
+    signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS),
   });
 
   if (!uploadRes.ok) throw new Error("Failed to upload image to storage");
@@ -42,7 +47,8 @@ export async function uploadMediaToStorage(
   mimeType: string,
   prefix: "chat-img" | "chat-vid"
 ): Promise<string> {
-  const fileRes = await fetch(uri);
+  const fileRes = await fetch(uri, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+  if (!fileRes.ok) throw new Error("Could not read the selected file. Please try again.");
   const blob = await fileRes.blob();
   const size = blob.size;
 
@@ -60,6 +66,7 @@ export async function uploadMediaToStorage(
     method: "PUT",
     headers: { "Content-Type": contentType },
     body: blob,
+    signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS),
   });
 
   if (!uploadRes.ok) throw new Error("Failed to upload media to storage");

@@ -260,42 +260,49 @@ router.post("/conversations/:conversationId/messages", sendMessageLimit, async (
     })
     .where(eq(conversationsTable.id, conversationId));
 
-  // Send push notification to the recipient.
+  // Respond immediately — push is best-effort and must not block the sender.
+  res.status(201).json(msg);
+
+  // Send push notification to the recipient asynchronously after the response.
   // Derive sender role server-side from the conversation record — never trust
   // the senderType the client submitted, which could be spoofed to misdirect
   // notifications.
-  const [conv] = await db.select().from(conversationsTable).where(eq(conversationsTable.id, conversationId));
-  if (conv) {
-    const [store] = await db
-      .select({ ownerUserId: storesTable.ownerUserId })
-      .from(storesTable)
-      .where(eq(storesTable.id, conv.storeId));
+  (async () => {
+    try {
+      const [conv] = await db.select().from(conversationsTable).where(eq(conversationsTable.id, conversationId));
+      if (!conv) return;
 
-    const senderIsCustomer = conv.customerId === authUserId;
-    const senderIsRetailer = store?.ownerUserId === authUserId;
+      const [store] = await db
+        .select({ ownerUserId: storesTable.ownerUserId })
+        .from(storesTable)
+        .where(eq(storesTable.id, conv.storeId));
 
-    if (senderIsCustomer && store) {
-      // Buyer sent a message → notify the store owner
-      const tokens = await db.select({ token: pushTokensTable.token }).from(pushTokensTable).where(eq(pushTokensTable.userId, store.ownerUserId));
-      await notifyTokens(
-        tokens.map(t => t.token),
-        `New message from ${resolvedSenderName}`,
-        parsed.data.body,
-        { conversationId },
-      );
-    } else if (senderIsRetailer) {
-      // Store owner replied → notify the buyer
-      const tokens = await db.select({ token: pushTokensTable.token }).from(pushTokensTable).where(eq(pushTokensTable.userId, conv.customerId));
-      await notifyTokens(
-        tokens.map(t => t.token),
-        `Reply from ${resolvedSenderName}`,
-        parsed.data.body,
-        { conversationId },
-      );
+      const senderIsCustomerPush = conv.customerId === authUserId;
+      const senderIsRetailerPush = store?.ownerUserId === authUserId;
+
+      if (senderIsCustomerPush && store) {
+        // Buyer sent a message → notify the store owner
+        const tokens = await db.select({ token: pushTokensTable.token }).from(pushTokensTable).where(eq(pushTokensTable.userId, store.ownerUserId));
+        await notifyTokens(
+          tokens.map(t => t.token),
+          `New message from ${resolvedSenderName}`,
+          parsed.data.body,
+          { conversationId },
+        );
+      } else if (senderIsRetailerPush) {
+        // Store owner replied → notify the buyer
+        const tokens = await db.select({ token: pushTokensTable.token }).from(pushTokensTable).where(eq(pushTokensTable.userId, conv.customerId));
+        await notifyTokens(
+          tokens.map(t => t.token),
+          `Reply from ${resolvedSenderName}`,
+          parsed.data.body,
+          { conversationId },
+        );
+      }
+    } catch {
+      // Push failure must never surface as an API error — message is already persisted.
     }
-  }
-
-  res.status(201).json(msg);
+  })();
 });
 
 router.post("/conversations/:conversationId/read", async (req, res): Promise<void> => {

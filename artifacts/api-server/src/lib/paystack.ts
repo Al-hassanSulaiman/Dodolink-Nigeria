@@ -43,13 +43,31 @@ export interface PaystackTransaction {
   };
 }
 
+const PAYSTACK_TIMEOUT_MS = 15_000;
+
+async function paystackFetch(url: string, init?: RequestInit): Promise<Response> {
+  const res = await fetch(url, {
+    ...init,
+    signal: AbortSignal.timeout(PAYSTACK_TIMEOUT_MS),
+  });
+  if (!res.ok) {
+    let message = `Paystack HTTP ${res.status}`;
+    try {
+      const body = (await res.json()) as { message?: string };
+      if (body.message) message = body.message;
+    } catch { /* ignore parse errors on error bodies */ }
+    throw new Error(message);
+  }
+  return res;
+}
+
 export async function paystackInitialize(
   email: string,
   amountKobo: number,
   reference: string,
   metadata: Record<string, unknown>
 ): Promise<{ authorization_url: string; reference: string }> {
-  const res = await fetch(`${PAYSTACK_BASE}/transaction/initialize`, {
+  const res = await paystackFetch(`${PAYSTACK_BASE}/transaction/initialize`, {
     method: "POST",
     headers: headers(),
     body: JSON.stringify({ email, amount: amountKobo, reference, metadata }),
@@ -60,7 +78,7 @@ export async function paystackInitialize(
 }
 
 export async function paystackVerify(reference: string): Promise<PaystackTransaction> {
-  const res = await fetch(
+  const res = await paystackFetch(
     `${PAYSTACK_BASE}/transaction/verify/${encodeURIComponent(reference)}`,
     { headers: headers() }
   );
@@ -75,7 +93,11 @@ export async function paystackChargeAuthorization(
   amountKobo: number,
   reference?: string
 ): Promise<{ status: string; reference: string }> {
-  const res = await fetch(`${PAYSTACK_BASE}/transaction/charge_authorization`, {
+  // charge_authorization is irreversible, so the bounded timeout here is only
+  // safe because every caller persists `reference` BEFORE charging and, on any
+  // error/timeout, reconciles that same reference via paystackVerify() before
+  // ever attempting a new charge. Never call this without a durable reference.
+  const res = await paystackFetch(`${PAYSTACK_BASE}/transaction/charge_authorization`, {
     method: "POST",
     headers: headers(),
     body: JSON.stringify({

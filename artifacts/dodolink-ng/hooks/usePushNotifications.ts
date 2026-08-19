@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import Constants from 'expo-constants';
-import { Platform } from 'react-native';
+import { Alert, Linking, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { registerPushToken } from '@workspace/api-client-react';
 
@@ -45,7 +45,20 @@ export function usePushNotifications(userId: string | null) {
           finalStatus = status;
         }
 
-        if (!active || finalStatus !== 'granted') return;
+        if (!active) return;
+
+        if (finalStatus !== 'granted') {
+          // Show a one-time alert so users know how to enable notifications
+          Alert.alert(
+            'Notifications are off',
+            'Enable notifications in Settings to get messages and alerts from Dodolink.',
+            [
+              { text: 'Not now', style: 'cancel' },
+              { text: 'Open Settings', onPress: () => Linking.openSettings() },
+            ]
+          );
+          return;
+        }
 
         if (Platform.OS === 'android') {
           await N!.setNotificationChannelAsync('messages', {
@@ -61,7 +74,10 @@ export function usePushNotifications(userId: string | null) {
         if (active && tokenData?.data) {
           await registerPushToken({ userId, token: tokenData.data });
         }
-      } catch { /* Silently fail */ }
+      } catch (err) {
+        // Registration failed — not critical, app still works without push
+        console.warn('[PushNotifications] Registration failed:', err);
+      }
     })();
 
     notifListener.current = N.addNotificationReceivedListener(() => {});

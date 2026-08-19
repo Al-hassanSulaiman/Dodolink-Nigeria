@@ -239,7 +239,7 @@ describe("POST /admin/admins", () => {
     const { db } = await import("@workspace/db");
     setupSelectMock(db as any, [
       BOOTSTRAP_COUNT, // bootstrap count
-      [{ id: 1 }],     // requireAdmin match
+      [{ id: 1, email: ADMIN_EMAIL }], // requireAdmin cached email set → match
     ]);
     (db as any).insert.mockImplementation(() => makeInsertChain());
 
@@ -254,7 +254,7 @@ describe("POST /admin/admins", () => {
     const { db } = await import("@workspace/db");
     setupSelectMock(db as any, [
       BOOTSTRAP_COUNT,                              // bootstrap count
-      [{ id: 1 }],                                  // requireAdmin match
+      [{ id: 1, email: ADMIN_EMAIL }],              // requireAdmin cached email set → match
       [{ id: OTHER_ADMIN_ID, email: OTHER_ADMIN_EMAIL }], // existing-admin lookup → found
     ]);
     (db as any).insert.mockImplementation(() => makeInsertChain());
@@ -272,7 +272,7 @@ describe("POST /admin/admins", () => {
     const { eq } = await import("drizzle-orm");
     setupSelectMock(db as any, [
       BOOTSTRAP_COUNT,
-      [{ id: 1 }],
+      [{ id: 1, email: ADMIN_EMAIL }], // requireAdmin cached email set → match
       [{ id: OTHER_ADMIN_ID, email: OTHER_ADMIN_EMAIL }], // lookup with normalized email → found
     ]);
     (db as any).insert.mockImplementation(() => makeInsertChain());
@@ -293,7 +293,7 @@ describe("POST /admin/admins", () => {
     const { db } = await import("@workspace/db");
     setupSelectMock(db as any, [
       BOOTSTRAP_COUNT,
-      [{ id: 1 }],
+      [{ id: 1, email: ADMIN_EMAIL }], // requireAdmin cached email set → match
       [],              // existing-admin lookup → none
     ]);
     let insertedValues: any;

@@ -9,8 +9,11 @@ import {
 import {
   paystackInitialize,
   paystackVerify,
-  paystackChargeAuthorization,
 } from "../lib/paystack";
+import {
+  chargeStoreSubscription,
+  type ChargeStoreResult,
+} from "../lib/subscriptionBilling";
 import {
   ENGAGEMENT_THRESHOLD,
   PREMIUM_ENGAGEMENT_THRESHOLD,
@@ -276,40 +279,41 @@ router.post("/stores/:storeId/subscription/charge", paymentLimit, async (req, re
   const chargeEngagement = await getEngagementCount(storeId);
   const chargeAmountKobo = getSubscriptionAmountKobo(chargeEngagement);
 
+  // Delegate to the shared charging service — the SAME lock-protected routine
+  // the auto-charge worker uses, so manual and automatic charges for a store
+  // can never run concurrently. Inside the lock it reconciles every pending
+  // attempt (manual or auto) before reserving and charging a new reference.
+  let result: ChargeStoreResult;
   try {
-    const result = await paystackChargeAuthorization(
-      store.paystackAuthCode,
-      store.paystackEmail,
-      chargeAmountKobo
-    );
+    result = await chargeStoreSubscription({
+      storeId,
+      authCode: store.paystackAuthCode,
+      email: store.paystackEmail,
+      amountKobo: chargeAmountKobo,
+      reference: `dodolink_manual_${storeId}_${Date.now()}`,
+    });
+  } catch (err) {
+    req.log.error({ err, storeId }, "Manual charge: unexpected error");
+    res.status(502).json({ error: "Payment provider error. Please try again." });
+    return;
+  }
 
-    if (result.status !== "success") {
-      await db
-        .update(storesTable)
-        .set({ subscriptionStatus: "past_due" })
-        .where(eq(storesTable.id, storeId));
-      res.status(400).json({ error: `Charge failed (status: ${result.status})` });
+  switch (result.kind) {
+    case "charged":
+    case "already_active": {
+      const [fresh] = await db.select().from(storesTable).where(eq(storesTable.id, storeId));
+      const engagementCount = await getEngagementCount(storeId);
+      res.json(buildStatus(fresh, engagementCount));
       return;
     }
-
-    const now = new Date();
-    const dueAt = new Date(now.getTime() + SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000);
-
-    const [updated] = await db
-      .update(storesTable)
-      .set({
-        subscriptionStatus: "active",
-        subscriptionLastPaidAt: now,
-        subscriptionDueAt: dueAt,
-      })
-      .where(eq(storesTable.id, storeId))
-      .returning();
-
-    const engagementCount = await getEngagementCount(storeId);
-    res.json(buildStatus(updated, engagementCount));
-  } catch (err) {
-    req.log.error({ err }, "Paystack charge failed");
-    res.status(502).json({ error: "Payment provider error" });
+    case "declined":
+      res.status(400).json({ error: `Charge failed (${result.reason})` });
+      return;
+    case "unconfirmed":
+      // Outcome unknown: pending row kept for later reconciliation. Do not
+      // tell the client a retry is safe yet.
+      res.status(502).json({ error: "Payment status is being confirmed. Please check back shortly before retrying." });
+      return;
   }
 });
 

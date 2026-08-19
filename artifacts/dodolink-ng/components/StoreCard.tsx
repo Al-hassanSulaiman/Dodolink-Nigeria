@@ -9,12 +9,18 @@ import { Feather } from '@expo/vector-icons';
 
 export function StoreCard({ store }: { store: Store }) {
   const colors = useColors();
-  
+  const [imgError, setImgError] = React.useState(false);
+
   return (
     <Link href={`/store/${store.id}`} asChild>
       <Pressable style={StyleSheet.flatten([styles.card, { backgroundColor: colors.card, borderColor: colors.border }])}>
-        {store.imageUrl ? (
-          <Image source={{ uri: getImageUrl(store.imageUrl) }} style={styles.image} resizeMode="cover" />
+        {store.imageUrl && !imgError ? (
+          <Image
+            source={{ uri: getImageUrl(store.imageUrl) }}
+            style={styles.image}
+            resizeMode="cover"
+            onError={() => setImgError(true)}
+          />
         ) : (
           <ImagePlaceholder name={store.name} size={64} borderRadius={32} />
         )}

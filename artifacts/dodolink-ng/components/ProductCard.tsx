@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, View, Text, Pressable, Image } from 'react-native';
 import { Link } from 'expo-router';
 import { Product } from '@workspace/api-client-react';
@@ -10,12 +10,18 @@ export function ProductCard({ product }: { product: Product }) {
   const colors = useColors();
   const rawThumb = (product.imageUrls && product.imageUrls[0]) || product.imageUrl || null;
   const thumbnail = rawThumb ? getImageUrl(rawThumb) : null;
+  const [imgError, setImgError] = useState(false);
 
   return (
     <Link href={`/product/${product.id}`} asChild>
       <Pressable style={StyleSheet.flatten([styles.card, { backgroundColor: colors.card, borderColor: colors.border }])}>
-        {thumbnail ? (
-          <Image source={{ uri: thumbnail }} style={styles.image} resizeMode="cover" />
+        {thumbnail && !imgError ? (
+          <Image
+            source={{ uri: thumbnail }}
+            style={styles.image}
+            resizeMode="cover"
+            onError={() => setImgError(true)}
+          />
         ) : (
           <View style={[styles.imageContainer, { backgroundColor: colors.muted }]}>
             <ImagePlaceholder name={product.name} size={80} borderRadius={0} />
