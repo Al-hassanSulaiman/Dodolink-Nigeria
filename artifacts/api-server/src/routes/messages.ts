@@ -16,6 +16,11 @@ const objectStorage = new ObjectStorageService();
 const startConversationLimit = rateLimit({ name: "conv-start", max: 15, windowMs: 5 * 60 * 1000 });
 const sendMessageLimit = rateLimit({ name: "msg-send", max: 30, windowMs: 60 * 1000 });
 
+function notificationPreview(body: string, mediaUrl?: string | null): string {
+  if (body.trim()) return body;
+  return mediaUrl ? "Sent a photo or video" : "New message";
+}
+
 async function loadConversationIfParticipant(conversationId: number, userId: string) {
   const [conv] = await db.select().from(conversationsTable).where(eq(conversationsTable.id, conversationId));
   if (!conv) return { conv: null, allowed: false };
@@ -286,7 +291,7 @@ router.post("/conversations/:conversationId/messages", sendMessageLimit, async (
         await notifyTokens(
           tokens.map(t => t.token),
           `New message from ${resolvedSenderName}`,
-          parsed.data.body,
+          notificationPreview(parsed.data.body, parsed.data.mediaUrl),
           { conversationId },
         );
       } else if (senderIsRetailerPush) {
@@ -295,7 +300,7 @@ router.post("/conversations/:conversationId/messages", sendMessageLimit, async (
         await notifyTokens(
           tokens.map(t => t.token),
           `Reply from ${resolvedSenderName}`,
-          parsed.data.body,
+          notificationPreview(parsed.data.body, parsed.data.mediaUrl),
           { conversationId },
         );
       }

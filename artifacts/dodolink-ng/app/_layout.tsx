@@ -1,5 +1,5 @@
 import { useFonts } from "expo-font";
-import { ClerkProvider, ClerkLoaded } from "@clerk/expo";
+import { ClerkProvider, ClerkLoaded, useAuth, useUser } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
@@ -11,9 +11,8 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { setBaseUrl } from "@workspace/api-client-react";
+import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
-import { useUser } from "@clerk/expo";
 import { getApiBase } from "@/utils/apiBase";
 
 setBaseUrl(getApiBase());
@@ -45,7 +44,13 @@ const queryClient = new QueryClient();
 
 function PushNotificationsGate() {
   const { user } = useUser();
-  usePushNotifications(user?.id ?? null);
+  const { getToken, isSignedIn } = useAuth();
+
+  // Push registration happens at the root, before the tab layout is guaranteed
+  // to mount. Set the bearer-token getter here so saving a device token never
+  // fails with an unauthenticated request immediately after sign-in.
+  setAuthTokenGetter(() => getToken());
+  usePushNotifications(isSignedIn ? user?.id ?? null : null);
   return null;
 }
 

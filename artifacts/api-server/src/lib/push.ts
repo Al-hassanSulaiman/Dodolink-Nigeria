@@ -9,6 +9,8 @@ interface PushMessage {
   data?: Record<string, unknown>;
   sound?: "default" | null;
   badge?: number;
+  channelId?: string;
+  priority?: "default" | "normal" | "high";
 }
 
 export async function sendPushNotification(messages: PushMessage[]): Promise<void> {
@@ -24,6 +26,21 @@ export async function sendPushNotification(messages: PushMessage[]): Promise<voi
     });
     if (!res.ok) {
       logger.warn({ status: res.status }, "Expo push API returned non-200");
+      return;
+    }
+
+    const payload = await res.json().catch(() => null) as {
+      data?: Array<{ status?: string; message?: string; details?: unknown }>;
+    } | null;
+    const rejected = payload?.data?.filter((ticket) => ticket.status === "error") ?? [];
+    if (rejected.length > 0) {
+      logger.warn(
+        {
+          rejected: rejected.length,
+          failures: rejected.map(({ message, details }) => ({ message, details })),
+        },
+        "Expo rejected one or more push notifications",
+      );
     }
   } catch (err) {
     logger.error({ err }, "Failed to send push notification");
@@ -39,5 +56,16 @@ export async function notifyTokens(
   if (tokens.length === 0) return;
   const valid = tokens.filter((t) => t.startsWith("ExponentPushToken[") || t.startsWith("ExpoPushToken["));
   if (valid.length === 0) return;
-  await sendPushNotification(valid.map((to) => ({ to, title, body, data, sound: "default" })));
+  await sendPushNotification(valid.map((to) => ({
+    to,
+    title,
+    body,
+    data,
+    sound: "default",
+    // The mobile app defines this channel at maximum importance. Without the
+    // channel ID Android can place a chat notification on a low-priority
+    // default channel and not show a heads-up alert.
+    channelId: "messages",
+    priority: "high",
+  })));
 }

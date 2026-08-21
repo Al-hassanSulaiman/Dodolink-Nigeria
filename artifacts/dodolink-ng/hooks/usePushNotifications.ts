@@ -9,6 +9,7 @@ import { registerPushToken } from '@workspace/api-client-react';
 type NotificationsModule = typeof import('expo-notifications');
 
 const isExpoGo = Constants.appOwnership === 'expo';
+const expoProjectId = Constants.easConfig?.projectId ?? Constants.expoConfig?.extra?.eas?.projectId;
 
 let N: NotificationsModule | null = null;
 if (!isExpoGo) {
@@ -37,6 +38,11 @@ export function usePushNotifications(userId: string | null) {
 
     (async () => {
       try {
+        if (typeof expoProjectId !== 'string' || !expoProjectId) {
+          console.warn('[PushNotifications] Missing Expo project ID; token registration skipped.');
+          return;
+        }
+
         const { status: existing } = await N!.getPermissionsAsync();
         let finalStatus = existing;
 
@@ -70,7 +76,7 @@ export function usePushNotifications(userId: string | null) {
           });
         }
 
-        const tokenData = await N!.getExpoPushTokenAsync();
+        const tokenData = await N!.getExpoPushTokenAsync({ projectId: expoProjectId });
         if (active && tokenData?.data) {
           await registerPushToken({ userId, token: tokenData.data });
         }
