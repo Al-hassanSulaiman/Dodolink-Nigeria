@@ -19,24 +19,87 @@ export async function requestUploadUrl(opts: {
 const FETCH_TIMEOUT_MS = 30_000;
 const UPLOAD_TIMEOUT_MS = 30_000;
 
-export async function uploadImageToStorage(imageUri: string): Promise<string> {
-  const fileRes = await fetch(imageUri, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
-  if (!fileRes.ok) throw new Error("Could not read the selected image. Please try again.");
+/**
+ * React Native does not provide AbortSignal.timeout in production Android/iOS
+ * builds. Use AbortController directly, with a Promise.race fallback for older
+ * runtimes, so uploads still have a bounded wait without crashing first.
+ */
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+  timeoutMessage: string,
+): Promise<Response> {
+  if (typeof AbortController === "undefined") {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        fetch(url, init),
+        new Promise<Response>((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
+  }
+
+  const controller = new AbortController();
+  let timedOut = false;
+  const timeoutId = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (timedOut) throw new Error(timeoutMessage);
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function readLocalFile(uri: string): Promise<Blob> {
+  const fileRes = await fetchWithTimeout(
+    uri,
+    {},
+    FETCH_TIMEOUT_MS,
+    "Reading the selected file took too long. Please choose it again.",
+  );
+  if (!fileRes.ok) throw new Error("Could not read the selected file. Please choose it again.");
   const blob = await fileRes.blob();
+  if (blob.size === 0) throw new Error("The selected file is empty. Please choose another file.");
+  return blob;
+}
+
+async function uploadBlob(
+  uploadURL: string,
+  blob: Blob,
+  contentType: string,
+): Promise<void> {
+  const uploadRes = await fetchWithTimeout(
+    uploadURL,
+    {
+      method: "PUT",
+      headers: { "Content-Type": contentType },
+      body: blob,
+    },
+    UPLOAD_TIMEOUT_MS,
+    "Uploading the file took too long. Check your connection and try again.",
+  );
+  if (!uploadRes.ok) throw new Error("Could not upload the file. Check your connection and try again.");
+}
+
+export async function uploadImageToStorage(imageUri: string): Promise<string> {
+  const blob = await readLocalFile(imageUri);
   const size = blob.size;
   const contentType = blob.type || "image/jpeg";
   const name = `product-${Date.now()}.jpg`;
 
   const { uploadURL, objectPath } = await requestUploadUrl({ name, size, contentType });
-
-  const uploadRes = await fetch(uploadURL, {
-    method: "PUT",
-    headers: { "Content-Type": contentType },
-    body: blob,
-    signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS),
-  });
-
-  if (!uploadRes.ok) throw new Error("Failed to upload image to storage");
+  await uploadBlob(uploadURL, blob, contentType);
   return objectPath;
 }
 
@@ -47,9 +110,7 @@ export async function uploadMediaToStorage(
   mimeType: string,
   prefix: "chat-img" | "chat-vid"
 ): Promise<string> {
-  const fileRes = await fetch(uri, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
-  if (!fileRes.ok) throw new Error("Could not read the selected file. Please try again.");
-  const blob = await fileRes.blob();
+  const blob = await readLocalFile(uri);
   const size = blob.size;
 
   if (size > MAX_MEDIA_BYTES) {
@@ -61,14 +122,6 @@ export async function uploadMediaToStorage(
   const contentType = mimeType || (prefix === "chat-vid" ? "video/mp4" : "image/jpeg");
 
   const { uploadURL, objectPath } = await requestUploadUrl({ name, size, contentType });
-
-  const uploadRes = await fetch(uploadURL, {
-    method: "PUT",
-    headers: { "Content-Type": contentType },
-    body: blob,
-    signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS),
-  });
-
-  if (!uploadRes.ok) throw new Error("Failed to upload media to storage");
+  await uploadBlob(uploadURL, blob, contentType);
   return objectPath;
 }

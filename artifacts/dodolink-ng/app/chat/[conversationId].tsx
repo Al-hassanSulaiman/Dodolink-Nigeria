@@ -25,6 +25,17 @@ import { showAlert } from '@/utils/alerts';
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const MEDIA_WIDTH = SCREEN_WIDTH * 0.65;
 
+function mediaSendErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message.trim() : '';
+  if (!message || message === 'undefined is not a function') {
+    return 'We could not prepare that photo. Tap + to choose it again.';
+  }
+  if (/network request failed|failed to fetch/i.test(message)) {
+    return 'Could not upload the photo. Check your connection, then tap + to try again.';
+  }
+  return `${message} Tap + to try again.`;
+}
+
 // Small component so each video gets its own player instance
 function VideoBubble({ uri, isMe, colors }: { uri: string; isMe: boolean; colors: ReturnType<typeof useColors> }) {
   const player = useVideoPlayer(uri, p => { p.loop = false; });
@@ -143,7 +154,7 @@ export default function ChatThreadScreen() {
         );
       });
     } catch (err: any) {
-      showAlert('Send failed', err?.message ?? 'Could not send media. Please try again.');
+      showAlert('Photo not sent', mediaSendErrorMessage(err));
     } finally {
       setUploading(false);
     }
@@ -226,6 +237,7 @@ export default function ChatThreadScreen() {
           style={[styles.mediaButton, { backgroundColor: colors.muted }]}
           onPress={handlePickMedia}
           disabled={isBusy}
+          testID="chat-media-button"
         >
           {uploading
             ? <ActivityIndicator size="small" color={colors.primary} />
@@ -247,6 +259,7 @@ export default function ChatThreadScreen() {
           style={[styles.sendButton, { backgroundColor: message.trim() ? colors.primary : colors.muted }]}
           onPress={handleSend}
           disabled={!message.trim() || isBusy}
+          testID="chat-send-button"
         >
           <Feather name="send" size={20} color={message.trim() ? colors.primaryForeground : colors.mutedForeground} />
         </Pressable>
