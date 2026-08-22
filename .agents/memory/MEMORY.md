@@ -12,3 +12,4 @@
 - [ASC review build swap](asc-review-build-swap.md) — can't swap build while WAITING_FOR_REVIEW; cancel submission, wait ~30s, attach, resubmit (metadata kept)
 - [Clerk + RN spm.rb nil crash](clerk-spm-nil-crash.md) — @clerk/expo causes pod install crash; fix is a config plugin nil-guard, NOT a RN version bump
 - [React Native upload timeouts](react-native-upload-timeouts.md) — production Android/iOS lacks AbortSignal.timeout; use AbortController plus a cleared timer
+- [EAS Submit credential conflicts](eas-submit-credential-conflicts.md) — Expo MCP may combine incompatible Apple auth; submit by build ID with EAS CLI from the mobile app directory

@@ -20,6 +20,9 @@
       "ios": {
         "credentialsSource": "remote",
         "image": "macos-sequoia-15.5-xcode-26.0"
+      },
+      "android": {
+        "image": "ubuntu-24.04-jdk-17-ndk-r27b"
       }
     }
   },
