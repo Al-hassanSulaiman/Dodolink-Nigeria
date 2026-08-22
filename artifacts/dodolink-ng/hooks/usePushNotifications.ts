@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import Constants from 'expo-constants';
-import { Platform } from 'react-native';
+import { Alert, Linking, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { registerPushToken } from '@workspace/api-client-react';
 
@@ -9,6 +9,7 @@ import { registerPushToken } from '@workspace/api-client-react';
 type NotificationsModule = typeof import('expo-notifications');
 
 const isExpoGo = Constants.appOwnership === 'expo';
+const expoProjectId = Constants.easConfig?.projectId ?? Constants.expoConfig?.extra?.eas?.projectId;
 
 let N: NotificationsModule | null = null;
 if (!isExpoGo) {
@@ -37,6 +38,11 @@ export function usePushNotifications(userId: string | null) {
 
     (async () => {
       try {
+        if (typeof expoProjectId !== 'string' || !expoProjectId) {
+          console.warn('[PushNotifications] Missing Expo project ID; token registration skipped.');
+          return;
+        }
+
         const { status: existing } = await N!.getPermissionsAsync();
         let finalStatus = existing;
 
@@ -45,7 +51,20 @@ export function usePushNotifications(userId: string | null) {
           finalStatus = status;
         }
 
-        if (!active || finalStatus !== 'granted') return;
+        if (!active) return;
+
+        if (finalStatus !== 'granted') {
+          // Show a one-time alert so users know how to enable notifications
+          Alert.alert(
+            'Notifications are off',
+            'Enable notifications in Settings to get messages and alerts from Dodolink.',
+            [
+              { text: 'Not now', style: 'cancel' },
+              { text: 'Open Settings', onPress: () => Linking.openSettings() },
+            ]
+          );
+          return;
+        }
 
         if (Platform.OS === 'android') {
           await N!.setNotificationChannelAsync('messages', {
@@ -57,11 +76,14 @@ export function usePushNotifications(userId: string | null) {
           });
         }
 
-        const tokenData = await N!.getExpoPushTokenAsync();
+        const tokenData = await N!.getExpoPushTokenAsync({ projectId: expoProjectId });
         if (active && tokenData?.data) {
           await registerPushToken({ userId, token: tokenData.data });
         }
-      } catch { /* Silently fail */ }
+      } catch (err) {
+        // Registration failed — not critical, app still works without push
+        console.warn('[PushNotifications] Registration failed:', err);
+      }
     })();
 
     notifListener.current = N.addNotificationReceivedListener(() => {});
