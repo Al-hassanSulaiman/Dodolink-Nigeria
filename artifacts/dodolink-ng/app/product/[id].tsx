@@ -15,6 +15,7 @@ import { ImagePlaceholder } from '@/components/ImagePlaceholder';
 import { getImageUrl } from '@/utils/storage';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { showAlert } from '@/utils/alerts';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -38,12 +39,19 @@ export default function ProductScreen() {
     mutation: {
       onSuccess: (data) => {
         router.push(`/chat/${data.id}`);
-      }
+      },
+      onError: () => {
+        showAlert('Could not start chat', 'Something went wrong. Please try again.');
+      },
     }
   });
 
   const handleChat = () => {
-    if (!product || !userId || !userName) return;
+    if (!product) return;
+    if (!userId || !userName) {
+      router.push('/(auth)/sign-in');
+      return;
+    }
     startConversation.mutate({ data: {
       customerId: userId,
       customerName: userName,
@@ -57,11 +65,25 @@ export default function ProductScreen() {
     setActiveImageIndex(index);
   };
 
+  // Image error state — must be declared before any early returns (Rules of Hooks)
+  const [imgErrors, setImgErrors] = useState<Record<number, boolean>>({});
+  const [storeImgError, setStoreImgError] = useState(false);
+  const handleImgError = (index: number) => setImgErrors(prev => ({ ...prev, [index]: true }));
+
   const isOwner = !!userId && !!store && store.ownerUserId === userId;
   const refreshing = productLoading || storeLoading;
 
   if ((productLoading || storeLoading) && !product) return <LoadingScreen message="Loading product..." />;
-  if (!product) return null;
+  if (!product) return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+      <Feather name="alert-circle" size={48} color="#9CA3AF" />
+      <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 18, color: '#374151', marginTop: 16, textAlign: 'center' }}>Product not found</Text>
+      <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 14, color: '#9CA3AF', marginTop: 8, textAlign: 'center' }}>This product may have been removed.</Text>
+      <Pressable onPress={() => refetchProduct()} style={{ marginTop: 20, paddingHorizontal: 24, paddingVertical: 10, backgroundColor: '#1B5E20', borderRadius: 20 }}>
+        <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#fff' }}>Try again</Text>
+      </Pressable>
+    </View>
+  );
 
   // Build image list: prefer imageUrls array, fall back to single imageUrl
   const images: string[] =
@@ -90,12 +112,19 @@ export default function ProductScreen() {
               scrollEventThrottle={16}
             >
               {images.map((img, index) => (
-                <Image
-                  key={index}
-                  source={{ uri: getImageUrl(img) }}
-                  style={[styles.galleryImage, { width: SCREEN_WIDTH }]}
-                  resizeMode="cover"
-                />
+                imgErrors[index] ? (
+                  <View key={index} style={[styles.galleryImage, { width: SCREEN_WIDTH, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' }]}>
+                    <ImagePlaceholder name={product.name} size={120} borderRadius={0} />
+                  </View>
+                ) : (
+                  <Image
+                    key={index}
+                    source={{ uri: getImageUrl(img) }}
+                    style={[styles.galleryImage, { width: SCREEN_WIDTH }]}
+                    resizeMode="cover"
+                    onError={() => handleImgError(index)}
+                  />
+                )
               ))}
             </ScrollView>
             {/* Dot indicators — only show when there are multiple images */}
@@ -141,8 +170,8 @@ export default function ProductScreen() {
           {store && (
             <Link href={`/store/${store.id}`} asChild>
               <Pressable style={StyleSheet.flatten([styles.storeCard, { backgroundColor: colors.card, borderColor: colors.border }])}>
-                {store.imageUrl ? (
-                  <Image source={{ uri: getImageUrl(store.imageUrl) }} style={styles.storeImage} />
+                {store.imageUrl && !storeImgError ? (
+                  <Image source={{ uri: getImageUrl(store.imageUrl) }} style={styles.storeImage} onError={() => setStoreImgError(true)} />
                 ) : (
                   <ImagePlaceholder name={store.name} size={40} borderRadius={20} />
                 )}
