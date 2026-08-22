@@ -18,7 +18,8 @@
         "EXPO_PUBLIC_CLERK_PROXY_URL": "https://dodolink.com.ng/api/__clerk"
       },
       "ios": {
-        "credentialsSource": "remote"
+        "credentialsSource": "remote",
+        "image": "macos-sequoia-15.5-xcode-26.0"
       }
     }
   },
