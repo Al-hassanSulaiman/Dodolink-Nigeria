@@ -3,6 +3,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { db, conversationsTable, messagesTable, storesTable, pushTokensTable } from "@workspace/db";
 import { SendMessageBody, StartConversationBody } from "@workspace/api-zod";
 import { notifyTokens } from "../lib/push";
+import { logger } from "../lib/logger";
 import { checkAndSetQualifiedAt } from "../lib/storeSubscription";
 import { requireUser } from "../lib/auth";
 import { rateLimit } from "../lib/rateLimit";
@@ -15,6 +16,11 @@ const objectStorage = new ObjectStorageService();
 
 const startConversationLimit = rateLimit({ name: "conv-start", max: 15, windowMs: 5 * 60 * 1000 });
 const sendMessageLimit = rateLimit({ name: "msg-send", max: 30, windowMs: 60 * 1000 });
+
+function notificationPreview(body: string, mediaUrl?: string | null): string {
+  if (body.trim()) return body;
+  return mediaUrl ? "Sent a photo or video" : "New message";
+}
 
 async function loadConversationIfParticipant(conversationId: number, userId: string) {
   const [conv] = await db.select().from(conversationsTable).where(eq(conversationsTable.id, conversationId));
@@ -260,42 +266,58 @@ router.post("/conversations/:conversationId/messages", sendMessageLimit, async (
     })
     .where(eq(conversationsTable.id, conversationId));
 
-  // Send push notification to the recipient.
+  // Respond immediately — push is best-effort and must not block the sender.
+  res.status(201).json(msg);
+
+  // Send push notification to the recipient asynchronously after the response.
   // Derive sender role server-side from the conversation record — never trust
   // the senderType the client submitted, which could be spoofed to misdirect
   // notifications.
-  const [conv] = await db.select().from(conversationsTable).where(eq(conversationsTable.id, conversationId));
-  if (conv) {
-    const [store] = await db
-      .select({ ownerUserId: storesTable.ownerUserId })
-      .from(storesTable)
-      .where(eq(storesTable.id, conv.storeId));
+  (async () => {
+    try {
+      const [conv] = await db.select().from(conversationsTable).where(eq(conversationsTable.id, conversationId));
+      if (!conv) return;
 
-    const senderIsCustomer = conv.customerId === authUserId;
-    const senderIsRetailer = store?.ownerUserId === authUserId;
+      const [store] = await db
+        .select({ ownerUserId: storesTable.ownerUserId })
+        .from(storesTable)
+        .where(eq(storesTable.id, conv.storeId));
 
-    if (senderIsCustomer && store) {
-      // Buyer sent a message → notify the store owner
-      const tokens = await db.select({ token: pushTokensTable.token }).from(pushTokensTable).where(eq(pushTokensTable.userId, store.ownerUserId));
-      await notifyTokens(
-        tokens.map(t => t.token),
-        `New message from ${resolvedSenderName}`,
-        parsed.data.body,
-        { conversationId },
-      );
-    } else if (senderIsRetailer) {
-      // Store owner replied → notify the buyer
-      const tokens = await db.select({ token: pushTokensTable.token }).from(pushTokensTable).where(eq(pushTokensTable.userId, conv.customerId));
-      await notifyTokens(
-        tokens.map(t => t.token),
-        `Reply from ${resolvedSenderName}`,
-        parsed.data.body,
-        { conversationId },
-      );
+      const senderIsCustomerPush = conv.customerId === authUserId;
+      const senderIsRetailerPush = store?.ownerUserId === authUserId;
+
+      if (senderIsCustomerPush && store) {
+        // Buyer sent a message → notify the store owner
+        const tokens = await db.select({ token: pushTokensTable.token }).from(pushTokensTable).where(eq(pushTokensTable.userId, store.ownerUserId));
+        if (tokens.length === 0) {
+          logger.warn({ conversationId, recipientUserId: store.ownerUserId }, "Message push skipped: recipient has no registered device token");
+          return;
+        }
+        await notifyTokens(
+          tokens.map(t => t.token),
+          `New message from ${resolvedSenderName}`,
+          notificationPreview(parsed.data.body, parsed.data.mediaUrl),
+          { conversationId },
+        );
+      } else if (senderIsRetailerPush) {
+        // Store owner replied → notify the buyer
+        const tokens = await db.select({ token: pushTokensTable.token }).from(pushTokensTable).where(eq(pushTokensTable.userId, conv.customerId));
+        if (tokens.length === 0) {
+          logger.warn({ conversationId, recipientUserId: conv.customerId }, "Message push skipped: recipient has no registered device token");
+          return;
+        }
+        await notifyTokens(
+          tokens.map(t => t.token),
+          `Reply from ${resolvedSenderName}`,
+          notificationPreview(parsed.data.body, parsed.data.mediaUrl),
+          { conversationId },
+        );
+      }
+    } catch (err) {
+      // Push failure must never surface as an API error — message is already persisted.
+      logger.error({ err, conversationId }, "Failed to dispatch message push notification");
     }
-  }
-
-  res.status(201).json(msg);
+  })();
 });
 
 router.post("/conversations/:conversationId/read", async (req, res): Promise<void> => {
