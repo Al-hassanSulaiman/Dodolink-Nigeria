@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db, pushTokensTable } from "@workspace/db";
 import { RegisterPushTokenBody } from "@workspace/api-zod";
 import { requireUser } from "../lib/auth";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
@@ -28,8 +29,15 @@ router.post("/push-tokens", async (req, res): Promise<void> => {
     .where(eq(pushTokensTable.userId, userId));
 
   const tokenExists = existing.find((r) => r.token === token);
-  if (!tokenExists) {
+  if (tokenExists) {
+    await db
+      .update(pushTokensTable)
+      .set({ updatedAt: new Date() })
+      .where(eq(pushTokensTable.id, tokenExists.id));
+    logger.info({ userId, tokenCount: existing.length }, "Push token refreshed");
+  } else {
     await db.insert(pushTokensTable).values({ userId, token });
+    logger.info({ userId, tokenCount: existing.length + 1 }, "Push token registered");
   }
 
   res.json({ status: "ok" });
