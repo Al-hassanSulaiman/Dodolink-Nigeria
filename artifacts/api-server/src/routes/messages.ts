@@ -3,6 +3,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { db, conversationsTable, messagesTable, storesTable, pushTokensTable } from "@workspace/db";
 import { SendMessageBody, StartConversationBody } from "@workspace/api-zod";
 import { notifyTokens } from "../lib/push";
+import { logger } from "../lib/logger";
 import { checkAndSetQualifiedAt } from "../lib/storeSubscription";
 import { requireUser } from "../lib/auth";
 import { rateLimit } from "../lib/rateLimit";
@@ -288,6 +289,10 @@ router.post("/conversations/:conversationId/messages", sendMessageLimit, async (
       if (senderIsCustomerPush && store) {
         // Buyer sent a message → notify the store owner
         const tokens = await db.select({ token: pushTokensTable.token }).from(pushTokensTable).where(eq(pushTokensTable.userId, store.ownerUserId));
+        if (tokens.length === 0) {
+          logger.warn({ conversationId, recipientUserId: store.ownerUserId }, "Message push skipped: recipient has no registered device token");
+          return;
+        }
         await notifyTokens(
           tokens.map(t => t.token),
           `New message from ${resolvedSenderName}`,
@@ -297,6 +302,10 @@ router.post("/conversations/:conversationId/messages", sendMessageLimit, async (
       } else if (senderIsRetailerPush) {
         // Store owner replied → notify the buyer
         const tokens = await db.select({ token: pushTokensTable.token }).from(pushTokensTable).where(eq(pushTokensTable.userId, conv.customerId));
+        if (tokens.length === 0) {
+          logger.warn({ conversationId, recipientUserId: conv.customerId }, "Message push skipped: recipient has no registered device token");
+          return;
+        }
         await notifyTokens(
           tokens.map(t => t.token),
           `Reply from ${resolvedSenderName}`,
@@ -304,8 +313,9 @@ router.post("/conversations/:conversationId/messages", sendMessageLimit, async (
           { conversationId },
         );
       }
-    } catch {
+    } catch (err) {
       // Push failure must never surface as an API error — message is already persisted.
+      logger.error({ err, conversationId }, "Failed to dispatch message push notification");
     }
   })();
 });

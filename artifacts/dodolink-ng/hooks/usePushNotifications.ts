@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import Constants from 'expo-constants';
-import { Alert, Linking, Platform } from 'react-native';
+import { Alert, AppState, Linking, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { registerPushToken } from '@workspace/api-client-react';
 
@@ -30,13 +30,17 @@ if (!isExpoGo) {
 export function usePushNotifications(userId: string | null) {
   const notifListener = useRef<{ remove(): void } | null>(null);
   const responseListener = useRef<{ remove(): void } | null>(null);
+  const registrationInFlight = useRef(false);
 
   useEffect(() => {
     if (!userId || Platform.OS === 'web' || !N) return;
 
     let active = true;
 
-    (async () => {
+    const registerDevice = async () => {
+      if (registrationInFlight.current) return;
+      registrationInFlight.current = true;
+
       try {
         if (typeof expoProjectId !== 'string' || !expoProjectId) {
           console.warn('[PushNotifications] Missing Expo project ID; token registration skipped.');
@@ -79,12 +83,22 @@ export function usePushNotifications(userId: string | null) {
         const tokenData = await N!.getExpoPushTokenAsync({ projectId: expoProjectId });
         if (active && tokenData?.data) {
           await registerPushToken({ userId, token: tokenData.data });
+          console.info('[PushNotifications] Device token registered.');
         }
       } catch (err) {
-        // Registration failed — not critical, app still works without push
-        console.warn('[PushNotifications] Registration failed:', err);
+        // The next foreground event retries registration, so a temporary
+        // network or authentication failure does not disable notifications
+        // for the rest of the session.
+        console.warn('[PushNotifications] Device token registration failed:', err);
+      } finally {
+        registrationInFlight.current = false;
       }
-    })();
+    };
+
+    void registerDevice();
+    const appStateSubscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void registerDevice();
+    });
 
     notifListener.current = N.addNotificationReceivedListener(() => {});
     responseListener.current = N.addNotificationResponseReceivedListener(response => {
@@ -97,6 +111,7 @@ export function usePushNotifications(userId: string | null) {
 
     return () => {
       active = false;
+      appStateSubscription.remove();
       notifListener.current?.remove();
       responseListener.current?.remove();
     };
