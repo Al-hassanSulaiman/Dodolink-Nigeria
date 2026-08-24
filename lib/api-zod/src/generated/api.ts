@@ -325,12 +325,48 @@ export const ListProductsResponse = zod.array(ListProductsResponseItem)
 /**
  * @summary Register an Expo push token for a user
  */
+export const registerPushTokenBodyAttemptIdMax = 64;
+
+
+
 export const RegisterPushTokenBody = zod.object({
   "userId": zod.string(),
-  "token": zod.string()
+  "token": zod.string(),
+  "attemptId": zod.string().max(registerPushTokenBodyAttemptIdMax).optional()
 })
 
 export const RegisterPushTokenResponse = zod.object({
+  "status": zod.string()
+})
+
+
+/**
+ * @summary Report a safe native push registration stage
+ */
+export const reportPushRegistrationDiagnosticBodyAttemptIdMax = 64;
+
+export const reportPushRegistrationDiagnosticBodyAppVersionMax = 32;
+
+export const reportPushRegistrationDiagnosticBodyBuildVersionMax = 32;
+
+export const reportPushRegistrationDiagnosticBodyPermissionStatusMax = 32;
+
+export const reportPushRegistrationDiagnosticBodyErrorCodeMax = 64;
+
+
+
+export const ReportPushRegistrationDiagnosticBody = zod.object({
+  "attemptId": zod.string().min(1).max(reportPushRegistrationDiagnosticBodyAttemptIdMax),
+  "stage": zod.enum(['started', 'channel', 'permission', 'auth-token', 'expo-token', 'server-registration', 'completed']),
+  "outcome": zod.enum(['started', 'success', 'denied', 'timeout', 'error']),
+  "platform": zod.enum(['android', 'ios']),
+  "appVersion": zod.string().max(reportPushRegistrationDiagnosticBodyAppVersionMax),
+  "buildVersion": zod.string().max(reportPushRegistrationDiagnosticBodyBuildVersionMax),
+  "permissionStatus": zod.string().max(reportPushRegistrationDiagnosticBodyPermissionStatusMax).optional(),
+  "errorCode": zod.string().max(reportPushRegistrationDiagnosticBodyErrorCodeMax).optional()
+})
+
+export const ReportPushRegistrationDiagnosticResponse = zod.object({
   "status": zod.string()
 })
 

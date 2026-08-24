@@ -5,7 +5,7 @@ import { z } from "zod/v4";
 export const pushTokensTable = pgTable("push_tokens", {
   id: serial("id").primaryKey(),
   userId: text("user_id").notNull(),
-  token: text("token").notNull(),
+  token: text("token").notNull().unique(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

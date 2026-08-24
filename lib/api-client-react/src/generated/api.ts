@@ -44,6 +44,7 @@ import type {
   MarkSupportRead200,
   Message,
   Product,
+  PushRegistrationDiagnosticBody,
   RegisterPushTokenBody,
   Review,
   SearchParams,
@@ -1058,6 +1059,77 @@ export const useRegisterPushToken = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getRegisterPushTokenMutationOptions(options));
+    }
+
+export const getReportPushRegistrationDiagnosticUrl = () => {
+
+
+
+
+  return `/api/push-registration-diagnostics`
+}
+
+/**
+ * @summary Report a safe native push registration stage
+ */
+export const reportPushRegistrationDiagnostic = async (pushRegistrationDiagnosticBody: PushRegistrationDiagnosticBody, options?: RequestInit): Promise<HealthStatus> => {
+
+  return customFetch<HealthStatus>(getReportPushRegistrationDiagnosticUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      pushRegistrationDiagnosticBody,)
+  }
+);}
+
+
+
+
+export const getReportPushRegistrationDiagnosticMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportPushRegistrationDiagnostic>>, TError,{data: BodyType<PushRegistrationDiagnosticBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reportPushRegistrationDiagnostic>>, TError,{data: BodyType<PushRegistrationDiagnosticBody>}, TContext> => {
+
+const mutationKey = ['reportPushRegistrationDiagnostic'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reportPushRegistrationDiagnostic>>, {data: BodyType<PushRegistrationDiagnosticBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  reportPushRegistrationDiagnostic(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReportPushRegistrationDiagnosticMutationResult = NonNullable<Awaited<ReturnType<typeof reportPushRegistrationDiagnostic>>>
+    export type ReportPushRegistrationDiagnosticMutationBody = BodyType<PushRegistrationDiagnosticBody>
+    export type ReportPushRegistrationDiagnosticMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Report a safe native push registration stage
+ */
+export const useReportPushRegistrationDiagnostic = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportPushRegistrationDiagnostic>>, TError,{data: BodyType<PushRegistrationDiagnosticBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reportPushRegistrationDiagnostic>>,
+        TError,
+        {data: BodyType<PushRegistrationDiagnosticBody>},
+        TContext
+      > => {
+      return useMutation(getReportPushRegistrationDiagnosticMutationOptions(options));
     }
 
 export const getSearchUrl = (params: SearchParams,) => {
