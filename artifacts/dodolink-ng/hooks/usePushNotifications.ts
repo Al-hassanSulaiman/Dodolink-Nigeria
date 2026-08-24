@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Constants from 'expo-constants';
-import { Alert, AppState, Linking, Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { registerPushToken } from '@workspace/api-client-react';
 
@@ -8,88 +8,145 @@ import { registerPushToken } from '@workspace/api-client-react';
 // We lazy-require it only in real device/EAS builds.
 type NotificationsModule = typeof import('expo-notifications');
 
-const isExpoGo = Constants.appOwnership === 'expo';
-const expoProjectId = Constants.easConfig?.projectId ?? Constants.expoConfig?.extra?.eas?.projectId;
+const FALLBACK_EXPO_PROJECT_ID = '3e4ed22b-8363-4fff-9ee7-be8921e99e55';
 
-let N: NotificationsModule | null = null;
-if (!isExpoGo) {
-  try {
-    N = require('expo-notifications') as NotificationsModule;
-    N.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: true,
-        shouldShowBanner: true,
-        shouldShowList: true,
-      }),
-    });
-  } catch { /* ignore in any other unsupported env */ }
+export type PushRegistrationState =
+  | { status: 'idle' | 'registering' | 'registered' }
+  | { status: 'permission-denied'; message: string }
+  | { status: 'unsupported'; message: string }
+  | { status: 'error'; message: string };
+
+type GetAuthToken = () => Promise<string | null>;
+
+function getNotificationsModule(): NotificationsModule {
+  return require('expo-notifications') as NotificationsModule;
 }
 
-export function usePushNotifications(userId: string | null) {
+function getErrorMessage(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error);
+  if (/401|unauthorized|authentication/i.test(raw)) {
+    return 'Your sign-in session was not ready. Tap Try again.';
+  }
+  if (/firebase|fcm|apns|credential|push token/i.test(raw)) {
+    return 'This build could not connect to the phone notification service. Tap Try again.';
+  }
+  if (/network|fetch|timeout|offline/i.test(raw)) {
+    return 'Check your internet connection, then tap Try again.';
+  }
+  return 'Dodolink could not connect notifications on this phone. Tap Try again.';
+}
+
+export function usePushNotifications(
+  userId: string | null,
+  getAuthToken: GetAuthToken,
+) {
   const notifListener = useRef<{ remove(): void } | null>(null);
   const responseListener = useRef<{ remove(): void } | null>(null);
   const registrationInFlight = useRef(false);
+  const [retryKey, setRetryKey] = useState(0);
+  const [state, setState] = useState<PushRegistrationState>({ status: 'idle' });
+
+  const retry = useCallback(() => {
+    setState({ status: 'registering' });
+    setRetryKey((current) => current + 1);
+  }, []);
 
   useEffect(() => {
-    if (!userId || Platform.OS === 'web' || !N) return;
+    if (!userId) {
+      setState({ status: 'idle' });
+      return;
+    }
+
+    if (Platform.OS === 'web') return;
+
+    if (Constants.appOwnership === 'expo') {
+      setState({
+        status: 'unsupported',
+        message: 'Push notifications require the installed Dodolink app, not Expo Go.',
+      });
+      return;
+    }
 
     let active = true;
+    let N: NotificationsModule;
+
+    try {
+      N = getNotificationsModule();
+      N.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: true,
+          shouldShowBanner: true,
+          shouldShowList: true,
+        }),
+      });
+    } catch (error) {
+      console.error('[PushNotifications] Native notifications module failed to load:', error);
+      setState({
+        status: 'unsupported',
+        message: 'Notifications are unavailable in this installation. Install the latest Dodolink update.',
+      });
+      return;
+    }
 
     const registerDevice = async () => {
       if (registrationInFlight.current) return;
       registrationInFlight.current = true;
+      if (active) setState({ status: 'registering' });
 
       try {
-        if (typeof expoProjectId !== 'string' || !expoProjectId) {
-          console.warn('[PushNotifications] Missing Expo project ID; token registration skipped.');
-          return;
+        const authToken = await getAuthToken();
+        if (!authToken) {
+          throw new Error('Authentication token is not ready');
         }
 
-        const { status: existing } = await N!.getPermissionsAsync();
-        let finalStatus = existing;
-
-        if (existing !== 'granted') {
-          const { status } = await N!.requestPermissionsAsync();
-          finalStatus = status;
-        }
-
-        if (!active) return;
-
-        if (finalStatus !== 'granted') {
-          // Show a one-time alert so users know how to enable notifications
-          Alert.alert(
-            'Notifications are off',
-            'Enable notifications in Settings to get messages and alerts from Dodolink.',
-            [
-              { text: 'Not now', style: 'cancel' },
-              { text: 'Open Settings', onPress: () => Linking.openSettings() },
-            ]
-          );
-          return;
-        }
+        const expoProjectId =
+          Constants.easConfig?.projectId ??
+          Constants.expoConfig?.extra?.eas?.projectId ??
+          FALLBACK_EXPO_PROJECT_ID;
 
         if (Platform.OS === 'android') {
-          await N!.setNotificationChannelAsync('messages', {
+          await N.setNotificationChannelAsync('messages', {
             name: 'Messages',
-            importance: N!.AndroidImportance.MAX,
+            importance: N.AndroidImportance.MAX,
             vibrationPattern: [0, 250, 250, 250],
             lightColor: '#1B5E20',
             sound: 'default',
           });
         }
 
-        const tokenData = await N!.getExpoPushTokenAsync({ projectId: expoProjectId });
+        const { status: existing } = await N.getPermissionsAsync();
+        let finalStatus = existing;
+
+        if (existing !== 'granted') {
+          const { status } = await N.requestPermissionsAsync();
+          finalStatus = status;
+        }
+
+        if (!active) return;
+
+        if (finalStatus !== 'granted') {
+          setState({
+            status: 'permission-denied',
+            message: 'Notifications are turned off for Dodolink. Enable them in your phone settings to receive messages.',
+          });
+          return;
+        }
+
+        const tokenData = await N.getExpoPushTokenAsync({ projectId: expoProjectId });
         if (active && tokenData?.data) {
           await registerPushToken({ userId, token: tokenData.data });
           console.info('[PushNotifications] Device token registered.');
+          setState({ status: 'registered' });
+        } else if (active) {
+          throw new Error('Push token service returned no token');
         }
       } catch (err) {
-        // The next foreground event retries registration, so a temporary
-        // network or authentication failure does not disable notifications
-        // for the rest of the session.
-        console.warn('[PushNotifications] Device token registration failed:', err);
+        console.error('[PushNotifications] Device token registration failed:', err);
+        if (active) {
+          setState({ status: 'error', message: getErrorMessage(err) });
+        }
       } finally {
         registrationInFlight.current = false;
       }
@@ -115,5 +172,7 @@ export function usePushNotifications(userId: string | null) {
       notifListener.current?.remove();
       responseListener.current?.remove();
     };
-  }, [userId]);
+  }, [getAuthToken, retryKey, userId]);
+
+  return { state, retry };
 }
