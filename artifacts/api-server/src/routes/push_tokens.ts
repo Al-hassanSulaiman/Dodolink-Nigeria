@@ -18,9 +18,15 @@ router.post("/push-tokens", async (req, res): Promise<void> => {
   }
   const { userId, token } = parsed.data;
   if (userId !== authUserId) {
+    logger.warn(
+      { authUserId, requestedUserId: userId },
+      "Push token registration rejected: user mismatch",
+    );
     res.status(403).json({ error: "userId must match the authenticated user" });
     return;
   }
+
+  logger.info({ userId }, "Push token registration received");
 
   // Upsert: if token already registered for user, update; otherwise insert
   const existing = await db
