@@ -13,3 +13,4 @@
 - [Clerk + RN spm.rb nil crash](clerk-spm-nil-crash.md) — @clerk/expo causes pod install crash; fix is a config plugin nil-guard, NOT a RN version bump
 - [React Native upload timeouts](react-native-upload-timeouts.md) — production Android/iOS lacks AbortSignal.timeout; use AbortController plus a cleared timer
 - [EAS Submit credential conflicts](eas-submit-credential-conflicts.md) — Expo MCP may combine incompatible Apple auth; submit by build ID with EAS CLI from the mobile app directory
+- [Android Expo FCM setup](android-expo-fcm.md) — expo-notifications needs both Firebase app config and an Expo FCM V1 credential before Android can register or receive remote pushes

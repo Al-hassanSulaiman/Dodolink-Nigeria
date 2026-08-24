@@ -28,6 +28,7 @@
     },
     "android": {
       "package": "com.dodolink.ng",
+      "googleServicesFile": "./google-services.json",
       "versionCode": 8,
       "permissions": [
         "android.permission.CAMERA",
