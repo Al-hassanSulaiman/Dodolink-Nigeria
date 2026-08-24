@@ -14,3 +14,4 @@
 - [React Native upload timeouts](react-native-upload-timeouts.md) — production Android/iOS lacks AbortSignal.timeout; use AbortController plus a cleared timer
 - [EAS Submit credential conflicts](eas-submit-credential-conflicts.md) — Expo MCP may combine incompatible Apple auth; submit by build ID with EAS CLI from the mobile app directory
 - [Android Expo FCM setup](android-expo-fcm.md) — expo-notifications needs both Firebase app config and an Expo FCM V1 credential before Android can register or receive remote pushes
+- [EAS monorepo build root](eas-monorepo-build-root.md) — Git-triggered builds may silently use repo root; for reliable releases run EAS CLI from the mobile app directory and pin pnpm
