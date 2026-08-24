@@ -11,6 +11,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { PushNotificationSetup } from "@/components/PushNotificationSetup";
 import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { getApiBase } from "@/utils/apiBase";
@@ -50,8 +51,12 @@ function PushNotificationsGate() {
   // to mount. Set the bearer-token getter here so saving a device token never
   // fails with an unauthenticated request immediately after sign-in.
   setAuthTokenGetter(() => getToken());
-  usePushNotifications(isSignedIn ? user?.id ?? null : null);
-  return null;
+  const { state, retry } = usePushNotifications(
+    isSignedIn ? user?.id ?? null : null,
+    getToken,
+  );
+
+  return <PushNotificationSetup state={state} onRetry={retry} />;
 }
 
 function RootLayoutNav() {
