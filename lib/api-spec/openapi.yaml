@@ -322,6 +322,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
+  /push-registration-diagnostics:
+    post:
+      operationId: reportPushRegistrationDiagnostic
+      tags: [stores]
+      summary: Report a safe native push registration stage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushRegistrationDiagnosticBody"
+      responses:
+        "200":
+          description: Diagnostic recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
   /search:
     get:
       operationId: search
@@ -1558,7 +1577,40 @@ components:
           type: string
         token:
           type: string
+        attemptId:
+          type: string
+          maxLength: 64
       required: [userId, token]
+
+    PushRegistrationDiagnosticBody:
+      type: object
+      properties:
+        attemptId:
+          type: string
+          minLength: 1
+          maxLength: 64
+        stage:
+          type: string
+          enum: [started, channel, permission, auth-token, expo-token, server-registration, completed]
+        outcome:
+          type: string
+          enum: [started, success, denied, timeout, error]
+        platform:
+          type: string
+          enum: [android, ios]
+        appVersion:
+          type: string
+          maxLength: 32
+        buildVersion:
+          type: string
+          maxLength: 32
+        permissionStatus:
+          type: string
+          maxLength: 32
+        errorCode:
+          type: string
+          maxLength: 64
+      required: [attemptId, stage, outcome, platform, appVersion, buildVersion]
 
     CreateReviewBody:
       type: object

@@ -13,14 +13,27 @@ export function PushNotificationSetup({
   onRetry,
 }: PushNotificationSetupProps) {
   const [dismissed, setDismissed] = useState(false);
+  const [showSlowRegistration, setShowSlowRegistration] = useState(false);
+  const registering = state.status === 'registering';
   const needsAttention =
     state.status === 'permission-denied' ||
     state.status === 'unsupported' ||
-    state.status === 'error';
+    state.status === 'error' ||
+    (registering && showSlowRegistration);
 
   useEffect(() => {
     if (needsAttention) setDismissed(false);
   }, [needsAttention, state.status]);
+
+  useEffect(() => {
+    if (!registering) {
+      setShowSlowRegistration(false);
+      return;
+    }
+
+    const timer = setTimeout(() => setShowSlowRegistration(true), 3_000);
+    return () => clearTimeout(timer);
+  }, [registering, state.status === 'registering' ? state.stage : null]);
 
   if (!needsAttention || dismissed) return null;
 
@@ -34,7 +47,11 @@ export function PushNotificationSetup({
             <Text style={styles.iconText}>!</Text>
           </View>
           <Text style={styles.title}>
-            {permissionDenied ? 'Turn on message notifications' : 'Notifications need attention'}
+            {permissionDenied
+              ? 'Turn on message notifications'
+              : registering
+                ? 'Connecting message notifications'
+                : 'Notifications need attention'}
           </Text>
           <Text style={styles.message}>{state.message}</Text>
 
@@ -44,7 +61,7 @@ export function PushNotificationSetup({
             onPress={permissionDenied ? () => void Linking.openSettings() : onRetry}
           >
             <Text style={styles.primaryButtonText}>
-              {permissionDenied ? 'Open phone settings' : 'Try again'}
+              {permissionDenied ? 'Open phone settings' : 'Try again now'}
             </Text>
           </Pressable>
 

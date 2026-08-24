@@ -314,6 +314,59 @@ export interface Review {
 export interface RegisterPushTokenBody {
   userId: string;
   token: string;
+  /** @maxLength 64 */
+  attemptId?: string;
+}
+
+export type PushRegistrationDiagnosticBodyStage = typeof PushRegistrationDiagnosticBodyStage[keyof typeof PushRegistrationDiagnosticBodyStage];
+
+
+export const PushRegistrationDiagnosticBodyStage = {
+  started: 'started',
+  channel: 'channel',
+  permission: 'permission',
+  'auth-token': 'auth-token',
+  'expo-token': 'expo-token',
+  'server-registration': 'server-registration',
+  completed: 'completed',
+} as const;
+
+export type PushRegistrationDiagnosticBodyOutcome = typeof PushRegistrationDiagnosticBodyOutcome[keyof typeof PushRegistrationDiagnosticBodyOutcome];
+
+
+export const PushRegistrationDiagnosticBodyOutcome = {
+  started: 'started',
+  success: 'success',
+  denied: 'denied',
+  timeout: 'timeout',
+  error: 'error',
+} as const;
+
+export type PushRegistrationDiagnosticBodyPlatform = typeof PushRegistrationDiagnosticBodyPlatform[keyof typeof PushRegistrationDiagnosticBodyPlatform];
+
+
+export const PushRegistrationDiagnosticBodyPlatform = {
+  android: 'android',
+  ios: 'ios',
+} as const;
+
+export interface PushRegistrationDiagnosticBody {
+  /**
+     * @minLength 1
+     * @maxLength 64
+     */
+  attemptId: string;
+  stage: PushRegistrationDiagnosticBodyStage;
+  outcome: PushRegistrationDiagnosticBodyOutcome;
+  platform: PushRegistrationDiagnosticBodyPlatform;
+  /** @maxLength 32 */
+  appVersion: string;
+  /** @maxLength 32 */
+  buildVersion: string;
+  /** @maxLength 32 */
+  permissionStatus?: string;
+  /** @maxLength 64 */
+  errorCode?: string;
 }
 
 export interface CreateReviewBody {
