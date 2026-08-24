@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "141808676382",
+    "project_id": "dodolink-ng",
+    "storage_bucket": "dodolink-ng.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:141808676382:android:544b4b08e9e08c304f480f",
+        "android_client_info": {
+          "package_name": "com.dodolink.ng"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCqQkQJgKbqbaT5CVS53oIUHomZNw0rL5M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
