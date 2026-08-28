@@ -48,6 +48,7 @@ const ALLOWED_ORIGIN_HOSTS = new Set(
     "dodolink.com.ng",
     "www.dodolink.com.ng",
     process.env.REPLIT_DEV_DOMAIN,
+    process.env.REPLIT_EXPO_DEV_DOMAIN,
     ...(process.env.REPLIT_DOMAINS?.split(",") ?? []),
   ].filter((h): h is string => !!h),
 );

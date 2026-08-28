@@ -12,6 +12,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { PushNotificationSetup } from "@/components/PushNotificationSetup";
+import { WebMcpRegistration } from "@/components/WebMcpRegistration";
 import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
 import {
   useAndroidNotificationChannelBootstrap,
@@ -107,6 +108,7 @@ export default function RootLayout() {
         <SafeAreaProvider>
           <ErrorBoundary>
             <QueryClientProvider client={queryClient}>
+              <WebMcpRegistration />
               <PushNotificationsGate />
               <GestureHandlerRootView>
                 <KeyboardProvider>
