@@ -15,6 +15,7 @@
     },
     "ios": {
       "supportsTablet": false,
+      "usesAppleSignIn": true,
       "bundleIdentifier": "com.dodolink.ng",
       "buildNumber": "14",
       "infoPlist": {
@@ -48,6 +49,7 @@
     "plugins": [
       "./plugins/withSpmNilFix",
       "@clerk/expo",
+      "expo-apple-authentication",
       [
         "expo-router",
         {

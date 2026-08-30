@@ -1,4 +1,5 @@
-import { useSignIn, useClerk, useAuth, useOAuth } from "@clerk/expo";
+import { useSignIn, useClerk, useAuth } from "@clerk/expo";
+import { useSignInWithApple } from "@clerk/expo/apple";
 import { type Href, Link, useRouter } from "expo-router";
 import React from "react";
 import {
@@ -75,18 +76,30 @@ export default function SignInPage() {
   const [syncUrl, setSyncUrl] = React.useState<string | null>(null);
   const [appleLoading, setAppleLoading] = React.useState(false);
 
-  const { startOAuthFlow: startAppleOAuth } = useOAuth({ strategy: "oauth_apple" });
+  const { startAppleAuthenticationFlow } = useSignInWithApple();
 
   const handleAppleSignIn = async () => {
     setAppleLoading(true);
     try {
-      const { createdSessionId, setActive } = await startAppleOAuth();
+      const { createdSessionId, setActive } =
+        await startAppleAuthenticationFlow();
       if (createdSessionId && setActive) {
         await setActive({ session: createdSessionId });
         router.replace("/(tabs)" as Href);
+        return;
       }
+
+      showAlert(
+        "Apple Sign In",
+        "Apple sign in could not create a session. Please try again.",
+      );
     } catch (err: any) {
-      const msg = err?.errors?.[0]?.longMessage ?? err?.message ?? "Apple sign in failed. Please try again.";
+      if (err?.code === "ERR_REQUEST_CANCELED") return;
+
+      const msg =
+        err?.errors?.[0]?.longMessage ??
+        err?.message ??
+        "Apple sign in failed. Please try again.";
       showAlert("Apple Sign In", msg);
     } finally {
       setAppleLoading(false);

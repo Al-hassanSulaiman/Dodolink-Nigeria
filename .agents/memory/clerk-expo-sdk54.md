@@ -113,3 +113,11 @@ Also: `useAuth()` returns only userId/sessionId/getToken — it has NO `user` ob
 ## useUserIdentity → Clerk
 
 Replace the random-UUID hook with `useUser()` from `@clerk/expo`. Return `user.id`, derive `userName` from fullName / firstName+lastName / email prefix.
+
+## App Store iOS builds must use Clerk's native Apple flow
+
+For a custom iOS sign-in screen, use `useSignInWithApple()` from `@clerk/expo/apple`, not the browser-oriented `useOAuth({ strategy: "oauth_apple" })` flow. Install the Expo-SDK-compatible `expo-apple-authentication` package, register its config plugin, and enable `ios.usesAppleSignIn`.
+
+**Why:** App Store review exercised the browser OAuth button on an iPad and received an error. Clerk's native hook handles the Apple ID token exchange and transfer between sign-up and sign-in, while Expo's config adds the required native capability.
+
+**How to apply:** This requires a new native build and a production Clerk native-application entry for the iOS bundle ID/App ID Prefix. Code and entitlement changes alone cannot validate or repair the Clerk dashboard configuration.
