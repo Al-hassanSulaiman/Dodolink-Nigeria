@@ -66,13 +66,13 @@ export default function CreateStoreScreen() {
         bottomOffset={20}
       >
         <Text style={[styles.label, { color: colors.foreground }]}>Store Name</Text>
-        <Input placeholder="e.g. Ebuka Electronics" value={name} onChangeText={setName} />
+        <Input placeholder="E.g. Al-Hassan Automobiles" value={name} onChangeText={setName} />
 
         <Text style={[styles.label, { color: colors.foreground, marginTop: 16 }]}>Category</Text>
-        <Input placeholder="e.g. Electronics" value={category} onChangeText={setCategory} />
+        <Input placeholder="E.g. Cars" value={category} onChangeText={setCategory} />
 
         <Text style={[styles.label, { color: colors.foreground, marginTop: 16 }]}>Location</Text>
-        <Input placeholder="e.g. Alaba International Market, Lagos" value={location} onChangeText={setLocation} />
+        <Input placeholder="E.g. Wunti Market, Bauchi, Bauchi" value={location} onChangeText={setLocation} />
 
         <Text style={[styles.label, { color: colors.foreground, marginTop: 16 }]}>Phone Number</Text>
         <Input placeholder="e.g. 08012345678" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
