@@ -9,6 +9,11 @@ import {
 import { visibleStoresFilter, isStoreHidden } from "../lib/storeSubscription";
 import { requireUser } from "../lib/auth";
 import { rateLimit } from "../lib/rateLimit";
+import {
+  findVerifiedStoreNameConflict,
+  isVerifiedStoreNameUniqueViolation,
+  STORE_NAME_ALREADY_EXISTS,
+} from "../lib/storeName";
 
 const storeCreateLimit = rateLimit({ name: "store-create", max: 5, windowMs: 60 * 60 * 1000 });
 
@@ -66,6 +71,11 @@ router.post("/stores", storeCreateLimit, async (req, res): Promise<void> => {
     .where(eq(storesTable.ownerUserId, userId));
   if (existing) {
     res.status(409).json({ error: "You already have a store" });
+    return;
+  }
+
+  if (await findVerifiedStoreNameConflict(parsed.data.name)) {
+    res.status(409).json(STORE_NAME_ALREADY_EXISTS);
     return;
   }
 
@@ -127,12 +137,30 @@ router.patch("/stores/:storeId", async (req, res): Promise<void> => {
     delete updates.location;
   }
 
+  if (
+    updates.name !== undefined &&
+    updates.name !== existing.name &&
+    await findVerifiedStoreNameConflict(updates.name, storeId)
+  ) {
+    res.status(409).json(STORE_NAME_ALREADY_EXISTS);
+    return;
+  }
+
   if (Object.keys(updates).length === 0) {
     res.json(toPublicStore(existing));
     return;
   }
 
-  const [store] = await db.update(storesTable).set(updates).where(eq(storesTable.id, storeId)).returning();
+  let store;
+  try {
+    [store] = await db.update(storesTable).set(updates).where(eq(storesTable.id, storeId)).returning();
+  } catch (error) {
+    if (isVerifiedStoreNameUniqueViolation(error)) {
+      res.status(409).json(STORE_NAME_ALREADY_EXISTS);
+      return;
+    }
+    throw error;
+  }
   if (!store) { res.status(404).json({ error: "Store not found" }); return; }
 
   // When the store name changes, backfill senderName on all existing retailer

@@ -267,7 +267,7 @@ export const createStore = async (createStoreBody: CreateStoreBody, options?: Re
 
 
 
-export const getCreateStoreMutationOptions = <TError = ErrorType<unknown>,
+export const getCreateStoreMutationOptions = <TError = ErrorType<ErrorResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createStore>>, TError,{data: BodyType<CreateStoreBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createStore>>, TError,{data: BodyType<CreateStoreBody>}, TContext> => {
 
@@ -296,12 +296,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateStoreMutationResult = NonNullable<Awaited<ReturnType<typeof createStore>>>
     export type CreateStoreMutationBody = BodyType<CreateStoreBody>
-    export type CreateStoreMutationError = ErrorType<unknown>
+    export type CreateStoreMutationError = ErrorType<ErrorResponse>
 
     /**
  * @summary Create a new store
  */
-export const useCreateStore = <TError = ErrorType<unknown>,
+export const useCreateStore = <TError = ErrorType<ErrorResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createStore>>, TError,{data: BodyType<CreateStoreBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof createStore>>,

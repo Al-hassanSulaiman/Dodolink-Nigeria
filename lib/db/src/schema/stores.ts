@@ -1,4 +1,5 @@
-import { pgTable, text, serial, timestamp, real, integer, boolean } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { pgTable, text, serial, timestamp, real, integer, boolean, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -32,7 +33,11 @@ export const storesTable = pgTable("stores", {
   hiddenByAdmin: boolean("hidden_by_admin").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (table) => [
+  uniqueIndex("stores_verified_name_unique")
+    .on(sql`lower(regexp_replace(btrim(${table.name}), '[[:space:]]+', ' ', 'g'))`)
+    .where(sql`${table.verificationStatus} = 'verified'`),
+]);
 
 export const insertStoreSchema = createInsertSchema(storesTable).omit({ id: true, createdAt: true, updatedAt: true, avgRating: true, totalReviews: true });
 export type InsertStore = z.infer<typeof insertStoreSchema>;

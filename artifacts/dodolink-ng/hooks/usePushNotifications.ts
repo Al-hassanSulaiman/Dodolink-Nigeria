@@ -37,6 +37,20 @@ export type PushRegistrationState =
 
 type GetAuthToken = () => Promise<string | null>;
 
+function describePermission(
+  permission: Awaited<ReturnType<NotificationsModule['getPermissionsAsync']>>,
+): string {
+  if (Platform.OS !== 'ios') return permission.status;
+  const ios = permission.ios;
+  return [
+    permission.status,
+    `ios=${ios?.status ?? 'unknown'}`,
+    `alert=${ios?.allowsAlert ?? false}`,
+    `sound=${ios?.allowsSound ?? false}`,
+    `badge=${ios?.allowsBadge ?? false}`,
+  ].join(',');
+}
+
 function getNotificationsModule(): NotificationsModule {
   return require('expo-notifications') as NotificationsModule;
 }
@@ -289,31 +303,6 @@ export function usePushNotifications(
         }
         if (!isCurrent()) return;
 
-        setStage('permission', 'Checking notification permission…');
-        const permission = await withTimeout(
-          N.getPermissionsAsync(),
-          NATIVE_STAGE_TIMEOUT_MS,
-          'permission',
-        );
-        let finalStatus = permission.status;
-        if (permission.status !== 'granted') {
-          const requested = await withTimeout(
-            N.requestPermissionsAsync(),
-            PERMISSION_TIMEOUT_MS,
-            'permission',
-          );
-          finalStatus = requested.status;
-        }
-        if (!isCurrent()) return;
-
-        if (finalStatus !== 'granted') {
-          setState({
-            status: 'permission-denied',
-            message: 'Notifications are turned off for Dodolink. Enable them in your phone settings to receive messages.',
-          });
-          return;
-        }
-
         setStage('auth-token', 'Connecting notifications to your account…');
         authToken = await withTimeout(
           getAuthTokenRef.current(),
@@ -327,8 +316,49 @@ export function usePushNotifications(
 
         void reportStage('started', 'started');
         void reportStage('channel', 'success');
-        void reportStage('permission', 'success', { permissionStatus: finalStatus });
         void reportStage('auth-token', 'success');
+
+        setStage('permission', 'Checking notification permission…');
+        const permission = await withTimeout(
+          N.getPermissionsAsync(),
+          NATIVE_STAGE_TIMEOUT_MS,
+          'permission',
+        );
+        let finalPermission = permission;
+        let finalStatus = permission.status;
+        if (permission.status !== 'granted') {
+          const requested = await withTimeout(
+            N.requestPermissionsAsync({
+              ios: {
+                allowAlert: true,
+                allowBadge: true,
+                allowSound: true,
+              },
+            }),
+            PERMISSION_TIMEOUT_MS,
+            'permission',
+          );
+          finalPermission = requested;
+          finalStatus = requested.status;
+        }
+        if (!isCurrent()) return;
+
+        const iosAlertsDisabled =
+          Platform.OS === 'ios' && finalPermission.ios?.allowsAlert === false;
+        if (finalStatus !== 'granted' || iosAlertsDisabled) {
+          void reportStage('permission', 'denied', {
+            permissionStatus: describePermission(finalPermission),
+          });
+          setState({
+            status: 'permission-denied',
+            message: 'Notifications are turned off for Dodolink. Enable them in your phone settings to receive messages.',
+          });
+          return;
+        }
+
+        void reportStage('permission', 'success', {
+          permissionStatus: describePermission(finalPermission),
+        });
 
         const expoProjectId =
           Constants.easConfig?.projectId ??

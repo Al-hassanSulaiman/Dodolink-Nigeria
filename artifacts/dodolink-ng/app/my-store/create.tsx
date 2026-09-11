@@ -8,6 +8,8 @@ import { useUserIdentity } from '@/hooks/useUserIdentity';
 import { Input, Button } from '@/components/ui';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { showAlert } from '@/utils/alerts';
+import { isStoreNameAlreadyExistsError } from '@/utils/storeErrors';
 
 export default function CreateStoreScreen() {
   const colors = useColors();
@@ -28,7 +30,17 @@ export default function CreateStoreScreen() {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListStoresQueryKey() });
         router.replace('/(tabs)/my-store');
-      }
+      },
+      onError: (error) => {
+        if (isStoreNameAlreadyExistsError(error)) {
+          showAlert(
+            'Store name already exists',
+            'A verified store is already using this name. Please choose another store name.',
+          );
+          return;
+        }
+        showAlert('Store creation failed', 'Could not create the store. Please try again.');
+      },
     }
   });
 

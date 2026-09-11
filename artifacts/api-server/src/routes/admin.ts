@@ -4,6 +4,11 @@ import { and, asc, eq, count, desc, sql, inArray } from "drizzle-orm";
 import { db, storesTable, productsTable, conversationsTable, supportMessagesTable, pushTokensTable, adminsTable, contactLeadsTable } from "@workspace/db";
 import { AdminRejectStoreBody, AdminUpdateStoreBody, SendSupportMessageBody, AdminAddAdminBody } from "@workspace/api-zod";
 import { notifyTokens } from "../lib/push";
+import {
+  findVerifiedStoreNameConflict,
+  isVerifiedStoreNameUniqueViolation,
+  STORE_NAME_ALREADY_EXISTS,
+} from "../lib/storeName";
 
 /**
  * Bootstrap seed only: if the admins table is empty (first run after the
@@ -115,15 +120,40 @@ router.patch("/admin/stores/:storeId", async (req, res): Promise<void> => {
     return;
   }
 
-  const [store] = await db
-    .update(storesTable)
-    .set({
-      ...(name !== undefined ? { name } : {}),
-      ...(location !== undefined ? { location } : {}),
-      detailsLockedByAdmin: true,
-    })
+  const [existing] = await db
+    .select({ id: storesTable.id, name: storesTable.name })
+    .from(storesTable)
     .where(eq(storesTable.id, storeId))
-    .returning();
+    .limit(1);
+  if (!existing) { res.status(404).json({ error: "Store not found" }); return; }
+
+  if (
+    name !== undefined &&
+    name !== existing.name &&
+    await findVerifiedStoreNameConflict(name, storeId)
+  ) {
+    res.status(409).json(STORE_NAME_ALREADY_EXISTS);
+    return;
+  }
+
+  let store;
+  try {
+    [store] = await db
+      .update(storesTable)
+      .set({
+        ...(name !== undefined ? { name } : {}),
+        ...(location !== undefined ? { location } : {}),
+        detailsLockedByAdmin: true,
+      })
+      .where(eq(storesTable.id, storeId))
+      .returning();
+  } catch (error) {
+    if (isVerifiedStoreNameUniqueViolation(error)) {
+      res.status(409).json(STORE_NAME_ALREADY_EXISTS);
+      return;
+    }
+    throw error;
+  }
   if (!store) { res.status(404).json({ error: "Store not found" }); return; }
   res.json(toSafeStore(store));
 });
@@ -159,16 +189,37 @@ router.post("/admin/stores/:storeId/verify", async (req, res): Promise<void> => 
   const storeId = parseInt(req.params.storeId, 10);
   if (isNaN(storeId)) { res.status(400).json({ error: "Invalid storeId" }); return; }
 
-  const [store] = await db
-    .update(storesTable)
-    .set({
-      verificationStatus: "verified",
-      verifiedAt: new Date(),
-      verifiedBy: userId ?? "admin",
-      rejectionReason: null,
-    })
+  const [existing] = await db
+    .select({ id: storesTable.id, name: storesTable.name })
+    .from(storesTable)
     .where(eq(storesTable.id, storeId))
-    .returning();
+    .limit(1);
+  if (!existing) { res.status(404).json({ error: "Store not found" }); return; }
+
+  if (await findVerifiedStoreNameConflict(existing.name, storeId)) {
+    res.status(409).json(STORE_NAME_ALREADY_EXISTS);
+    return;
+  }
+
+  let store;
+  try {
+    [store] = await db
+      .update(storesTable)
+      .set({
+        verificationStatus: "verified",
+        verifiedAt: new Date(),
+        verifiedBy: userId ?? "admin",
+        rejectionReason: null,
+      })
+      .where(eq(storesTable.id, storeId))
+      .returning();
+  } catch (error) {
+    if (isVerifiedStoreNameUniqueViolation(error)) {
+      res.status(409).json(STORE_NAME_ALREADY_EXISTS);
+      return;
+    }
+    throw error;
+  }
   if (!store) { res.status(404).json({ error: "Store not found" }); return; }
   res.json(toSafeStore(store));
 });

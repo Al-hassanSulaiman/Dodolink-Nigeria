@@ -19,8 +19,11 @@ export function getSubscriptionAmountKobo(engagementCount: number): number {
     : STANDARD_AMOUNT_KOBO;
 }
 
-/** Payments are disabled until this date. On this date they auto-enable. */
-export const SUBSCRIPTION_LAUNCH_DATE = new Date("2027-01-01T00:00:00.000Z");
+/**
+ * Billing rollout date. Stores that qualified before rollout receive their
+ * full 14-day grace period from this date.
+ */
+export const SUBSCRIPTION_LAUNCH_DATE = new Date("2026-09-11T00:00:00.000Z");
 
 /** True when the subscription billing system is live. */
 export function isPaymentsLive(): boolean {
@@ -28,8 +31,8 @@ export function isPaymentsLive(): boolean {
 }
 
 /**
- * If a store qualified before the launch date, treat the grace period as
- * starting from the launch date so nobody gets immediately hidden on day 1.
+ * If a store qualified before billing rolled out, treat the grace period as
+ * starting from rollout so nobody gets immediately hidden on day 1.
  */
 function effectiveQualifiedAt(qualifiedAt: Date): Date {
   return qualifiedAt < SUBSCRIPTION_LAUNCH_DATE ? SUBSCRIPTION_LAUNCH_DATE : qualifiedAt;
@@ -104,11 +107,11 @@ type StoreVisibilityFields = {
 export function visibleStoresFilter() {
   const notHiddenByAdmin = eq(storesTable.hiddenByAdmin, false);
 
-  // Before launch date only admin-hidden stores are hidden
+  // Before rollout only admin-hidden stores are hidden
   if (!isPaymentsLive()) return notHiddenByAdmin;
 
   const graceDeadline = new Date(Date.now() - GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
-  // Adjust grace deadline to account for stores that qualified before launch
+  // Give stores that qualified before rollout a full grace period
   const effectiveLaunchGraceDeadline = new Date(
     Math.max(SUBSCRIPTION_LAUNCH_DATE.getTime(), graceDeadline.getTime())
   );
@@ -132,7 +135,7 @@ export function isStoreHidden(store: StoreVisibilityFields): boolean {
   // Always hidden if admin explicitly hid it
   if (store.hiddenByAdmin) return true;
 
-  // Before launch date nothing else is hidden
+  // Before rollout nothing else is hidden
   if (!isPaymentsLive()) return false;
 
   if (!store.qualifiedAt) return false;
@@ -151,7 +154,7 @@ export function gracePeriodDaysRemaining(store: StoreVisibilityFields): number |
   if (store.subscriptionStatus === "active") return null;
   if (store.subscriptionStatus === "past_due") return null;
 
-  // Use effectiveQualifiedAt so pre-launch retailers get 14 days from launch date
+  // Stores that qualified before rollout get 14 days from the rollout date
   const effQualifiedAt = effectiveQualifiedAt(store.qualifiedAt);
   const expiresAt = new Date(effQualifiedAt.getTime() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
   const msLeft = expiresAt.getTime() - Date.now();

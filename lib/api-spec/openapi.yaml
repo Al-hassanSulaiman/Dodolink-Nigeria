@@ -91,6 +91,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Store"
+        "409":
+          description: The user already owns a store or a verified store already uses this name
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /stores/{storeId}:
     get:
@@ -112,6 +118,12 @@ paths:
                 $ref: "#/components/schemas/StoreDetail"
         "404":
           description: Store not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: A verified store already uses this name
           content:
             application/json:
               schema:
@@ -1337,6 +1349,8 @@ components:
       type: object
       properties:
         error:
+          type: string
+        code:
           type: string
       required: [error]
 

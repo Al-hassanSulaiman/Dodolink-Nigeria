@@ -108,6 +108,7 @@ export interface HealthStatus {
 
 export interface ErrorResponse {
   error: string;
+  code?: string;
 }
 
 export type StoreVerificationStatus = typeof StoreVerificationStatus[keyof typeof StoreVerificationStatus];

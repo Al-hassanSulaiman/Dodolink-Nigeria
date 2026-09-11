@@ -75,6 +75,28 @@ function getSubscriptionInfo(store: {
 
 type VerificationStatus = "pending" | "verified" | "rejected";
 
+function isStoreNameAlreadyExistsError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as {
+    status?: unknown;
+    data?: unknown;
+    message?: unknown;
+  };
+  const data =
+    candidate.data && typeof candidate.data === "object"
+      ? candidate.data as Record<string, unknown>
+      : null;
+
+  return (
+    candidate.status === 409 &&
+    (
+      data?.code === "STORE_NAME_ALREADY_EXISTS" ||
+      (typeof candidate.message === "string" &&
+        /verified store with this name already exists/i.test(candidate.message))
+    )
+  );
+}
+
 export default function StoresPage() {
   const [tab, setTab] = useState<VerificationStatus>("pending");
   const [rejectStoreId, setRejectStoreId] = useState<number | null>(null);
@@ -93,7 +115,13 @@ export default function StoresPage() {
         queryClient.invalidateQueries({ queryKey: getAdminGetAnalyticsQueryKey() });
         toast.success("Store verified successfully");
       },
-      onError: () => toast.error("Failed to verify store"),
+      onError: (error) => {
+        toast.error(
+          isStoreNameAlreadyExistsError(error)
+            ? "A verified store with this name already exists"
+            : "Failed to verify store",
+        );
+      },
     },
   });
 
@@ -118,7 +146,13 @@ export default function StoresPage() {
         setEditStoreId(null);
         toast.success("Store updated — name and location are now locked for the owner");
       },
-      onError: () => toast.error("Failed to update store"),
+      onError: (error) => {
+        toast.error(
+          isStoreNameAlreadyExistsError(error)
+            ? "A verified store with this name already exists"
+            : "Failed to update store",
+        );
+      },
     },
   });
 

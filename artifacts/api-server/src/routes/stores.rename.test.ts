@@ -64,11 +64,15 @@ const storeConversations = [{ id: CONV_ID_A }, { id: CONV_ID_B }];
 function makeSelectResult(rows: unknown[]) {
   const chain: any = {
     from: () => chain,
-    where: () => Promise.resolve(rows),
+    where: () => chain,
     $dynamic: () => chain,
     limit: () => chain,
     offset: () => chain,
     orderBy: () => Promise.resolve(rows),
+    then: (
+      resolve: (value: unknown[]) => unknown,
+      reject: (reason: unknown) => unknown,
+    ) => Promise.resolve(rows).then(resolve, reject),
   };
   return chain;
 }
@@ -131,6 +135,7 @@ vi.mock("@workspace/db", () => {
     id: Symbol("stores.id"),
     ownerUserId: Symbol("stores.ownerUserId"),
     name: Symbol("stores.name"),
+    verificationStatus: Symbol("stores.verificationStatus"),
     detailsLockedByAdmin: Symbol("stores.detailsLockedByAdmin"),
   };
   const conversationsTable = {
@@ -155,6 +160,7 @@ vi.mock("@workspace/db", () => {
 
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn((col: unknown, val: unknown) => ({ op: "eq", col, val })),
+  ne: vi.fn((col: unknown, val: unknown) => ({ op: "ne", col, val })),
   inArray: vi.fn((col: unknown, vals: unknown) => ({ op: "inArray", col, vals })),
   and: vi.fn((...args: unknown[]) => ({ op: "and", args })),
   ilike: vi.fn(),
@@ -235,9 +241,11 @@ describe("PATCH /stores/:storeId — rename backfill", () => {
     const { db } = await import("@workspace/db");
 
     // SELECT call 0: load existing store
-    // SELECT call 1: load conversations for the store
+    // SELECT call 1: confirm no verified store owns the proposed name
+    // SELECT call 2: load conversations for the store
     setupSelectMock(db as any, [
       [baseStore],
+      [],
       storeConversations,
     ]);
 
@@ -300,6 +308,7 @@ describe("PATCH /stores/:storeId — rename backfill", () => {
 
     setupSelectMock(db as any, [
       [baseStore],
+      [],              // no verified-name conflict
       [],              // empty conversations
     ]);
     setupUpdateMock(db as any, [
@@ -331,6 +340,7 @@ describe("PATCH /stores/:storeId — rename backfill", () => {
 
     setupSelectMock(db as any, [
       [baseStore],
+      [],              // no verified-name conflict
       storeConversations,
     ]);
     setupUpdateMock(db as any, [
@@ -369,5 +379,27 @@ describe("PATCH /stores/:storeId — rename backfill", () => {
       args.some((a: any) => a?.op === "eq" && a?.val === "retailer"),
     );
     expect(backfillAnd).toBeDefined();
+  });
+
+  it("rejects a name already owned by another verified store", async () => {
+    const { db } = await import("@workspace/db");
+
+    setupSelectMock(db as any, [
+      [baseStore],
+      [{ id: 99 }],
+    ]);
+    setupUpdateMock(db as any, []);
+
+    const app = await buildApp();
+    const res = await request(app)
+      .patch(`/stores/${STORE_ID}`)
+      .send({ name: "  NEW   STORE NAME " });
+
+    expect(res.status).toBe(409);
+    expect(res.body).toEqual({
+      code: "STORE_NAME_ALREADY_EXISTS",
+      error: "A verified store with this name already exists",
+    });
+    expect(updateCallCount).toBe(0);
   });
 });

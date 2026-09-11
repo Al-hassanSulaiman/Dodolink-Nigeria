@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, View, Text, ScrollView, RefreshControl, Pressable, Image } from 'react-native';
 import { showAlert } from '@/utils/alerts';
+import { isStoreNameAlreadyExistsError } from '@/utils/storeErrors';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import {
   useGetStore,
@@ -75,7 +76,14 @@ export default function StoreScreen() {
         queryClient.invalidateQueries({ queryKey: getGetStoreQueryKey(storeId) });
         setIsEditing(false);
       },
-      onError: () => {
+      onError: (error) => {
+        if (isStoreNameAlreadyExistsError(error)) {
+          showAlert(
+            'Store name already exists',
+            'A verified store is already using this name. Please choose another store name.',
+          );
+          return;
+        }
         showAlert('Save failed', 'Could not update the store. Please try again.');
       }
     }

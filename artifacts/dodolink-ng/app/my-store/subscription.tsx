@@ -219,7 +219,7 @@ export default function SubscriptionScreen() {
                   : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left in grace period`}
               </Text>
               <Text style={[styles.alertBody, { color: graceUrgencyColor + 'cc' }]}>
-                Your store will be hidden from customers if you don't pay before the grace period ends.
+                Pay before your 14-day grace period ends to keep your store visible to customers.
               </Text>
             </View>
           </View>
@@ -247,7 +247,7 @@ export default function SubscriptionScreen() {
           <Text style={[styles.cardBody, { color: colors.mutedForeground }]}>
             {sub?.qualified
               ? '✓ Your store qualifies for a subscription'
-              : `Reach ${ENGAGEMENT_THRESHOLD} customer interactions (reviews + messages) to activate your subscription.`}
+              : `Verified stores qualify after ${ENGAGEMENT_THRESHOLD} customer interactions (reviews + customer conversations) within 30 days. Once qualified, you have 14 days to make your first payment.`}
           </Text>
         </View>
 
@@ -306,10 +306,7 @@ export default function SubscriptionScreen() {
           >
             <Text style={[styles.cardTitle, { color: colors.foreground }]}>Payment</Text>
             <Text style={[styles.cardBody, { color: colors.mutedForeground, marginBottom: 16 }]}>
-              {formatNaira(sub?.subscriptionAmountKobo)}/month keeps your store visible and accepting orders.
-              {sub?.premiumThreshold != null && (sub?.engagementCount ?? 0) < sub.premiumThreshold
-                ? ` Stores with ${sub.premiumThreshold}+ interactions in 30 days pay a higher rate.`
-                : ''}
+              Your current rate is {formatNaira(sub?.subscriptionAmountKobo)}/month, based on customer interactions in the last 30 days. Payment keeps your store visible and accepting orders.
             </Text>
 
             {/* Coming soon banner — shown only if billing is not yet live */}
@@ -318,10 +315,10 @@ export default function SubscriptionScreen() {
                 <Feather name="calendar" size={20} color="#16a34a" />
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.comingSoonTitle, { color: '#16a34a' }]}>
-                    Subscription billing launches January 1, 2027
+                    Subscription billing is temporarily unavailable
                   </Text>
                   <Text style={[styles.comingSoonBody, { color: '#16a34a99' }]}>
-                    Your store is free to use until then. No payment is required right now — enjoy building your customer base!
+                    Please try again shortly.
                   </Text>
                 </View>
               </View>
@@ -418,7 +415,7 @@ export default function SubscriptionScreen() {
           >
             <Feather name="lock" size={20} color={colors.mutedForeground} />
             <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
-              Subscription payment will be unlocked once your store reaches {ENGAGEMENT_THRESHOLD} customer interactions. Payments of {formatNaira(sub.subscriptionAmountKobo)} will start by January 1st, 2027 to all verified store owners, with a higher rate for stores with {sub.premiumThreshold}+ interactions in 30 days.
+              Payment unlocks when your verified store reaches {ENGAGEMENT_THRESHOLD} customer interactions within 30 days. After qualifying, you have 14 days to pay. The monthly fee is ₦2,000 for 7–11 interactions and ₦5,000 for {sub.premiumThreshold}+ interactions.
             </Text>
           </View>
         )}
