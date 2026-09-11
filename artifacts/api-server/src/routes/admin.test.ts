@@ -78,6 +78,9 @@ vi.mock("@workspace/db", () => {
     id: Symbol(`${name}.id`),
     email: Symbol(`${name}.email`),
     createdAt: Symbol(`${name}.createdAt`),
+    subscriptionExempt: Symbol(`${name}.subscriptionExempt`),
+    subscriptionStatus: Symbol(`${name}.subscriptionStatus`),
+    subscriptionDueAt: Symbol(`${name}.subscriptionDueAt`),
   });
   const db = {
     select: vi.fn(),
@@ -127,15 +130,25 @@ vi.mock("@workspace/api-zod", () => {
       return { success: true, data: { email } };
     },
   };
+  const paymentExemptionBody = {
+    safeParse: (v: unknown) =>
+      typeof (v as any)?.exempt === "boolean"
+        ? { success: true, data: { exempt: (v as any).exempt } }
+        : { success: false, error: { message: "Invalid exemption value" } },
+  };
   return {
     AdminRejectStoreBody: passthrough,
     AdminUpdateStoreBody: passthrough,
+    AdminSetPaymentExemptionBody: paymentExemptionBody,
     SendSupportMessageBody: passthrough,
     AdminAddAdminBody: addAdminBody,
   };
 });
 
 vi.mock("../lib/push", () => ({ notifyTokens: vi.fn() }));
+vi.mock("../lib/subscriptionBilling", () => ({
+  withStoreChargeLock: vi.fn(async (_storeId: number, fn: () => Promise<unknown>) => fn()),
+}));
 
 // --------------------------------------------------------------------------
 // Test helpers
@@ -225,6 +238,63 @@ describe("requireAdmin middleware", () => {
     const app = await buildApp();
     const res = await request(app).get("/admin/admins");
     expect(res.status).toBe(403);
+  });
+});
+
+describe("PATCH /admin/stores/:storeId/payment-exemption", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
+
+  it("returns 401 when unauthenticated", async () => {
+    authedAs(null);
+    const app = await buildApp();
+    const res = await request(app)
+      .patch("/admin/stores/7/payment-exemption")
+      .send({ exempt: true });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 for a non-admin", async () => {
+    authedAs("user_not_admin", ["stranger@example.com"]);
+    const { db } = await import("@workspace/db");
+    setupSelectMock(db as any, [BOOTSTRAP_COUNT, [{ email: ADMIN_EMAIL }]]);
+
+    const app = await buildApp();
+    const res = await request(app)
+      .patch("/admin/stores/7/payment-exemption")
+      .send({ exempt: true });
+    expect(res.status).toBe(403);
+    expect((db as any).update).not.toHaveBeenCalled();
+  });
+
+  it.each([true, false])("sets subscriptionExempt to %s", async (exempt) => {
+    authedAs(ADMIN_USER_ID, [ADMIN_EMAIL]);
+    const { db } = await import("@workspace/db");
+    setupSelectMock(db as any, [BOOTSTRAP_COUNT, [{ email: ADMIN_EMAIL }]]);
+
+    let updatedValues: Record<string, unknown> | undefined;
+    (db as any).update.mockImplementation(() => {
+      const chain: any = {
+        set: (values: Record<string, unknown>) => {
+          updatedValues = values;
+          return chain;
+        },
+        where: () => chain,
+        returning: () => Promise.resolve([{ id: 7, subscriptionExempt: exempt }]),
+      };
+      return chain;
+    });
+
+    const app = await buildApp();
+    const res = await request(app)
+      .patch("/admin/stores/7/payment-exemption")
+      .send({ exempt });
+
+    expect(res.status).toBe(200);
+    expect(updatedValues).toEqual({ subscriptionExempt: exempt });
+    expect(res.body.subscriptionExempt).toBe(exempt);
   });
 });
 

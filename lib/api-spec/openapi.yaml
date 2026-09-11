@@ -739,6 +739,39 @@ paths:
         "404":
           description: Store not found
 
+  /admin/stores/{storeId}/payment-exemption:
+    patch:
+      operationId: adminSetPaymentExemption
+      tags: [admin]
+      summary: Allow or revoke store visibility without subscription payment (admin only)
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentExemptionInput"
+      responses:
+        "200":
+          description: Payment exemption updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Store"
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Store not found
+
   /admin/stores/{storeId}/reject:
     post:
       operationId: adminRejectStore
@@ -1295,6 +1328,8 @@ components:
           nullable: true
         isVisible:
           type: boolean
+        subscriptionExempt:
+          type: boolean
         autoPayEnabled:
           type: boolean
         hasAutoCharge:
@@ -1314,6 +1349,7 @@ components:
         - qualified
         - subscriptionStatus
         - isVisible
+        - subscriptionExempt
         - autoPayEnabled
         - hasAutoCharge
         - paymentsLive
@@ -1400,6 +1436,8 @@ components:
           type: boolean
         hiddenByAdmin:
           type: boolean
+        subscriptionExempt:
+          type: boolean
         verifiedAt:
           type: ["string", "null"]
           format: date-time
@@ -1424,7 +1462,7 @@ components:
         createdAt:
           type: string
           format: date-time
-      required: [id, ownerName, ownerUserId, name, description, category, location, phone, totalReviews, verificationStatus, detailsLockedByAdmin, hiddenByAdmin, subscriptionStatus, autoPayEnabled, createdAt]
+      required: [id, ownerName, ownerUserId, name, description, category, location, phone, totalReviews, verificationStatus, detailsLockedByAdmin, hiddenByAdmin, subscriptionExempt, subscriptionStatus, autoPayEnabled, createdAt]
 
     StoreDetail:
       allOf:
@@ -1523,6 +1561,13 @@ components:
         location:
           type: string
           minLength: 1
+
+    PaymentExemptionInput:
+      type: object
+      properties:
+        exempt:
+          type: boolean
+      required: [exempt]
 
     UpdateStoreBody:
       type: object

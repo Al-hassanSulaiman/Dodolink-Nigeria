@@ -100,6 +100,7 @@ type StoreVisibilityFields = {
   qualifiedAt: Date | null;
   subscriptionStatus: string;
   subscriptionDueAt: Date | null;
+  subscriptionExempt: boolean;
   hiddenByAdmin: boolean;
 };
 
@@ -119,6 +120,7 @@ export function visibleStoresFilter() {
   return and(
     notHiddenByAdmin,
     or(
+      eq(storesTable.subscriptionExempt, true),
       isNull(storesTable.qualifiedAt),
       eq(storesTable.subscriptionStatus, "active"),
       and(
@@ -134,6 +136,7 @@ export function visibleStoresFilter() {
 export function isStoreHidden(store: StoreVisibilityFields): boolean {
   // Always hidden if admin explicitly hid it
   if (store.hiddenByAdmin) return true;
+  if (store.subscriptionExempt) return false;
 
   // Before rollout nothing else is hidden
   if (!isPaymentsLive()) return false;
@@ -150,6 +153,7 @@ export function isStoreHidden(store: StoreVisibilityFields): boolean {
 
 /** Returns days left in initial grace period (null if not qualified, active, or past_due). */
 export function gracePeriodDaysRemaining(store: StoreVisibilityFields): number | null {
+  if (store.subscriptionExempt) return null;
   if (!store.qualifiedAt) return null;
   if (store.subscriptionStatus === "active") return null;
   if (store.subscriptionStatus === "past_due") return null;

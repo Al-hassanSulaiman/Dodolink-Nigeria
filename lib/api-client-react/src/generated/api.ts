@@ -48,6 +48,7 @@ import type {
   MarkConversationRead200,
   MarkSupportRead200,
   Message,
+  PaymentExemptionInput,
   Product,
   PushRegistrationDiagnosticBody,
   RegisterPushTokenBody,
@@ -2659,6 +2660,78 @@ export const useAdminRestoreStore = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getAdminRestoreStoreMutationOptions(options), queryClient);
+    }
+
+export const getAdminSetPaymentExemptionUrl = (storeId: number,) => {
+
+
+
+
+  return `/api/admin/stores/${storeId}/payment-exemption`
+}
+
+/**
+ * @summary Allow or revoke store visibility without subscription payment (admin only)
+ */
+export const adminSetPaymentExemption = async (storeId: number,
+    paymentExemptionInput: PaymentExemptionInput, options?: RequestInit): Promise<Store> => {
+
+  return customFetch<Store>(getAdminSetPaymentExemptionUrl(storeId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(paymentExemptionInput)
+  }
+);}
+
+
+
+
+
+export const getAdminSetPaymentExemptionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSetPaymentExemption>>, TError,{storeId: number;data: BodyType<PaymentExemptionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminSetPaymentExemption>>, TError,{storeId: number;data: BodyType<PaymentExemptionInput>}, TContext> => {
+
+const mutationKey = ['adminSetPaymentExemption'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminSetPaymentExemption>>, {storeId: number;data: BodyType<PaymentExemptionInput>}> = (props) => {
+          const {storeId,data} = props ?? {};
+
+          return  adminSetPaymentExemption(storeId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminSetPaymentExemptionMutationResult = NonNullable<Awaited<ReturnType<typeof adminSetPaymentExemption>>>
+    export type AdminSetPaymentExemptionMutationBody = BodyType<PaymentExemptionInput>
+    export type AdminSetPaymentExemptionMutationError = ErrorType<void>
+
+    /**
+ * @summary Allow or revoke store visibility without subscription payment (admin only)
+ */
+export const useAdminSetPaymentExemption = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSetPaymentExemption>>, TError,{storeId: number;data: BodyType<PaymentExemptionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof adminSetPaymentExemption>>,
+        TError,
+        {storeId: number;data: BodyType<PaymentExemptionInput>},
+        TContext
+      > => {
+      return useMutation(getAdminSetPaymentExemptionMutationOptions(options), queryClient);
     }
 
 export const getAdminRejectStoreUrl = (storeId: number,) => {

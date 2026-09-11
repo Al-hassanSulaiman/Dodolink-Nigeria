@@ -147,14 +147,18 @@ export default function SubscriptionScreen() {
   if (!isReady || storesLoading) return <LoadingScreen message="Loading…" />;
 
   const statusColor =
-    sub?.subscriptionStatus === 'active'
+    sub?.subscriptionExempt
+      ? '#7c3aed'
+      : sub?.subscriptionStatus === 'active'
       ? '#22c55e'
       : sub?.subscriptionStatus === 'past_due'
       ? '#f59e0b'
       : colors.mutedForeground;
 
   const statusLabel =
-    sub?.subscriptionStatus === 'active'
+    sub?.subscriptionExempt
+      ? 'Payment Exempt'
+      : sub?.subscriptionStatus === 'active'
       ? 'Active'
       : sub?.subscriptionStatus === 'past_due'
       ? 'Past Due'
@@ -195,8 +199,20 @@ export default function SubscriptionScreen() {
 
       <View style={styles.content}>
 
+        {sub?.subscriptionExempt && (
+          <View style={[styles.alertBanner, { backgroundColor: '#7c3aed22', borderColor: '#7c3aed' }]}>
+            <Feather name="shield" size={18} color="#7c3aed" />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.alertTitle, { color: '#7c3aed' }]}>Payment exemption active</Text>
+              <Text style={[styles.alertBody, { color: '#7c3aedcc' }]}>
+                Your store remains visible without subscription payment. You will not be charged automatically, but you can still pay manually if you choose.
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Store hidden banner */}
-        {isHidden && (
+        {!sub?.subscriptionExempt && isHidden && (
           <View style={[styles.alertBanner, { backgroundColor: '#ef444422', borderColor: '#ef4444' }]}>
             <Feather name="eye-off" size={18} color="#ef4444" />
             <View style={{ flex: 1 }}>
@@ -209,7 +225,7 @@ export default function SubscriptionScreen() {
         )}
 
         {/* Grace period countdown */}
-        {!isHidden && daysLeft !== null && (
+        {!sub?.subscriptionExempt && !isHidden && daysLeft !== null && (
           <View style={[styles.alertBanner, { backgroundColor: graceUrgencyColor + '22', borderColor: graceUrgencyColor }]}>
             <Feather name="clock" size={18} color={graceUrgencyColor} />
             <View style={{ flex: 1 }}>
@@ -263,7 +279,7 @@ export default function SubscriptionScreen() {
               </View>
             </View>
 
-            {sub.subscriptionStatus === 'active' && dueDate && (
+            {!sub.subscriptionExempt && sub.subscriptionStatus === 'active' && dueDate && (
               <Text style={[styles.cardBody, { color: colors.mutedForeground }]}>
                 {isOverdue
                   ? `⚠️ Due date passed on ${dueDate.toLocaleDateString('en-NG')}`
@@ -277,7 +293,7 @@ export default function SubscriptionScreen() {
             )}
 
             {/* Auto-pay toggle */}
-            {sub.hasAutoCharge && (
+            {sub.hasAutoCharge && !sub.subscriptionExempt && (
               <View style={[styles.autoPayRow, { borderTopColor: colors.border }]}>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.autoPayLabel, { color: colors.foreground }]}>
@@ -306,7 +322,9 @@ export default function SubscriptionScreen() {
           >
             <Text style={[styles.cardTitle, { color: colors.foreground }]}>Payment</Text>
             <Text style={[styles.cardBody, { color: colors.mutedForeground, marginBottom: 16 }]}>
-              Your current rate is {formatNaira(sub?.subscriptionAmountKobo)}/month, based on customer interactions in the last 30 days. Payment keeps your store visible and accepting orders.
+              {sub.subscriptionExempt
+                ? `Your current rate is ${formatNaira(sub?.subscriptionAmountKobo)}/month, but payment is optional while your admin exemption is active.`
+                : `Your current rate is ${formatNaira(sub?.subscriptionAmountKobo)}/month, based on customer interactions in the last 30 days. Payment keeps your store visible and accepting orders.`}
             </Text>
 
             {/* Coming soon banner — shown only if billing is not yet live */}

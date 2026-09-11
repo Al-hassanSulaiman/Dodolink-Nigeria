@@ -99,6 +99,7 @@ export async function activateStoreForReference(storeId: number, reference: stri
 export type ChargeStoreResult =
   | { kind: "charged" }         // a new successful charge activated the store
   | { kind: "already_active" }  // a prior settled attempt covered this window; no new charge
+  | { kind: "exempt" }          // automatic charge cancelled because exemption is active
   | { kind: "declined"; reason: string }   // definitive non-success; store set past_due
   | { kind: "unconfirmed" };    // outcome unknown; pending row kept, no retry-safe claim
 
@@ -126,10 +127,19 @@ export async function chargeStoreSubscription(params: {
   email: string;
   amountKobo: number;
   reference: string;
+  automatic?: boolean;
 }): Promise<ChargeStoreResult> {
-  const { storeId, authCode, email, amountKobo, reference } = params;
+  const { storeId, authCode, email, amountKobo, reference, automatic = false } = params;
 
   return withStoreChargeLock(storeId, async (): Promise<ChargeStoreResult> => {
+    // Re-read inside the same per-store lock used by exemption updates. If an
+    // admin grants an exemption before this charge acquires the lock, an
+    // automatic provider charge cannot proceed on stale data.
+    if (automatic) {
+      const [lockedStore] = await db.select().from(storesTable).where(eq(storesTable.id, storeId));
+      if (lockedStore?.subscriptionExempt) return { kind: "exempt" };
+    }
+
     // Step 1: reconcile ALL unconsumed attempts for this store (any prefix).
     const pending = await db
       .select()
@@ -279,6 +289,7 @@ export async function autoChargeDueSubscriptions(): Promise<void> {
       and(
         eq(storesTable.subscriptionStatus, "active"),
         eq(storesTable.autoPayEnabled, true),
+        eq(storesTable.subscriptionExempt, false),
         lte(storesTable.subscriptionDueAt, windowEnd),
       ),
     );
@@ -289,6 +300,7 @@ export async function autoChargeDueSubscriptions(): Promise<void> {
   }
 
   for (const store of stores) {
+    if (store.subscriptionExempt) continue;
     if (!store.paystackAuthCode || !store.paystackEmail || !store.subscriptionDueAt) continue;
 
     // Deterministic per-period reference: a second run for the same window
@@ -305,6 +317,7 @@ export async function autoChargeDueSubscriptions(): Promise<void> {
       email: store.paystackEmail,
       amountKobo,
       reference,
+      automatic: true,
     });
 
     switch (result.kind) {
@@ -313,6 +326,9 @@ export async function autoChargeDueSubscriptions(): Promise<void> {
         break;
       case "already_active":
         logger.info({ storeId: store.id }, "Auto-charge: period already settled, skipping");
+        break;
+      case "exempt":
+        logger.info({ storeId: store.id }, "Auto-charge: exemption active, skipping");
         break;
       case "declined":
         // chargeStoreSubscription already set past_due; just notify.

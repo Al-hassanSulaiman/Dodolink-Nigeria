@@ -1,9 +1,10 @@
 import { Router, type IRouter } from "express";
+import { getAuth } from "@clerk/express";
 import { eq, and, desc, inArray, sql } from "drizzle-orm";
 import { db, productsTable, storesTable } from "@workspace/db";
 import { CreateProductBody, UpdateProductBody } from "@workspace/api-zod";
 import { requireUser } from "../lib/auth";
-import { visibleStoresFilter } from "../lib/storeSubscription";
+import { isStoreHidden, visibleStoresFilter } from "../lib/storeSubscription";
 
 const router: IRouter = Router();
 const FEATURED_STORE_POOL_SIZE = 10;
@@ -74,10 +75,17 @@ router.get("/stores/:storeId/products", async (req, res): Promise<void> => {
   const storeId = parseInt(raw, 10);
   if (isNaN(storeId)) { res.status(400).json({ error: "Invalid storeId" }); return; }
 
-  const [store] = await db.select({ name: storesTable.name }).from(storesTable).where(eq(storesTable.id, storeId));
+  const [store] = await db.select().from(storesTable).where(eq(storesTable.id, storeId));
+  if (!store) { res.status(404).json({ error: "Store not found" }); return; }
+
+  const { userId } = getAuth(req);
+  if (isStoreHidden(store) && userId !== store.ownerUserId) {
+    res.status(404).json({ error: "Store not found" });
+    return;
+  }
 
   const rows = await db.select().from(productsTable).where(eq(productsTable.storeId, storeId));
-  res.json(rows.map(r => ({ ...r, storeName: store?.name ?? "" })));
+  res.json(rows.map(r => ({ ...r, storeName: store.name })));
 });
 
 router.post("/stores/:storeId/products", async (req, res): Promise<void> => {

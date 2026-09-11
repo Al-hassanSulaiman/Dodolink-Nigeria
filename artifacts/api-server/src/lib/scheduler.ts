@@ -32,6 +32,7 @@ async function sendRenewalReminders(): Promise<void> {
       and(
         eq(storesTable.subscriptionStatus, "active"),
         eq(storesTable.autoPayEnabled, false),
+        eq(storesTable.subscriptionExempt, false),
         gte(storesTable.subscriptionDueAt, windowStart),
         lte(storesTable.subscriptionDueAt, windowEnd)
       )
@@ -125,6 +126,7 @@ async function expireOverdueSubscriptions(): Promise<void> {
     .where(
       and(
         eq(storesTable.subscriptionStatus, "active"),
+        eq(storesTable.subscriptionExempt, false),
         lt(storesTable.subscriptionDueAt, now)
       )
     )

@@ -2,8 +2,9 @@ import { Router, type IRouter, type Request, type Response, type NextFunction } 
 import { getAuth, clerkClient } from "@clerk/express";
 import { and, asc, eq, count, desc, sql, inArray } from "drizzle-orm";
 import { db, storesTable, productsTable, conversationsTable, supportMessagesTable, pushTokensTable, adminsTable, contactLeadsTable } from "@workspace/db";
-import { AdminRejectStoreBody, AdminUpdateStoreBody, SendSupportMessageBody, AdminAddAdminBody } from "@workspace/api-zod";
+import { AdminRejectStoreBody, AdminUpdateStoreBody, AdminSetPaymentExemptionBody, SendSupportMessageBody, AdminAddAdminBody } from "@workspace/api-zod";
 import { notifyTokens } from "../lib/push";
+import { withStoreChargeLock } from "../lib/subscriptionBilling";
 import {
   findVerifiedStoreNameConflict,
   isVerifiedStoreNameUniqueViolation,
@@ -180,6 +181,38 @@ router.post("/admin/stores/:storeId/restore", async (req, res): Promise<void> =>
     .set({ hiddenByAdmin: false })
     .where(eq(storesTable.id, storeId))
     .returning();
+  if (!store) { res.status(404).json({ error: "Store not found" }); return; }
+  res.json(toSafeStore(store));
+});
+
+router.patch("/admin/stores/:storeId/payment-exemption", async (req, res): Promise<void> => {
+  const storeId = parseInt(req.params.storeId, 10);
+  if (isNaN(storeId)) { res.status(400).json({ error: "Invalid storeId" }); return; }
+
+  const parsed = AdminSetPaymentExemptionBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const store = await withStoreChargeLock(storeId, async () => {
+    const update = parsed.data.exempt
+      ? { subscriptionExempt: true }
+      : {
+          subscriptionExempt: false,
+          subscriptionStatus: sql`
+            CASE
+              WHEN ${storesTable.subscriptionStatus} = 'active'
+                AND ${storesTable.subscriptionDueAt} < NOW()
+              THEN 'past_due'
+              ELSE ${storesTable.subscriptionStatus}
+            END
+          `,
+        };
+    const [updated] = await db
+      .update(storesTable)
+      .set(update)
+      .where(eq(storesTable.id, storeId))
+      .returning();
+    return updated;
+  });
   if (!store) { res.status(404).json({ error: "Store not found" }); return; }
   res.json(toSafeStore(store));
 });

@@ -50,6 +50,7 @@ function makeStoreRow(overrides: Record<string, unknown> = {}) {
     subscriptionLastPaidAt: null,
     qualifiedAt: null,
     autoPayEnabled: true,
+    subscriptionExempt: false,
     paystackAuthCode: "AUTH_xxx",
     paystackEmail: "seller@example.com",
     ...overrides,
@@ -224,6 +225,23 @@ describe("subscription charging — payment integrity", () => {
     expect(res.body.subscriptionStatus).toBe("active");
     expect(chargeMock).toHaveBeenCalledTimes(1);
     expect(paymentRows.every((r) => r.consumedAt !== null)).toBe(true);
+  });
+
+  it("allows an exempt store owner to pay manually if they choose", async () => {
+    storeRow = makeStoreRow({ subscriptionExempt: true });
+    chargeMock.mockResolvedValue(txn("success"));
+    const app = await buildApp();
+    const res = await request(app).post(`/stores/${STORE_ID}/subscription/charge`).send({});
+    expect(res.status).toBe(200);
+    expect(chargeMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not automatically charge an exempt store", async () => {
+    storeRow = makeStoreRow({ subscriptionExempt: true });
+    const { autoChargeDueSubscriptions } = await import("../lib/subscriptionBilling");
+    await autoChargeDueSubscriptions();
+    expect(chargeMock).not.toHaveBeenCalled();
+    expect(storeRow.subscriptionStatus).toBe("active");
   });
 
   it("two concurrent manual requests call Paystack at most once (advisory lock serializes)", async () => {

@@ -33,6 +33,7 @@ export const storesTable = pgTable("stores", {
   paystackAuthCode: text("paystack_auth_code"),
   paystackEmail: text("paystack_email"),
   autoPayEnabled: boolean("auto_pay_enabled").notNull().default(false),
+  subscriptionExempt: boolean("subscription_exempt").notNull().default(false),
   hiddenByAdmin: boolean("hidden_by_admin").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

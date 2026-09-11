@@ -6,6 +6,7 @@ import {
   useAdminUpdateStore,
   useAdminHideStore,
   useAdminRestoreStore,
+  useAdminSetPaymentExemption,
   getAdminListStoresQueryKey,
   getAdminGetAnalyticsQueryKey,
 } from "@workspace/api-client-react";
@@ -50,10 +51,12 @@ function getSubscriptionInfo(store: {
   qualifiedAt?: string | null;
   subscriptionStatus?: string | null;
   subscriptionDueAt?: string | null;
+  subscriptionExempt?: boolean;
 }) {
   const qualifiedAt = store.qualifiedAt ? new Date(store.qualifiedAt) : null;
   const status = store.subscriptionStatus ?? "inactive";
 
+  if (store.subscriptionExempt) return { label: "Payment exempt", color: "purple", hidden: false, daysLeft: null };
   if (!qualifiedAt) return { label: "Not qualified", color: "gray", hidden: false, daysLeft: null };
   if (status === "active") return { label: "Active", color: "green", hidden: false, daysLeft: null };
   // Missed renewal — hidden immediately, no grace
@@ -176,6 +179,20 @@ export default function StoresPage() {
     },
   });
 
+  const paymentExemptionMutation = useAdminSetPaymentExemption({
+    mutation: {
+      onSuccess: (_store, variables) => {
+        queryClient.invalidateQueries({ queryKey: getAdminListStoresQueryKey() });
+        toast.success(
+          variables.data.exempt
+            ? "Store can remain available without payment"
+            : "Payment requirement restored for this store",
+        );
+      },
+      onError: () => toast.error("Failed to update payment exemption"),
+    },
+  });
+
   function handleVerify(storeId: number) {
     verifyMutation.mutate({ storeId });
   }
@@ -289,6 +306,7 @@ export default function StoresPage() {
                           sub.color === "red"   ? "bg-red-100 text-red-800 border-red-200" :
                           sub.color === "amber" ? "bg-amber-100 text-amber-800 border-amber-200" :
                           sub.color === "blue"  ? "bg-blue-100 text-blue-800 border-blue-200" :
+                           sub.color === "purple" ? "bg-purple-100 text-purple-800 border-purple-200" :
                                                   "bg-gray-100 text-gray-500 border-gray-200";
                         return (
                           <Badge className={cls} variant="outline">
@@ -364,6 +382,13 @@ export default function StoresPage() {
                         <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-red-700 bg-red-50 border border-red-100 rounded-md px-2.5 py-1.5">
                           <EyeOff className="w-3.5 h-3.5 flex-shrink-0" />
                           Store is hidden from customers — subscription unpaid after 14-day grace period
+                        </div>
+                      );
+
+                      if (store.subscriptionExempt) return (
+                        <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-100 rounded-md px-2.5 py-1.5">
+                          <ShieldCheck className="w-3.5 h-3.5 flex-shrink-0" />
+                          Admin exemption active — this store remains available even when payment is due
                         </div>
                       );
 
@@ -462,6 +487,21 @@ export default function StoresPage() {
                     <Button size="sm" variant="outline" onClick={() => openEdit(store)}>
                       <Pencil className="w-4 h-4 mr-1.5" />
                       Edit name / location
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className={store.subscriptionExempt
+                        ? "text-amber-700 border-amber-200 hover:bg-amber-50"
+                        : "text-purple-700 border-purple-200 hover:bg-purple-50"}
+                      onClick={() => paymentExemptionMutation.mutate({
+                        storeId: store.id,
+                        data: { exempt: !store.subscriptionExempt },
+                      })}
+                      disabled={paymentExemptionMutation.isPending}
+                    >
+                      <CreditCard className="w-4 h-4 mr-1.5" />
+                      {store.subscriptionExempt ? "Require payment" : "Allow without payment"}
                     </Button>
                     {store.hiddenByAdmin ? (
                       <Button

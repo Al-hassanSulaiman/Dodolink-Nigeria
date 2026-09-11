@@ -77,6 +77,7 @@ export interface SubscriptionStatus {
   qualifiedAt?: string | null;
   gracePeriodDaysRemaining?: number | null;
   isVisible: boolean;
+  subscriptionExempt: boolean;
   autoPayEnabled: boolean;
   hasAutoCharge: boolean;
   /** True when the billing system is active (after Jan 1 2027) */
@@ -148,6 +149,7 @@ export interface Store {
   verificationStatus: StoreVerificationStatus;
   detailsLockedByAdmin: boolean;
   hiddenByAdmin: boolean;
+  subscriptionExempt: boolean;
   /** @nullable */
   verifiedAt?: string | null;
   /** @nullable */
@@ -233,6 +235,10 @@ export interface AdminUpdateStoreBody {
   name?: string;
   /** @minLength 1 */
   location?: string;
+}
+
+export interface PaymentExemptionInput {
+  exempt: boolean;
 }
 
 export interface UpdateStoreBody {

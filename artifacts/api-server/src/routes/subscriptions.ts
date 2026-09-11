@@ -72,6 +72,7 @@ function buildStatus(store: typeof storesTable.$inferSelect, engagementCount: nu
     qualifiedAt: store.qualifiedAt?.toISOString() ?? null,
     gracePeriodDaysRemaining: gracePeriodDaysRemaining(store),
     isVisible: !isStoreHidden(store),
+    subscriptionExempt: store.subscriptionExempt,
     autoPayEnabled: store.autoPayEnabled,
     hasAutoCharge: !!store.paystackAuthCode,
     paymentsLive: isPaymentsLive(),
@@ -300,7 +301,8 @@ router.post("/stores/:storeId/subscription/charge", paymentLimit, async (req, re
 
   switch (result.kind) {
     case "charged":
-    case "already_active": {
+    case "already_active":
+    case "exempt": {
       const [fresh] = await db.select().from(storesTable).where(eq(storesTable.id, storeId));
       const engagementCount = await getEngagementCount(storeId);
       res.json(buildStatus(fresh, engagementCount));
