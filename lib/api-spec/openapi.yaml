@@ -65,6 +65,12 @@ paths:
           schema:
             type: integer
             default: 0
+        - name: top
+          in: query
+          description: Rank stores by review count and average rating for the home feed
+          schema:
+            type: boolean
+            default: false
       responses:
         "200":
           description: List of stores
@@ -303,6 +309,12 @@ paths:
           schema:
             type: integer
             default: 0
+        - name: featured
+          in: query
+          description: Return a changing selection of products from top-reviewed stores
+          schema:
+            type: boolean
+            default: false
       responses:
         "200":
           description: List of products

@@ -1,11 +1,12 @@
 import { Router, type IRouter } from "express";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc, inArray, sql } from "drizzle-orm";
 import { db, productsTable, storesTable } from "@workspace/db";
 import { CreateProductBody, UpdateProductBody } from "@workspace/api-zod";
 import { requireUser } from "../lib/auth";
 import { visibleStoresFilter } from "../lib/storeSubscription";
 
 const router: IRouter = Router();
+const FEATURED_STORE_POOL_SIZE = 10;
 
 async function productStoreOwner(productId: number): Promise<{ found: boolean; ownerUserId: string | null }> {
   const rows = await db
@@ -32,13 +33,36 @@ const productSelect = {
 };
 
 router.get("/products", async (req, res): Promise<void> => {
-  const { limit = 30, offset = 0 } = req.query;
+  const { limit = 30, offset = 0, featured } = req.query;
+  const isFeatured = featured === "true";
 
-  const rows = await db
+  const topStoreIds = db
+    .select({ id: storesTable.id })
+    .from(storesTable)
+    .where(visibleStoresFilter())
+    .orderBy(
+      desc(storesTable.totalReviews),
+      sql`${storesTable.avgRating} DESC NULLS LAST`,
+      storesTable.createdAt,
+    )
+    .limit(FEATURED_STORE_POOL_SIZE);
+
+  let query = db
     .select(productSelect)
     .from(productsTable)
     .leftJoin(storesTable, eq(productsTable.storeId, storesTable.id))
-    .where(visibleStoresFilter())
+    .where(
+      isFeatured
+        ? and(visibleStoresFilter(), inArray(productsTable.storeId, topStoreIds))
+        : visibleStoresFilter(),
+    )
+    .$dynamic();
+
+  if (isFeatured) {
+    query = query.orderBy(sql`random()`);
+  }
+
+  const rows = await query
     .limit(Number(limit))
     .offset(Number(offset));
 

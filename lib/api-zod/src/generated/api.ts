@@ -20,12 +20,14 @@ export const HealthCheckResponse = zod.object({
  */
 export const listStoresQueryLimitDefault = 20;
 export const listStoresQueryOffsetDefault = 0;
+export const listStoresQueryTopDefault = false;
 
 export const ListStoresQueryParams = zod.object({
   "category": zod.coerce.string().optional(),
   "ownerUserId": zod.coerce.string().optional().describe('Filter stores by owner user ID'),
   "limit": zod.coerce.number().default(listStoresQueryLimitDefault),
-  "offset": zod.coerce.number().default(listStoresQueryOffsetDefault)
+  "offset": zod.coerce.number().default(listStoresQueryOffsetDefault),
+  "top": zod.coerce.boolean().default(listStoresQueryTopDefault).describe('Rank stores by review count and average rating for the home feed')
 })
 
 export const ListStoresResponseItem = zod.object({
@@ -342,11 +344,13 @@ export const DeleteProductResponse = zod.void()
  */
 export const listProductsQueryLimitDefault = 30;
 export const listProductsQueryOffsetDefault = 0;
+export const listProductsQueryFeaturedDefault = false;
 
 export const ListProductsQueryParams = zod.object({
   "category": zod.coerce.string().optional(),
   "limit": zod.coerce.number().default(listProductsQueryLimitDefault),
-  "offset": zod.coerce.number().default(listProductsQueryOffsetDefault)
+  "offset": zod.coerce.number().default(listProductsQueryOffsetDefault),
+  "featured": zod.coerce.boolean().default(listProductsQueryFeaturedDefault).describe('Return a changing selection of products from top-reviewed stores')
 })
 
 export const ListProductsResponseItem = zod.object({

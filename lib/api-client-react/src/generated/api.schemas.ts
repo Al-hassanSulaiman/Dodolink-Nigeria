@@ -469,12 +469,20 @@ category?: string;
 ownerUserId?: string;
 limit?: number;
 offset?: number;
+/**
+ * Rank stores by review count and average rating for the home feed
+ */
+top?: boolean;
 };
 
 export type ListProductsParams = {
 category?: string;
 limit?: number;
 offset?: number;
+/**
+ * Return a changing selection of products from top-reviewed stores
+ */
+featured?: boolean;
 };
 
 export type SearchParams = {

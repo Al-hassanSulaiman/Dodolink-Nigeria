@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { getAuth } from "@clerk/express";
-import { eq, ilike, and, sql, inArray } from "drizzle-orm";
+import { eq, ilike, and, sql, inArray, desc } from "drizzle-orm";
 import { db, storesTable, productsTable, conversationsTable, messagesTable } from "@workspace/db";
 import {
   CreateStoreBody,
@@ -30,7 +30,7 @@ function toPublicStore<T extends Record<string, unknown>>(store: T) {
 }
 
 router.get("/stores", async (req, res): Promise<void> => {
-  const { category, limit = 20, offset = 0, ownerUserId } = req.query;
+  const { category, limit = 20, offset = 0, ownerUserId, top } = req.query;
 
   // When filtering by owner, hidden stores are only included when the caller
   // IS that owner (so owners can always reach their own store to pay). Anyone
@@ -50,7 +50,18 @@ router.get("/stores", async (req, res): Promise<void> => {
     query = query.where(accessFilter);
   }
 
-  const stores = await query.limit(Number(limit)).offset(Number(offset)).orderBy(storesTable.createdAt);
+  const stores = await query
+    .limit(Number(limit))
+    .offset(Number(offset))
+    .orderBy(
+      ...(top === "true"
+        ? [
+            desc(storesTable.totalReviews),
+            sql`${storesTable.avgRating} DESC NULLS LAST`,
+            storesTable.createdAt,
+          ]
+        : [storesTable.createdAt]),
+    );
   res.json(stores.map(toPublicStore));
 });
 
