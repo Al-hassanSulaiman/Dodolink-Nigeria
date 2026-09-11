@@ -1,4 +1,4 @@
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { db, storesTable } from "@workspace/db";
 
 export const STORE_NAME_ALREADY_EXISTS = {
@@ -17,7 +17,7 @@ export async function findVerifiedStoreNameConflict(
   const normalizedName = normalizeStoreName(name);
   const conditions = [
     eq(storesTable.verificationStatus, "verified"),
-    sql`lower(regexp_replace(btrim(${storesTable.name}), '[[:space:]]+', ' ', 'g')) = ${normalizedName}`,
+    eq(storesTable.normalizedName, normalizedName),
   ];
 
   if (excludeStoreId !== undefined) {

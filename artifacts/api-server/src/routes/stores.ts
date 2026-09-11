@@ -25,8 +25,8 @@ const router: IRouter = Router();
  * charge a seller's saved card.
  */
 function toPublicStore<T extends Record<string, unknown>>(store: T) {
-  const { paystackAuthCode, paystackCustomerCode, paystackEmail, ...pub } = store as any;
-  return pub as Omit<T, "paystackAuthCode" | "paystackCustomerCode" | "paystackEmail">;
+  const { paystackAuthCode, paystackCustomerCode, paystackEmail, normalizedName, ...pub } = store as any;
+  return pub as Omit<T, "paystackAuthCode" | "paystackCustomerCode" | "paystackEmail" | "normalizedName">;
 }
 
 router.get("/stores", async (req, res): Promise<void> => {

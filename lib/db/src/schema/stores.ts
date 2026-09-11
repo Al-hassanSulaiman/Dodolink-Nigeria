@@ -8,6 +8,9 @@ export const storesTable = pgTable("stores", {
   ownerName: text("owner_name").notNull(),
   ownerUserId: text("owner_user_id").notNull(),
   name: text("name").notNull(),
+  normalizedName: text("normalized_name").generatedAlwaysAs(
+    sql`lower(regexp_replace(btrim(name), '[[:space:]]+', ' ', 'g'))`,
+  ),
   description: text("description").notNull(),
   category: text("category").notNull(),
   location: text("location").notNull(),
@@ -35,7 +38,7 @@ export const storesTable = pgTable("stores", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => [
   uniqueIndex("stores_verified_name_unique")
-    .on(sql`lower(regexp_replace(btrim(${table.name}), '[[:space:]]+', ' ', 'g'))`)
+    .on(table.normalizedName)
     .where(sql`${table.verificationStatus} = 'verified'`),
 ]);
 
