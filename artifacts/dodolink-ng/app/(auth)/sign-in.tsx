@@ -21,6 +21,7 @@ import * as WebBrowser from "expo-web-browser";
 
 const PRIVACY_URL = "https://dodolink.com.ng/admin/privacy";
 const TERMS_URL = "https://dodolink.com.ng/admin/terms";
+const APPLE_SIGN_IN_ENABLED = false;
 
 function NativeAnchor({ href, children, style }: { href: string; children: React.ReactNode; style?: object }) {
   if (Platform.OS !== "web") return null;
@@ -324,7 +325,7 @@ export default function SignInPage() {
             </Pressable>
           </View>
 
-          {Platform.OS === "ios" && (
+          {Platform.OS === "ios" && APPLE_SIGN_IN_ENABLED && (
             <>
               <View style={styles.divider}>
                 <View style={styles.dividerLine} />
