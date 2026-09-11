@@ -16,3 +16,4 @@
 - [Android Expo FCM setup](android-expo-fcm.md) — expo-notifications needs both Firebase app config and an Expo FCM V1 credential before Android can register or receive remote pushes
 - [EAS monorepo build root](eas-monorepo-build-root.md) — Git-triggered builds may silently use repo root; for reliable releases run EAS CLI from the mobile app directory and pin pnpm
 - [GitHub connector HTML upload filter](github-connector-html-upload.md) — connector API may Cloudflare-block HTML payloads; generate the page shell from an uploaded server module
+- [Publish dependency scan coverage](publish-dependency-scan.md) — Publish scans build/dev transitives; no-fix build-tool advisories need a compatible safe replacement
