@@ -10,7 +10,7 @@
  * Fix: reopen SPMManager after it is loaded and redefine add_spm_to_target to
  * return early when target is nil.
  */
-const { withDangerousMod } = require('@expo/config-plugins');
+const { withDangerousMod } = require('expo/config-plugins');
 const fs = require('fs');
 const path = require('path');
 
