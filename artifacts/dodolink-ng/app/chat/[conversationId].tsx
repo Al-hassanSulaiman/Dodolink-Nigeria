@@ -25,6 +25,17 @@ import { showAlert } from '@/utils/alerts';
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const MEDIA_WIDTH = SCREEN_WIDTH * 0.65;
 
+function mediaSendErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message.trim() : '';
+  if (!message || message === 'undefined is not a function') {
+    return 'We could not prepare that photo. Tap + to choose it again.';
+  }
+  if (/network request failed|failed to fetch/i.test(message)) {
+    return 'Could not upload the photo. Check your connection, then tap + to try again.';
+  }
+  return `${message} Tap + to try again.`;
+}
+
 // Small component so each video gets its own player instance
 function VideoBubble({ uri, isMe, colors }: { uri: string; isMe: boolean; colors: ReturnType<typeof useColors> }) {
   const player = useVideoPlayer(uri, p => { p.loop = false; });
@@ -63,7 +74,7 @@ export default function ChatThreadScreen() {
   const queryClient = useQueryClient();
   const inputRef = useRef<TextInput>(null);
 
-  const { data: messages, isLoading } = useListMessages(id, {
+  const { data: messages, isLoading, isError: messagesError, refetch: refetchMessages } = useListMessages(id, {
     query: { enabled: !!id, queryKey: getListMessagesQueryKey(id) }
   });
 
@@ -75,24 +86,28 @@ export default function ChatThreadScreen() {
       .catch(() => {});
   }, [id]);
 
-  const sendMessage = useSendMessage({
-    mutation: {
-      onSuccess: () => {
-        setMessage('');
-        queryClient.invalidateQueries({ queryKey: getListMessagesQueryKey(id) });
-        inputRef.current?.focus();
-      }
-    }
-  });
+  const sendMessage = useSendMessage();
 
   const handleSend = () => {
     if (!message.trim() || !userId || !userName) return;
-    sendMessage.mutate({ conversationId: id, data: {
-      senderId: userId,
-      senderName: senderName,
-      senderType: senderType,
-      body: message.trim(),
-    }});
+    sendMessage.mutate(
+      { conversationId: id, data: {
+        senderId: userId,
+        senderName: senderName,
+        senderType: senderType,
+        body: message.trim(),
+      }},
+      {
+        onSuccess: () => {
+          setMessage('');
+          queryClient.invalidateQueries({ queryKey: getListMessagesQueryKey(id) });
+          inputRef.current?.focus();
+        },
+        onError: () => {
+          showAlert('Message not sent', 'Something went wrong. Please check your connection and try again.');
+        },
+      }
+    );
   };
 
   const handlePickMedia = async () => {
@@ -125,21 +140,37 @@ export default function ChatThreadScreen() {
       );
       const mediaUrl = getImageUrl(objectPath);
 
-      sendMessage.mutate({ conversationId: id, data: {
-        senderId: userId,
-        senderName: senderName,
-        senderType: senderType,
-        body: '',
-        mediaUrl,
-      }});
+      // Use per-call onError only (no global onError on the hook for media path)
+      await new Promise<void>((resolve, reject) => {
+        sendMessage.mutate(
+          { conversationId: id, data: { senderId: userId, senderName: senderName, senderType: senderType, body: '', mediaUrl } },
+          {
+            onSuccess: () => {
+              queryClient.invalidateQueries({ queryKey: getListMessagesQueryKey(id) });
+              resolve();
+            },
+            onError: (err: any) => reject(err),
+          }
+        );
+      });
     } catch (err: any) {
-      showAlert('Upload failed', err?.message ?? 'Could not upload media. Please try again.');
+      showAlert('Photo not sent', mediaSendErrorMessage(err));
     } finally {
       setUploading(false);
     }
   };
 
   if (isLoading && !messages) return <LoadingScreen message="Loading messages..." />;
+  if (messagesError && !messages) return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, backgroundColor: colors.background }}>
+      <Feather name="wifi-off" size={48} color={colors.mutedForeground} />
+      <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 18, color: colors.foreground, marginTop: 16, textAlign: 'center' }}>Couldn't load messages</Text>
+      <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 14, color: colors.mutedForeground, marginTop: 8, textAlign: 'center' }}>Check your connection and try again.</Text>
+      <Pressable onPress={() => refetchMessages()} style={{ marginTop: 20, paddingHorizontal: 24, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: 20 }}>
+        <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 14, color: colors.primaryForeground }}>Try again</Text>
+      </Pressable>
+    </View>
+  );
 
   const renderItem = ({ item }: { item: Message }) => {
     const isMe = item.senderId === userId;
@@ -206,6 +237,7 @@ export default function ChatThreadScreen() {
           style={[styles.mediaButton, { backgroundColor: colors.muted }]}
           onPress={handlePickMedia}
           disabled={isBusy}
+          testID="chat-media-button"
         >
           {uploading
             ? <ActivityIndicator size="small" color={colors.primary} />
@@ -227,6 +259,7 @@ export default function ChatThreadScreen() {
           style={[styles.sendButton, { backgroundColor: message.trim() ? colors.primary : colors.muted }]}
           onPress={handleSend}
           disabled={!message.trim() || isBusy}
+          testID="chat-send-button"
         >
           <Feather name="send" size={20} color={message.trim() ? colors.primaryForeground : colors.mutedForeground} />
         </Pressable>

@@ -8,6 +8,8 @@ import { useUserIdentity } from '@/hooks/useUserIdentity';
 import { Input, Button } from '@/components/ui';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { showAlert } from '@/utils/alerts';
+import { isStoreNameAlreadyExistsError } from '@/utils/storeErrors';
 
 export default function CreateStoreScreen() {
   const colors = useColors();
@@ -28,7 +30,17 @@ export default function CreateStoreScreen() {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListStoresQueryKey() });
         router.replace('/(tabs)/my-store');
-      }
+      },
+      onError: (error) => {
+        if (isStoreNameAlreadyExistsError(error)) {
+          showAlert(
+            'Store name already exists',
+            'A verified store is already using this name. Please choose another store name.',
+          );
+          return;
+        }
+        showAlert('Store creation failed', 'Could not create the store. Please try again.');
+      },
     }
   });
 
@@ -54,13 +66,13 @@ export default function CreateStoreScreen() {
         bottomOffset={20}
       >
         <Text style={[styles.label, { color: colors.foreground }]}>Store Name</Text>
-        <Input placeholder="e.g. Ebuka Electronics" value={name} onChangeText={setName} />
+        <Input placeholder="E.g. Al-Hassan Automobiles" value={name} onChangeText={setName} />
 
         <Text style={[styles.label, { color: colors.foreground, marginTop: 16 }]}>Category</Text>
-        <Input placeholder="e.g. Electronics" value={category} onChangeText={setCategory} />
+        <Input placeholder="E.g. Cars" value={category} onChangeText={setCategory} />
 
         <Text style={[styles.label, { color: colors.foreground, marginTop: 16 }]}>Location</Text>
-        <Input placeholder="e.g. Alaba International Market, Lagos" value={location} onChangeText={setLocation} />
+        <Input placeholder="E.g. Wunti Market, Bauchi, Bauchi" value={location} onChangeText={setLocation} />
 
         <Text style={[styles.label, { color: colors.foreground, marginTop: 16 }]}>Phone Number</Text>
         <Input placeholder="e.g. 08012345678" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />

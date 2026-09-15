@@ -31,8 +31,13 @@ import { useListStores } from '@workspace/api-client-react';
 import { Button } from '@/components/ui';
 import { LoadingScreen } from '@/components/Loading';
 
-const SUBSCRIPTION_FEE = '₦5,000';
 const ENGAGEMENT_THRESHOLD = 7;
+
+/** Format a kobo amount from the server as a naira string, e.g. 200000 → ₦2,000. */
+function formatNaira(kobo: number | undefined): string {
+  if (kobo == null) return '₦—';
+  return `₦${(kobo / 100).toLocaleString('en-NG')}`;
+}
 
 export default function SubscriptionScreen() {
   const colors = useColors();
@@ -112,7 +117,7 @@ export default function SubscriptionScreen() {
     if (!myStore) return;
     confirmAlert({
       title: 'Renew subscription',
-      message: `Charge ${SUBSCRIPTION_FEE} using your saved card?`,
+      message: `Charge ${formatNaira(sub?.subscriptionAmountKobo)} using your saved card?`,
       confirmText: 'Charge now',
       onConfirm: async () => {
         try {
@@ -142,14 +147,18 @@ export default function SubscriptionScreen() {
   if (!isReady || storesLoading) return <LoadingScreen message="Loading…" />;
 
   const statusColor =
-    sub?.subscriptionStatus === 'active'
+    sub?.subscriptionExempt
+      ? '#7c3aed'
+      : sub?.subscriptionStatus === 'active'
       ? '#22c55e'
       : sub?.subscriptionStatus === 'past_due'
       ? '#f59e0b'
       : colors.mutedForeground;
 
   const statusLabel =
-    sub?.subscriptionStatus === 'active'
+    sub?.subscriptionExempt
+      ? 'Payment Exempt'
+      : sub?.subscriptionStatus === 'active'
       ? 'Active'
       : sub?.subscriptionStatus === 'past_due'
       ? 'Past Due'
@@ -190,8 +199,20 @@ export default function SubscriptionScreen() {
 
       <View style={styles.content}>
 
+        {sub?.subscriptionExempt && (
+          <View style={[styles.alertBanner, { backgroundColor: '#7c3aed22', borderColor: '#7c3aed' }]}>
+            <Feather name="shield" size={18} color="#7c3aed" />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.alertTitle, { color: '#7c3aed' }]}>Payment exemption active</Text>
+              <Text style={[styles.alertBody, { color: '#7c3aedcc' }]}>
+                Your store remains visible without subscription payment. You will not be charged automatically, but you can still pay manually if you choose.
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Store hidden banner */}
-        {isHidden && (
+        {!sub?.subscriptionExempt && isHidden && (
           <View style={[styles.alertBanner, { backgroundColor: '#ef444422', borderColor: '#ef4444' }]}>
             <Feather name="eye-off" size={18} color="#ef4444" />
             <View style={{ flex: 1 }}>
@@ -204,7 +225,7 @@ export default function SubscriptionScreen() {
         )}
 
         {/* Grace period countdown */}
-        {!isHidden && daysLeft !== null && (
+        {!sub?.subscriptionExempt && !isHidden && daysLeft !== null && (
           <View style={[styles.alertBanner, { backgroundColor: graceUrgencyColor + '22', borderColor: graceUrgencyColor }]}>
             <Feather name="clock" size={18} color={graceUrgencyColor} />
             <View style={{ flex: 1 }}>
@@ -214,7 +235,7 @@ export default function SubscriptionScreen() {
                   : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left in grace period`}
               </Text>
               <Text style={[styles.alertBody, { color: graceUrgencyColor + 'cc' }]}>
-                Your store will be hidden from customers if you don't pay before the grace period ends.
+                Pay before your 14-day grace period ends to keep your store visible to customers.
               </Text>
             </View>
           </View>
@@ -242,7 +263,7 @@ export default function SubscriptionScreen() {
           <Text style={[styles.cardBody, { color: colors.mutedForeground }]}>
             {sub?.qualified
               ? '✓ Your store qualifies for a subscription'
-              : `Reach ${ENGAGEMENT_THRESHOLD} customer interactions (reviews + messages) to activate your subscription.`}
+              : `Verified stores qualify after ${ENGAGEMENT_THRESHOLD} distinct customers who send chat messages within 30 days. Each customer counts once in the window; reviews, comments, and retailer replies do not count. Once qualified, you have 14 days to make your first payment.`}
           </Text>
         </View>
 
@@ -258,7 +279,7 @@ export default function SubscriptionScreen() {
               </View>
             </View>
 
-            {sub.subscriptionStatus === 'active' && dueDate && (
+            {!sub.subscriptionExempt && sub.subscriptionStatus === 'active' && dueDate && (
               <Text style={[styles.cardBody, { color: colors.mutedForeground }]}>
                 {isOverdue
                   ? `⚠️ Due date passed on ${dueDate.toLocaleDateString('en-NG')}`
@@ -272,14 +293,14 @@ export default function SubscriptionScreen() {
             )}
 
             {/* Auto-pay toggle */}
-            {sub.hasAutoCharge && (
+            {sub.hasAutoCharge && !sub.subscriptionExempt && (
               <View style={[styles.autoPayRow, { borderTopColor: colors.border }]}>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.autoPayLabel, { color: colors.foreground }]}>
                     Auto-renew
                   </Text>
                   <Text style={[styles.autoPaySub, { color: colors.mutedForeground }]}>
-                    Automatically charge {SUBSCRIPTION_FEE} every 30 days
+                    Automatically charge {formatNaira(sub?.subscriptionAmountKobo)} every 30 days
                   </Text>
                 </View>
                 <Switch
@@ -301,19 +322,21 @@ export default function SubscriptionScreen() {
           >
             <Text style={[styles.cardTitle, { color: colors.foreground }]}>Payment</Text>
             <Text style={[styles.cardBody, { color: colors.mutedForeground, marginBottom: 16 }]}>
-              {SUBSCRIPTION_FEE}/month keeps your store visible and accepting orders.
+              {sub.subscriptionExempt
+                ? `Your current rate is ${formatNaira(sub?.subscriptionAmountKobo)}/month, but payment is optional while your admin exemption is active.`
+                : `Your current rate is ${formatNaira(sub?.subscriptionAmountKobo)}/month, based on distinct customers who sent chat messages in the last 30 days. Payment keeps your store visible and accepting orders.`}
             </Text>
 
-            {/* Coming soon banner — shown before Jan 1 2027 */}
+            {/* Coming soon banner — shown only if billing is not yet live */}
             {!sub.paymentsLive ? (
               <View style={[styles.comingSoonBanner, { backgroundColor: '#16a34a18', borderColor: '#16a34a44' }]}>
                 <Feather name="calendar" size={20} color="#16a34a" />
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.comingSoonTitle, { color: '#16a34a' }]}>
-                    Subscription billing launches January 1, 2027
+                    Subscription billing is temporarily unavailable
                   </Text>
                   <Text style={[styles.comingSoonBody, { color: '#16a34a99' }]}>
-                    Your store is free to use until then. No payment is required right now — enjoy building your customer base!
+                    Please try again shortly.
                   </Text>
                 </View>
               </View>
@@ -376,8 +399,8 @@ export default function SubscriptionScreen() {
                         initMutation.isPending
                           ? 'Opening payment…'
                           : sub.subscriptionStatus === 'active'
-                          ? `Renew now (${SUBSCRIPTION_FEE})`
-                          : `Pay ${SUBSCRIPTION_FEE} to activate`
+                          ? `Renew now (${formatNaira(sub?.subscriptionAmountKobo)})`
+                          : `Pay ${formatNaira(sub?.subscriptionAmountKobo)} to activate`
                       }
                       onPress={handlePayManually}
                       disabled={initMutation.isPending}
@@ -410,7 +433,7 @@ export default function SubscriptionScreen() {
           >
             <Feather name="lock" size={20} color={colors.mutedForeground} />
             <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
-              Subscription payment will be unlocked once your store reaches {ENGAGEMENT_THRESHOLD} customer interactions.
+              Payment unlocks when your verified store reaches {ENGAGEMENT_THRESHOLD} distinct customers who sent chat messages within 30 days. Each customer counts once in the window; reviews and comments do not count. After qualifying, you have 14 days to pay. The monthly fee is ₦2,000 for 7–11 active customer chats and ₦5,000 for {sub.premiumThreshold}+ active customer chats.
             </Text>
           </View>
         )}

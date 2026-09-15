@@ -13,8 +13,8 @@ export default function HomeScreen() {
   const colors = useColors();
   const { signOut } = useAuth();
   const router = useRouter();
-  const { data: products, isLoading: isLoadingProducts, refetch: refetchProducts } = useListProducts({ limit: 6 });
-  const { data: stores, isLoading: isLoadingStores, refetch: refetchStores } = useListStores({ limit: 3 });
+  const { data: products, isLoading: isLoadingProducts, refetch: refetchProducts } = useListProducts({ limit: 6, featured: true });
+  const { data: stores, isLoading: isLoadingStores, refetch: refetchStores } = useListStores({ limit: 5, top: true });
 
   const refreshing = isLoadingProducts || isLoadingStores;
   const onRefresh = () => {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, View, Text, ScrollView, RefreshControl, Pressable, Image } from 'react-native';
 import { showAlert } from '@/utils/alerts';
+import { isStoreNameAlreadyExistsError } from '@/utils/storeErrors';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import {
   useGetStore,
@@ -37,6 +38,7 @@ export default function StoreScreen() {
   const [comment, setComment] = useState('');
 
   const [isEditing, setIsEditing] = useState(false);
+  const [storeImgError, setStoreImgError] = useState(false);
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editLocation, setEditLocation] = useState('');
@@ -44,7 +46,7 @@ export default function StoreScreen() {
   const [editPhone, setEditPhone] = useState('');
   const [editCacNumber, setEditCacNumber] = useState('');
 
-  const { data: store, isLoading: storeLoading, refetch: refetchStore } = useGetStore(storeId, {
+  const { data: store, isLoading: storeLoading, isError: storeError, refetch: refetchStore } = useGetStore(storeId, {
     query: { enabled: !!storeId, queryKey: getGetStoreQueryKey(storeId) }
   });
 
@@ -74,7 +76,14 @@ export default function StoreScreen() {
         queryClient.invalidateQueries({ queryKey: getGetStoreQueryKey(storeId) });
         setIsEditing(false);
       },
-      onError: () => {
+      onError: (error) => {
+        if (isStoreNameAlreadyExistsError(error)) {
+          showAlert(
+            'Store name already exists',
+            'A verified store is already using this name. Please choose another store name.',
+          );
+          return;
+        }
         showAlert('Save failed', 'Could not update the store. Please try again.');
       }
     }
@@ -126,7 +135,23 @@ export default function StoreScreen() {
   const onRefresh = () => { refetchStore(); };
 
   if (storeLoading && !store) return <LoadingScreen message="Loading store..." />;
-  if (!store) return null;
+  if (storeError && !store) return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, backgroundColor: colors.background }}>
+      <Feather name="wifi-off" size={48} color={colors.mutedForeground} />
+      <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 18, color: colors.foreground, marginTop: 16, textAlign: 'center' }}>Couldn't load this store</Text>
+      <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 14, color: colors.mutedForeground, marginTop: 8, textAlign: 'center' }}>Check your connection and try again.</Text>
+      <Pressable onPress={() => refetchStore()} style={{ marginTop: 20, paddingHorizontal: 24, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: 20 }}>
+        <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 14, color: colors.primaryForeground }}>Try again</Text>
+      </Pressable>
+    </View>
+  );
+  if (!store) return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, backgroundColor: colors.background }}>
+      <Feather name="alert-circle" size={48} color={colors.mutedForeground} />
+      <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 18, color: colors.foreground, marginTop: 16, textAlign: 'center' }}>Store not found</Text>
+      <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 14, color: colors.mutedForeground, marginTop: 8, textAlign: 'center' }}>This store may have been removed.</Text>
+    </View>
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -161,8 +186,8 @@ export default function StoreScreen() {
           <View style={[styles.avatarContainer, { borderColor: colors.background }]}>
             {isOwner ? (
               <StoreAvatar store={store} size={80} editable />
-            ) : store.imageUrl ? (
-              <Image source={{ uri: getImageUrl(store.imageUrl) }} style={styles.avatar} resizeMode="cover" />
+            ) : store.imageUrl && !storeImgError ? (
+              <Image source={{ uri: getImageUrl(store.imageUrl) }} style={styles.avatar} resizeMode="cover" onError={() => setStoreImgError(true)} />
             ) : (
               <ImagePlaceholder name={store.name} size={80} borderRadius={40} />
             )}

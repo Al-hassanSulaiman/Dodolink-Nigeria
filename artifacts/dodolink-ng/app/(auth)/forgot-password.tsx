@@ -2,6 +2,7 @@ import { useSignIn } from "@clerk/expo";
 import { type Href, useRouter } from "expo-router";
 import React from "react";
 import { showAlert } from "../../utils/alerts";
+import * as WebBrowser from "expo-web-browser";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -14,6 +15,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+const PRIVACY_URL = "https://dodolink.com.ng/admin/privacy";
 
 type Step = "email" | "code" | "password" | "done";
 
@@ -336,6 +339,12 @@ export default function ForgotPasswordPage() {
               </>
             )}
           </View>
+
+          <View style={styles.legalRow}>
+            <Pressable onPress={() => WebBrowser.openBrowserAsync(PRIVACY_URL)} hitSlop={6}>
+              <Text style={styles.legalLink}>Privacy Policy</Text>
+            </Pressable>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -472,5 +481,17 @@ const styles = StyleSheet.create({
     color: "#374151",
     fontSize: 15,
     fontFamily: "Inter_500Medium",
+  },
+  legalRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    flexWrap: "wrap",
+    marginTop: 16,
+  },
+  legalLink: {
+    fontSize: 12,
+    color: "#1B5E20",
+    fontFamily: "Inter_500Medium",
+    fontWeight: "500",
   },
 });

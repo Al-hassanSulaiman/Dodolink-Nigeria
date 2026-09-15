@@ -1,5 +1,5 @@
 import { useFonts } from "expo-font";
-import { ClerkProvider, ClerkLoaded } from "@clerk/expo";
+import { ClerkProvider, ClerkLoaded, useAuth } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
@@ -11,9 +11,13 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { setBaseUrl } from "@workspace/api-client-react";
-import { usePushNotifications } from "@/hooks/usePushNotifications";
-import { useUser } from "@clerk/expo";
+import { PushNotificationSetup } from "@/components/PushNotificationSetup";
+import { WebMcpRegistration } from "@/components/WebMcpRegistration";
+import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
+import {
+  useAndroidNotificationChannelBootstrap,
+  usePushNotifications,
+} from "@/hooks/usePushNotifications";
 import { getApiBase } from "@/utils/apiBase";
 
 setBaseUrl(getApiBase());
@@ -44,9 +48,22 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 function PushNotificationsGate() {
-  const { user } = useUser();
-  usePushNotifications(user?.id ?? null);
-  return null;
+  const { getToken, isLoaded, isSignedIn, userId } = useAuth();
+
+  // Push registration happens at the root, before the tab layout is guaranteed
+  // to mount. Set the bearer-token getter here so saving a device token never
+  // fails with an unauthenticated request immediately after sign-in.
+  useEffect(() => {
+    setAuthTokenGetter(() => getToken());
+    return () => setAuthTokenGetter(null);
+  }, [getToken]);
+
+  const { state, retry } = usePushNotifications(
+    isLoaded && isSignedIn ? userId : null,
+    getToken,
+  );
+
+  return <PushNotificationSetup state={state} onRetry={retry} />;
 }
 
 function RootLayoutNav() {
@@ -64,6 +81,8 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
+  useAndroidNotificationChannelBootstrap();
+
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular: require("../assets/fonts/Inter_400Regular.ttf"),
     Inter_500Medium: require("../assets/fonts/Inter_500Medium.ttf"),
@@ -89,6 +108,7 @@ export default function RootLayout() {
         <SafeAreaProvider>
           <ErrorBoundary>
             <QueryClientProvider client={queryClient}>
+              <WebMcpRegistration />
               <PushNotificationsGate />
               <GestureHandlerRootView>
                 <KeyboardProvider>
