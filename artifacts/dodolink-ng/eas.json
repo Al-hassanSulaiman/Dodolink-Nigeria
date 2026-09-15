@@ -23,9 +23,6 @@
     },
     "production": {
       "pnpm": "10.14.0",
-      "cache": {
-        "key": "native-signin-build-2026-09-15"
-      },
       "env": {
         "EXPO_PUBLIC_DOMAIN": "dodolink.com.ng",
         "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsuZG9kb2xpbmsuY29tLm5nJA",
@@ -33,7 +30,7 @@
       },
       "ios": {
         "credentialsSource": "remote",
-        "image": "macos-sequoia-15.5-xcode-16.4"
+        "image": "macos-sequoia-15.5-xcode-26.0"
       },
       "android": {
         "image": "ubuntu-24.04-jdk-17-ndk-r27b"

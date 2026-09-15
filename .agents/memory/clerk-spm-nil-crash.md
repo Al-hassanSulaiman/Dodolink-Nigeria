@@ -26,3 +26,18 @@ versions (0.81.5 → 0.81.6) does NOT help.
   exists. If ClerkExpo ever silently disappears from a build again, check deployment target /
   plugin registration first.
 - Note: this makes the app require iOS 17+.
+
+## Distinguish a full Pods build-graph failure
+
+If Xcode reports missing module maps for nearly every pod (`Expo`, `EXConstants`,
+`ClerkExpo`, and many others) while compiling `ExpoModulesProvider.swift`, do not treat
+it as the Clerk-only failure above.
+
+**Why:** The same failure persisted across a clean EAS cache, Xcode 26 and Xcode 16.4,
+Git-triggered builds, a direct EAS CLI upload, and the last known-good dependency snapshot.
+That pattern means the app target is compiling before the Pods products exist.
+
+**How to apply:** Stop retrying cache or Xcode-image changes. Inspect the generated
+Xcode workspace dependency graph and the app target's `Pods-DodolinkNG` dependency;
+fix that single generated-project relationship rather than changing module search paths
+or removing Clerk.
