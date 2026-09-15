@@ -80,21 +80,13 @@ await signIn.finalize({ navigate: ... });
 
 **Why:** Core v3 `SignInFutureResource` uses method-based API (signIn.password(), signIn.resetPasswordEmailCode.*) instead of v2's strategy-based create/prepareFirstFactor/attemptFirstFactor.
 
-## needs_client_trust — Replit iframe sandbox blocks ALL navigation
+## New-device client trust is verification, not browser sync
 
-Clerk dev instances always return `needs_client_trust` on first sign-in. Fixing it requires a redirect round-trip to Clerk's FAPI (`/v1/client/sync`). **The Replit preview iframe blocks every navigation method:**
+Do not interpret `needs_client_trust` as proof of a preview sandbox problem or assume it cannot occur in production. Inspect supported verification factors and complete the challenge before finalizing.
 
-- `location.href = externalUrl` → "cannot set location.href"
-- `window.open(url, '_blank')` → "window.open is not an option" (sandbox blocks popups)
-- `<a target="_blank">` → also blocked
+**Why:** The browser-sync workaround stranded users signing into installed Android and iPhone test apps on a second phone. Their accounts were not restricted to one device.
 
-**The only working solution for dev testing:** Open the Expo app URL directly in a new browser tab (not inside the Replit iframe). In a standalone tab, Clerk's dev browser sync completes automatically on first load. localStorage is shared between the standalone tab and the Replit iframe (same origin), so signing in there sets the JWT for both contexts.
-
-The sign-in page now shows a "One-time setup required" screen when `needs_client_trust` is returned, displaying the app URL with a copy button and an `<a>` link attempt.
-
-**Why `finalize()` doesn't work either:** `createdSessionId` is null under `needs_client_trust` status — the session hasn't been created yet.
-
-**For production Clerk keys (pk_live_*):** `needs_client_trust` never occurs. Auth works normally everywhere.
+**How to apply:** Use the installed Clerk future API's MFA email-code methods for an offered email factor, then finalize the completed sign-in. Keep resend, errors and finalization retry usable. Browser helper authentication bypasses this challenge and does not prove native new-device verification works.
 
 ## Future hooks have NO isLoaded — only fetchStatus
 

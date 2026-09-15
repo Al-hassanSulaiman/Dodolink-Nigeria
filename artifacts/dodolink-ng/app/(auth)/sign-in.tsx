@@ -1,4 +1,4 @@
-import { useSignIn, useClerk, useAuth } from "@clerk/expo";
+import { useSignIn, useAuth } from "@clerk/expo";
 import { useSignInWithApple } from "@clerk/expo/apple";
 import { type Href, Link, useRouter } from "expo-router";
 import React from "react";
@@ -23,58 +23,62 @@ const PRIVACY_URL = "https://dodolink.com.ng/admin/privacy";
 const TERMS_URL = "https://dodolink.com.ng/admin/terms";
 const APPLE_SIGN_IN_ENABLED = false;
 
-function NativeAnchor({ href, children, style }: { href: string; children: React.ReactNode; style?: object }) {
-  if (Platform.OS !== "web") return null;
-  return React.createElement("a", {
-    href,
-    target: "_blank",
-    rel: "noopener noreferrer",
-    style: {
-      display: "flex",
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: "#1B5E20",
-      borderRadius: 12,
-      paddingTop: 14,
-      paddingBottom: 14,
-      paddingLeft: 24,
-      paddingRight: 24,
-      textDecoration: "none",
-      gap: 8,
-      ...style,
-    },
-  }, children);
+type VerificationMode = "client_trust" | "second_factor";
+type SecondFactorStrategy =
+  | "email_code"
+  | "phone_code"
+  | "totp"
+  | "backup_code";
+
+const SECOND_FACTOR_PRIORITY: SecondFactorStrategy[] = [
+  "email_code",
+  "phone_code",
+  "totp",
+  "backup_code",
+];
+
+function getErrorMessage(error: any, fallback: string): string {
+  return (
+    error?.errors?.[0]?.longMessage ??
+    error?.errors?.[0]?.message ??
+    error?.longMessage ??
+    error?.message ??
+    fallback
+  );
 }
 
-function buildSyncUrl(clerk: any): string | null {
-  let frontendApi: string | undefined =
-    clerk?.frontendApi ??
-    clerk?.__unstable__environment?.displayConfig?.homeUrl;
-  if (!frontendApi) {
-    try {
-      const pk: string = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
-      const raw = pk.replace(/^pk_(test|live)_/, "");
-      const pad = raw + "=".repeat((4 - (raw.length % 4)) % 4);
-      frontendApi = atob(pad).replace(/\.$/, "");
-    } catch {}
+function factorLabel(strategy: string): string {
+  switch (strategy) {
+    case "email_code":
+      return "Email code";
+    case "phone_code":
+      return "SMS code";
+    case "totp":
+      return "Authenticator app";
+    case "backup_code":
+      return "Backup code";
+    case "email_link":
+      return "Email link";
+    default:
+      return strategy.replace(/_/g, " ");
   }
-  if (!frontendApi) return null;
-  const origin =
-    typeof window !== "undefined" ? window.location.origin : "";
-  return `https://${frontendApi}/v1/client/sync?redirect_url=${encodeURIComponent(origin)}`;
 }
 
 export default function SignInPage() {
-  const { signIn, errors, fetchStatus } = useSignIn() as any;
-  const clerk = useClerk() as any;
+  const { signIn, errors, fetchStatus } = useSignIn();
   const { isSignedIn } = useAuth();
   const router = useRouter();
 
   const [emailAddress, setEmailAddress] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [showPassword, setShowPassword] = React.useState(false);
-  const [syncUrl, setSyncUrl] = React.useState<string | null>(null);
+  const [verificationMode, setVerificationMode] =
+    React.useState<VerificationMode | null>(null);
+  const [secondFactorStrategy, setSecondFactorStrategy] =
+    React.useState<SecondFactorStrategy | null>(null);
+  const [code, setCode] = React.useState("");
+  const [actionLoading, setActionLoading] = React.useState(false);
+  const [finalizeFailed, setFinalizeFailed] = React.useState(false);
   const [appleLoading, setAppleLoading] = React.useState(false);
 
   const { startAppleAuthenticationFlow } = useSignInWithApple();
@@ -112,108 +116,430 @@ export default function SignInPage() {
     return code === "session_exists";
   };
 
-  const handleSubmit = async () => {
+  const goToApp = () => {
+    router.replace("/(tabs)" as Href);
+  };
+
+  const finalizeSession = async () => {
+    setFinalizeFailed(false);
+    setActionLoading(true);
+
+    let lastError: any = null;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const { error } = await signIn.finalize();
+        if (!error || isAlreadySignedInError(error)) {
+          goToApp();
+          return true;
+        }
+        lastError = error;
+      } catch (err) {
+        lastError = err;
+      }
+
+      // A native token cache can finish updating just after the first
+      // finalize request. Retry once before asking the user to try again.
+      if (attempt === 0) {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+    }
+
+    setFinalizeFailed(true);
+    setActionLoading(false);
+    showAlert(
+      "Sign in error",
+      getErrorMessage(
+        lastError,
+        "Could not finish signing you in. Check your connection and try again.",
+      ),
+    );
+    return false;
+  };
+
+  const startSecondFactor = async (
+    mode: VerificationMode,
+    preferredStrategy?: string,
+  ) => {
+    const supported = (signIn.supportedSecondFactors ?? [])
+      .map((factor: { strategy: string }) => factor.strategy)
+      .filter((strategy: string): strategy is SecondFactorStrategy =>
+        SECOND_FACTOR_PRIORITY.includes(strategy as SecondFactorStrategy),
+      );
+    const strategy =
+      (preferredStrategy &&
+        supported.includes(preferredStrategy as SecondFactorStrategy) &&
+        (preferredStrategy as SecondFactorStrategy)) ||
+      (SECOND_FACTOR_PRIORITY.find((candidate) => supported.includes(candidate)) ??
+        null);
+
+    setVerificationMode(mode);
+    setSecondFactorStrategy(strategy);
+    setCode("");
+
+    if (!strategy) {
+      const hasEmailLink = (signIn.supportedSecondFactors ?? []).some(
+        (factor: { strategy: string }) => factor.strategy === "email_link",
+      );
+      showAlert(
+        "Verification unavailable",
+        hasEmailLink
+          ? "This account requires an email link for verification. Open the sign-in link on this device, then try again."
+          : "No supported verification method was provided by Clerk. Please try again.",
+      );
+      return false;
+    }
+
+    if (strategy !== "email_code" && strategy !== "phone_code") return true;
+
+    setActionLoading(true);
     try {
-      const { data, error } = await signIn.password({ emailAddress, password });
+      const result =
+        strategy === "email_code"
+          ? await signIn.mfa.sendEmailCode()
+          : await signIn.mfa.sendPhoneCode();
+      if (result?.error) {
+        showAlert(
+          "Could not send code",
+          getErrorMessage(result.error, "Please try again."),
+        );
+        return false;
+      }
+      return true;
+    } catch (err: any) {
+      showAlert(
+        "Could not send code",
+        getErrorMessage(err, "Please try again."),
+      );
+      return false;
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (actionLoading || isLoading) return;
+    setFinalizeFailed(false);
+    try {
+      const { error } = await signIn.password({ emailAddress, password });
       if (error) {
         // Already signed in? Just go straight into the app.
         if (isAlreadySignedInError(error) || isSignedIn) {
-          router.replace("/(tabs)" as Href);
+          goToApp();
           return;
         }
-        // Surface the error explicitly (errors.global may not always update)
-        const msg =
-          (error as any)?.errors?.[0]?.longMessage ??
-          (error as any)?.longMessage ??
-          (error as any)?.message ??
-          "Sign in failed. Please check your email and password and try again.";
-        showAlert("Sign in failed", msg);
+        showAlert(
+          "Sign in failed",
+          getErrorMessage(
+            error,
+            "Please check your email and password and try again.",
+          ),
+        );
         return;
       }
 
-      const result = data ?? signIn;
-
-      if (result.status === "complete") {
-        // finalize() converts the completed sign-in into the active session.
-        // Without it the app never learns the user is signed in.
-        const { error: finalizeError } = await result.finalize();
-        if (finalizeError && !isAlreadySignedInError(finalizeError)) {
-          const msg =
-            finalizeError?.errors?.[0]?.longMessage ??
-            finalizeError?.longMessage ??
-            finalizeError?.message ??
-            "Could not complete sign in. Please try again.";
-          showAlert("Sign in error", msg);
-          return;
-        }
-        router.replace("/(tabs)" as Href);
-      } else if (result.status === "needs_client_trust") {
-        setSyncUrl(buildSyncUrl(clerk));
+      if (signIn.status === "complete") {
+        await finalizeSession();
+      } else if (signIn.status === "needs_client_trust") {
+        await startSecondFactor("client_trust");
+      } else if (signIn.status === "needs_second_factor") {
+        await startSecondFactor("second_factor");
       } else {
-        showAlert("Sign in incomplete", `Status: ${result.status ?? "unknown"}`);
+        showAlert(
+          "Sign in incomplete",
+          `Status: ${signIn.status ?? "unknown"}`,
+        );
       }
     } catch (err: any) {
       // If the session was actually created despite the error, enter the app.
       if (isAlreadySignedInError(err) || isSignedIn) {
-        router.replace("/(tabs)" as Href);
+        goToApp();
         return;
       }
-      const msg = err?.errors?.[0]?.longMessage ?? err?.message ?? String(err);
-      showAlert("Sign in error", msg);
+      showAlert(
+        "Sign in error",
+        getErrorMessage(err, "Please try again."),
+      );
     }
   };
 
-  const isLoading = fetchStatus === "fetching";
-  const canSubmit = emailAddress.length > 0 && password.length > 0 && !isLoading;
+  const handleVerify = async () => {
+    if (!secondFactorStrategy || !code.trim() || actionLoading) return;
+    setActionLoading(true);
+    try {
+      const result =
+        secondFactorStrategy === "email_code"
+          ? await signIn.mfa.verifyEmailCode({ code: code.trim() })
+          : secondFactorStrategy === "phone_code"
+            ? await signIn.mfa.verifyPhoneCode({ code: code.trim() })
+            : secondFactorStrategy === "totp"
+              ? await signIn.mfa.verifyTOTP({ code: code.trim() })
+              : await signIn.mfa.verifyBackupCode({ code: code.trim() });
+      if (result?.error) {
+        showAlert(
+          "Verification failed",
+          getErrorMessage(result.error, "The code was not accepted."),
+        );
+        return;
+      }
 
-  if (syncUrl) {
-    const appUrl = typeof window !== "undefined" ? window.location.origin : "";
+      if (signIn.status === "complete") {
+        await finalizeSession();
+      } else {
+        showAlert(
+          "Verification incomplete",
+          `Status: ${signIn.status ?? "unknown"}`,
+        );
+      }
+    } catch (err: any) {
+      showAlert(
+        "Verification failed",
+        getErrorMessage(err, "The code was not accepted."),
+      );
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const resendCode = async () => {
+    if (
+      (secondFactorStrategy !== "email_code" &&
+        secondFactorStrategy !== "phone_code") ||
+      actionLoading
+    ) {
+      return;
+    }
+    setActionLoading(true);
+    try {
+      const result =
+        secondFactorStrategy === "email_code"
+          ? await signIn.mfa.sendEmailCode()
+          : await signIn.mfa.sendPhoneCode();
+      if (result?.error) {
+        showAlert(
+          "Could not resend code",
+          getErrorMessage(result.error, "Please try again."),
+        );
+        return;
+      }
+      showAlert(
+        "Code sent",
+        secondFactorStrategy === "email_code"
+          ? "A new verification code has been sent to your email."
+          : "A new verification code has been sent by SMS.",
+      );
+    } catch (err: any) {
+      showAlert(
+        "Could not resend code",
+        getErrorMessage(err, "Please try again."),
+      );
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const resetVerification = async () => {
+    try {
+      const { error } = await signIn.reset();
+      if (error) {
+        showAlert("Could not start over", getErrorMessage(error, "Please try again."));
+        return;
+      }
+      setVerificationMode(null);
+      setSecondFactorStrategy(null);
+      setCode("");
+    } catch (err: any) {
+      showAlert("Could not start over", getErrorMessage(err, "Please try again."));
+    }
+  };
+
+  const switchFactor = async (strategy: string) => {
+    if (strategy === "email_link") {
+      showAlert(
+        "Email link unavailable",
+        "Email-link verification is not supported in this native sign-in screen. Choose another available method.",
+      );
+      return;
+    }
+    if (verificationMode) {
+      await startSecondFactor(verificationMode, strategy);
+    }
+  };
+
+  const isLoading = fetchStatus === "fetching" || actionLoading;
+  const canSubmit = emailAddress.length > 0 && password.length > 0 && !isLoading;
+  const supportedSecondFactors = (signIn.supportedSecondFactors ?? []) as Array<{
+    strategy: string;
+    safeIdentifier?: string;
+  }>;
+
+  if (signIn.status === "complete") {
     return (
       <SafeAreaView style={styles.safe}>
-        <ScrollView contentContainerStyle={styles.trustContainer}>
-          <View style={styles.trustIconWrap}>
-            <Feather name="shield" size={40} color="#1B5E20" />
-          </View>
-          <Text style={styles.trustTitle}>One-time setup required</Text>
-          <Text style={styles.trustBody}>
-            The preview is sandboxed — authentication needs to happen outside
-            it. Copy the URL below and open it in a new browser tab. Sign in
-            there, then come back here and sign in again.
-          </Text>
+        <View style={styles.finalizeContainer}>
+          {finalizeFailed ? (
+            <>
+              <Text style={styles.title}>Almost done</Text>
+              <Text style={styles.trustBody}>
+                Your credentials were verified, but the session could not be
+                saved on this device.
+              </Text>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.button,
+                  styles.finalizeButton,
+                  pressed && styles.buttonPressed,
+                ]}
+                onPress={finalizeSession}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.buttonText}>Try again</Text>
+                )}
+              </Pressable>
+              <Pressable style={styles.trustBack} onPress={resetVerification}>
+                <Text style={styles.trustBackText}>← Start over</Text>
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <ActivityIndicator size="large" color="#1B5E20" />
+              <Text style={styles.trustBody}>Finishing sign in…</Text>
+            </>
+          )}
+        </View>
+      </SafeAreaView>
+    );
+  }
 
-          <View style={styles.urlBox}>
-            <Text style={styles.urlLabel}>Your app URL</Text>
-            <TextInput
-              style={styles.urlInput}
-              value={appUrl}
-              editable={false}
-              selectTextOnFocus
-            />
-            <Pressable
-              style={styles.copyBtn}
-              onPress={() => {
-                if (typeof navigator !== "undefined" && navigator.clipboard) {
-                  navigator.clipboard.writeText(appUrl).then(() =>
-                    showAlert("Copied!", "URL copied to clipboard.")
-                  );
+  if (verificationMode && secondFactorStrategy) {
+    const factorTitle =
+      verificationMode === "client_trust"
+        ? "Verify this device"
+        : "Two-step verification";
+    const factorDescription =
+      secondFactorStrategy === "email_code"
+        ? "Enter the code sent to your email to approve this sign-in."
+        : secondFactorStrategy === "phone_code"
+          ? "Enter the code sent to your phone to approve this sign-in."
+          : secondFactorStrategy === "totp"
+            ? "Enter the code from your authenticator app."
+            : "Enter one of your saved backup codes.";
+    return (
+      <SafeAreaView style={styles.safe}>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <ScrollView
+            contentContainerStyle={styles.trustContainer}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.trustIconWrap}>
+              <Feather name="shield" size={40} color="#1B5E20" />
+            </View>
+            <Text style={styles.trustTitle}>{factorTitle}</Text>
+            <Text style={styles.trustBody}>{factorDescription}</Text>
+
+            <View style={styles.factorPill}>
+              <Text style={styles.factorPillText}>
+                {factorLabel(secondFactorStrategy)}
+              </Text>
+            </View>
+
+            <View style={styles.verificationForm}>
+              <TextInput
+                style={[styles.input, !!errors.fields.code && styles.inputError]}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType={
+                  secondFactorStrategy === "backup_code"
+                    ? "default"
+                    : "number-pad"
                 }
-              }}
-            >
-              <Feather name="copy" size={14} color="#1B5E20" />
-              <Text style={styles.copyBtnText}>Copy URL</Text>
+                placeholder={
+                  secondFactorStrategy === "backup_code"
+                    ? "Enter backup code"
+                    : "Enter verification code"
+                }
+                placeholderTextColor="#9CA3AF"
+                value={code}
+                onChangeText={setCode}
+                maxLength={secondFactorStrategy === "backup_code" ? 32 : 8}
+              />
+              {!!errors.fields.code && (
+                <Text style={styles.fieldError}>
+                  {errors.fields.code.message}
+                </Text>
+              )}
+              {!!errors.global?.length && (
+                <View style={styles.globalError}>
+                  <Text style={styles.globalErrorText}>
+                    {errors.global?.[0]?.longMessage ??
+                      errors.global?.[0]?.message}
+                  </Text>
+                </View>
+              )}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.button,
+                  (!code.trim() || isLoading) && styles.buttonDisabled,
+                  pressed && code.trim() && !isLoading && styles.buttonPressed,
+                ]}
+                onPress={handleVerify}
+                disabled={!code.trim() || isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.buttonText}>Verify</Text>
+                )}
+              </Pressable>
+              {(secondFactorStrategy === "email_code" ||
+                secondFactorStrategy === "phone_code") && (
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.secondaryButton,
+                    pressed && styles.buttonPressed,
+                  ]}
+                  onPress={resendCode}
+                  disabled={isLoading}
+                >
+                  <Text style={styles.secondaryButtonText}>Resend code</Text>
+                </Pressable>
+              )}
+            </View>
+
+            {supportedSecondFactors.length > 1 && (
+              <View style={styles.factorOptions}>
+                <Text style={styles.factorOptionsTitle}>Use another method</Text>
+                {supportedSecondFactors.map((factor) => (
+                  <Pressable
+                    key={factor.strategy}
+                    style={styles.factorOption}
+                    onPress={() => switchFactor(factor.strategy)}
+                    disabled={isLoading || factor.strategy === secondFactorStrategy}
+                  >
+                    <Text
+                      style={[
+                        styles.factorOptionText,
+                        factor.strategy === secondFactorStrategy &&
+                          styles.factorOptionSelected,
+                      ]}
+                    >
+                      {factorLabel(factor.strategy)}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+
+            <Pressable style={styles.trustBack} onPress={resetVerification}>
+              <Text style={styles.trustBackText}>← Back to sign in</Text>
             </Pressable>
-          </View>
-
-          <NativeAnchor href={appUrl}>
-            {React.createElement("span", {
-              style: { color: "#fff", fontSize: 15, fontWeight: "600" },
-            }, "Open in new tab ↗")}
-          </NativeAnchor>
-
-          <Pressable style={styles.trustBack} onPress={() => setSyncUrl(null)}>
-            <Text style={styles.trustBackText}>← Back to sign in</Text>
-          </Pressable>
-        </ScrollView>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     );
   }
@@ -592,44 +918,66 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     fontFamily: "Inter_400Regular",
   },
-  urlBox: {
+  verificationForm: {
     width: "100%",
-    gap: 6,
+    gap: 12,
   },
-  urlLabel: {
+  finalizeContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+    gap: 16,
+  },
+  finalizeButton: {
+    alignSelf: "stretch",
+  },
+  factorPill: {
+    borderRadius: 999,
+    backgroundColor: "#DCFCE7",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  factorPillText: {
+    color: "#166534",
     fontSize: 13,
-    fontWeight: "500",
-    color: "#374151",
     fontFamily: "Inter_500Medium",
   },
-  urlInput: {
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 13,
-    color: "#111827",
-    backgroundColor: "#F9FAFB",
-    fontFamily: "Inter_400Regular",
-  },
-  copyBtn: {
-    flexDirection: "row",
+  secondaryButton: {
+    borderRadius: 12,
+    paddingVertical: 14,
     alignItems: "center",
-    alignSelf: "flex-start",
-    gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
     borderWidth: 1,
     borderColor: "#D1D5DB",
     backgroundColor: "#fff",
   },
-  copyBtnText: {
-    fontSize: 13,
-    color: "#1B5E20",
+  secondaryButtonText: {
+    color: "#374151",
+    fontSize: 15,
     fontFamily: "Inter_500Medium",
-    fontWeight: "500",
+  },
+  factorOptions: {
+    width: "100%",
+    marginTop: 4,
+    gap: 8,
+  },
+  factorOptionsTitle: {
+    fontSize: 13,
+    color: "#6B7280",
+    fontFamily: "Inter_500Medium",
+    textAlign: "center",
+  },
+  factorOption: {
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  factorOptionText: {
+    color: "#1B5E20",
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+  },
+  factorOptionSelected: {
+    color: "#9CA3AF",
   },
   legalRow: {
     flexDirection: "row",
