@@ -166,11 +166,12 @@ export default function SignInPage() {
         SECOND_FACTOR_PRIORITY.includes(strategy as SecondFactorStrategy),
       );
     const strategy =
-      (preferredStrategy &&
-        supported.includes(preferredStrategy as SecondFactorStrategy) &&
-        (preferredStrategy as SecondFactorStrategy)) ||
-      (SECOND_FACTOR_PRIORITY.find((candidate) => supported.includes(candidate)) ??
-        null);
+      preferredStrategy &&
+      supported.includes(preferredStrategy as SecondFactorStrategy)
+        ? (preferredStrategy as SecondFactorStrategy)
+        : (SECOND_FACTOR_PRIORITY.find((candidate) =>
+            supported.includes(candidate),
+          ) ?? null);
 
     setVerificationMode(mode);
     setSecondFactorStrategy(strategy);
