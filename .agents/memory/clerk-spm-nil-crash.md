@@ -37,7 +37,7 @@ it as the Clerk-only failure above.
 Git-triggered builds, a direct EAS CLI upload, and the last known-good dependency snapshot.
 That pattern means the app target is compiling before the Pods products exist.
 
-**How to apply:** Stop retrying cache or Xcode-image changes. Inspect the generated
-Xcode workspace dependency graph and the app target's `Pods-DodolinkNG` dependency;
-fix that single generated-project relationship rather than changing module search paths
-or removing Clerk.
+**How to apply:** Stop retrying cache, Xcode-image, or explicit-module changes; disabling
+Swift and Clang explicit modules on both the app and Pods does not fix this pattern.
+Inspect the post-`pod install` workspace on macOS or involve Expo build support rather
+than changing module search paths or removing Clerk.
