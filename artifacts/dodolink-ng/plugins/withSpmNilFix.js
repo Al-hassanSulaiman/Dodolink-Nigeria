@@ -36,6 +36,36 @@ class ::SPMManager
     end
     apply_on_post_install_without_nil_guard(installer)
   end
+
+  private
+
+  # Backport RN's SPM UUID collision fix (facebook/react-native#57576).
+  def new_object(project, klass)
+    uuid = project.generate_uuid
+    uuid = project.generate_uuid while project.objects_by_uuid.key?(uuid)
+    object = klass.new(project, uuid)
+    object.initialize_defaults
+    object
+  end
+
+  def add_spm_to_target(project, target, url, requirement, products)
+    pkg_class = Xcodeproj::Project::Object::XCRemoteSwiftPackageReference
+    ref_class = Xcodeproj::Project::Object::XCSwiftPackageProductDependency
+    pkg = project.root_object.package_references.find { |p| p.class == pkg_class && p.repositoryURL == url }
+    unless pkg
+      pkg = new_object(project, pkg_class)
+      pkg.repositoryURL = url
+      pkg.requirement = requirement
+      project.root_object.package_references << pkg
+    end
+    products.each do |product_name|
+      next if target.package_product_dependencies.any? { |r| r.class == ref_class && r.package == pkg && r.product_name == product_name }
+      ref = new_object(project, ref_class)
+      ref.package = pkg
+      ref.product_name = product_name
+      target.package_product_dependencies << ref
+    end
+  end
 end
 # ---- end withSpmNilFix ----
 `;
@@ -55,11 +85,11 @@ module.exports = function withSpmNilFix(config) {
 
       let content = fs.readFileSync(podfilePath, 'utf-8');
 
-      // Only patch once
-      if (!content.includes('withSpmNilFix')) {
-        content = content + '\n' + SPM_PATCH;
-        fs.writeFileSync(podfilePath, content);
-      }
+      content = content.replace(
+        /# ---- withSpmNilFix:[\s\S]*?# ---- end withSpmNilFix ----\n?/g,
+        ''
+      );
+      fs.writeFileSync(podfilePath, content + '\n' + SPM_PATCH);
 
       return modConfig;
     },

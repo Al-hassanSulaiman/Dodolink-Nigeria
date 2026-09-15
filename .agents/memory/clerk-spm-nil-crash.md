@@ -33,11 +33,12 @@ If Xcode reports missing module maps for nearly every pod (`Expo`, `EXConstants`
 `ClerkExpo`, and many others) while compiling `ExpoModulesProvider.swift`, do not treat
 it as the Clerk-only failure above.
 
-**Why:** The same failure persisted across a clean EAS cache, Xcode 26 and Xcode 16.4,
-Git-triggered builds, a direct EAS CLI upload, and the last known-good dependency snapshot.
-That pattern means the app target is compiling before the Pods products exist.
+**Why:** Full logs revealed an earlier error: Pods.xcodeproj could not open, with
+`XCSwiftPackageProductDependency _setSavedArchiveVersion:`. React Native's SPM
+post-install allocator can collide with existing CocoaPods UUIDs and overwrite the
+root project object (upstream react-native PR 57576). Module-map errors are secondary.
 
-**How to apply:** Stop retrying cache, Xcode-image, or explicit-module changes; disabling
-Swift and Clang explicit modules on both the app and Pods does not fix this pattern.
-Inspect the post-`pod install` workspace on macOS or involve Expo build support rather
-than changing module search paths or removing Clerk.
+**How to apply:** Inspect the first Xcode project-loading error, not just EAS's summary.
+Retain the upstream collision-safe SPM allocator backport until upgrading to a version
+that includes it. Cache/image swaps and explicit-module settings do not repair this.
+EAS log objects may be Brotli compressed; Node zlib.brotliDecompressSync decodes them.
