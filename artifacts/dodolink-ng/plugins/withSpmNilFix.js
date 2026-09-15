@@ -10,7 +10,7 @@
  * Fix: reopen SPMManager after it is loaded and redefine add_spm_to_target to
  * return early when target is nil.
  */
-const { withDangerousMod } = require('expo/config-plugins');
+const { withDangerousMod, withXcodeProject } = require('expo/config-plugins');
 const fs = require('fs');
 const path = require('path');
 
@@ -35,12 +35,33 @@ class ::SPMManager
       project.targets.none? { |t| t.name == pod_name }
     end
     apply_on_post_install_without_nil_guard(installer)
+
+    # Xcode's explicit-module dependency scanner can try to compile the app's
+    # ExpoModulesProvider before CocoaPods has produced the pod module maps.
+    project.targets.each do |target|
+      target.build_configurations.each do |config|
+        config.build_settings['SWIFT_ENABLE_EXPLICIT_MODULES'] = 'NO'
+        config.build_settings['CLANG_ENABLE_EXPLICIT_MODULES'] = 'NO'
+      end
+    end
   end
 end
 # ---- end withSpmNilFix ----
 `;
 
 module.exports = function withSpmNilFix(config) {
+  config = withXcodeProject(config, (modConfig) => {
+    modConfig.modResults.addBuildProperty(
+      'SWIFT_ENABLE_EXPLICIT_MODULES',
+      'NO'
+    );
+    modConfig.modResults.addBuildProperty(
+      'CLANG_ENABLE_EXPLICIT_MODULES',
+      'NO'
+    );
+    return modConfig;
+  });
+
   return withDangerousMod(config, [
     'ios',
     async (modConfig) => {
