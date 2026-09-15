@@ -15,19 +15,22 @@
     },
     "ios": {
       "supportsTablet": false,
+      "usesAppleSignIn": true,
       "bundleIdentifier": "com.dodolink.ng",
-      "buildNumber": "1",
+      "buildNumber": "16",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Dodolink uses your photo library so you can upload product images for your store.",
         "NSPhotoLibraryAddUsageDescription": "Dodolink needs permission to save images to your photo library.",
         "NSCameraUsageDescription": "Dodolink uses your camera so you can take product photos directly.",
         "NSLocationWhenInUseUsageDescription": "Dodolink uses your location to show nearby stores and help customers find you.",
-        "NSUserNotificationsUsageDescription": "Dodolink sends you notifications for new orders, messages, and store activity."
+        "NSUserNotificationsUsageDescription": "Dodolink sends you notifications for new orders, messages, and store activity.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.dodolink.ng",
-      "versionCode": 1,
+      "googleServicesFile": "./google-services.json",
+      "versionCode": 10,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
@@ -36,13 +39,17 @@
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
       "favicon": "./assets/images/icon.png"
     },
     "plugins": [
+      "./plugins/withSpmNilFix",
+      "@clerk/expo",
+      "expo-apple-authentication",
       [
         "expo-router",
         {
@@ -69,13 +76,32 @@
         {
           "icon": "./assets/images/icon.png",
           "color": "#1B5E20",
-          "sounds": []
+          "sounds": [],
+          "enableBackgroundRemoteNotifications": true
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "packagingOptions": {
+              "pickFirst": [
+                "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+              ]
+            }
+          }
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "3e4ed22b-8363-4fff-9ee7-be8921e99e55"
+      }
+    },
+    "owner": "alhassan_5star"
   }
 }

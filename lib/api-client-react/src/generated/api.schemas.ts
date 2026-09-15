@@ -5,6 +5,15 @@
  * Dodolink NG API - Nigerian marketplace connecting retailers and customers
  * OpenAPI spec version: 0.1.0
  */
+export interface ContactLead {
+  id: number;
+  name: string;
+  email: string;
+  description: string;
+  budget: string;
+  submittedAt: string;
+}
+
 export type SupportMessageSenderRole = typeof SupportMessageSenderRole[keyof typeof SupportMessageSenderRole];
 
 
@@ -57,6 +66,10 @@ export const SubscriptionStatusSubscriptionStatus = {
 export interface SubscriptionStatus {
   storeId: number;
   engagementCount: number;
+  /** Monthly subscription fee in kobo, computed by the server */
+  subscriptionAmountKobo: number;
+  /** Engagement count at which the premium fee applies */
+  premiumThreshold: number;
   qualified: boolean;
   subscriptionStatus: SubscriptionStatusSubscriptionStatus;
   subscriptionDueAt?: string | null;
@@ -198,6 +211,22 @@ export interface CreateStoreBody {
   cacNumber?: string | null;
 }
 
+export interface AdminEntry {
+  id: number;
+  email: string;
+  /** @nullable */
+  addedBy?: string | null;
+  createdAt: string;
+}
+
+export interface AddAdminBody {
+  /**
+     * @minLength 3
+     * @maxLength 320
+     */
+  email: string;
+}
+
 export interface AdminUpdateStoreBody {
   /** @minLength 1 */
   name?: string;
@@ -314,6 +343,59 @@ export interface Review {
 export interface RegisterPushTokenBody {
   userId: string;
   token: string;
+  /** @maxLength 64 */
+  attemptId?: string;
+}
+
+export type PushRegistrationDiagnosticBodyStage = typeof PushRegistrationDiagnosticBodyStage[keyof typeof PushRegistrationDiagnosticBodyStage];
+
+
+export const PushRegistrationDiagnosticBodyStage = {
+  started: 'started',
+  channel: 'channel',
+  permission: 'permission',
+  'auth-token': 'auth-token',
+  'expo-token': 'expo-token',
+  'server-registration': 'server-registration',
+  completed: 'completed',
+} as const;
+
+export type PushRegistrationDiagnosticBodyOutcome = typeof PushRegistrationDiagnosticBodyOutcome[keyof typeof PushRegistrationDiagnosticBodyOutcome];
+
+
+export const PushRegistrationDiagnosticBodyOutcome = {
+  started: 'started',
+  success: 'success',
+  denied: 'denied',
+  timeout: 'timeout',
+  error: 'error',
+} as const;
+
+export type PushRegistrationDiagnosticBodyPlatform = typeof PushRegistrationDiagnosticBodyPlatform[keyof typeof PushRegistrationDiagnosticBodyPlatform];
+
+
+export const PushRegistrationDiagnosticBodyPlatform = {
+  android: 'android',
+  ios: 'ios',
+} as const;
+
+export interface PushRegistrationDiagnosticBody {
+  /**
+     * @minLength 1
+     * @maxLength 64
+     */
+  attemptId: string;
+  stage: PushRegistrationDiagnosticBodyStage;
+  outcome: PushRegistrationDiagnosticBodyOutcome;
+  platform: PushRegistrationDiagnosticBodyPlatform;
+  /** @maxLength 32 */
+  appVersion: string;
+  /** @maxLength 32 */
+  buildVersion: string;
+  /** @maxLength 32 */
+  permissionStatus?: string;
+  /** @maxLength 64 */
+  errorCode?: string;
 }
 
 export interface CreateReviewBody {
@@ -437,6 +519,10 @@ export const AdminListUsersStatus = {
   active: 'active',
   inactive: 'inactive',
 } as const;
+
+export type AdminRemoveAdmin200 = {
+  status: string;
+};
 
 export type AdminMarkSupportRead200 = {
   status: string;

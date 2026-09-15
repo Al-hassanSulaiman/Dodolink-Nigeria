@@ -31,8 +31,13 @@ import { useListStores } from '@workspace/api-client-react';
 import { Button } from '@/components/ui';
 import { LoadingScreen } from '@/components/Loading';
 
-const SUBSCRIPTION_FEE = '₦5,000';
 const ENGAGEMENT_THRESHOLD = 7;
+
+/** Format a kobo amount from the server as a naira string, e.g. 200000 → ₦2,000. */
+function formatNaira(kobo: number | undefined): string {
+  if (kobo == null) return '₦—';
+  return `₦${(kobo / 100).toLocaleString('en-NG')}`;
+}
 
 export default function SubscriptionScreen() {
   const colors = useColors();
@@ -112,7 +117,7 @@ export default function SubscriptionScreen() {
     if (!myStore) return;
     confirmAlert({
       title: 'Renew subscription',
-      message: `Charge ${SUBSCRIPTION_FEE} using your saved card?`,
+      message: `Charge ${formatNaira(sub?.subscriptionAmountKobo)} using your saved card?`,
       confirmText: 'Charge now',
       onConfirm: async () => {
         try {
@@ -279,7 +284,7 @@ export default function SubscriptionScreen() {
                     Auto-renew
                   </Text>
                   <Text style={[styles.autoPaySub, { color: colors.mutedForeground }]}>
-                    Automatically charge {SUBSCRIPTION_FEE} every 30 days
+                    Automatically charge {formatNaira(sub?.subscriptionAmountKobo)} every 30 days
                   </Text>
                 </View>
                 <Switch
@@ -301,10 +306,13 @@ export default function SubscriptionScreen() {
           >
             <Text style={[styles.cardTitle, { color: colors.foreground }]}>Payment</Text>
             <Text style={[styles.cardBody, { color: colors.mutedForeground, marginBottom: 16 }]}>
-              {SUBSCRIPTION_FEE}/month keeps your store visible and accepting orders.
+              {formatNaira(sub?.subscriptionAmountKobo)}/month keeps your store visible and accepting orders.
+              {sub?.premiumThreshold != null && (sub?.engagementCount ?? 0) < sub.premiumThreshold
+                ? ` Stores with ${sub.premiumThreshold}+ interactions in 30 days pay a higher rate.`
+                : ''}
             </Text>
 
-            {/* Coming soon banner — shown before Jan 1 2027 */}
+            {/* Coming soon banner — shown only if billing is not yet live */}
             {!sub.paymentsLive ? (
               <View style={[styles.comingSoonBanner, { backgroundColor: '#16a34a18', borderColor: '#16a34a44' }]}>
                 <Feather name="calendar" size={20} color="#16a34a" />
@@ -376,8 +384,8 @@ export default function SubscriptionScreen() {
                         initMutation.isPending
                           ? 'Opening payment…'
                           : sub.subscriptionStatus === 'active'
-                          ? `Renew now (${SUBSCRIPTION_FEE})`
-                          : `Pay ${SUBSCRIPTION_FEE} to activate`
+                          ? `Renew now (${formatNaira(sub?.subscriptionAmountKobo)})`
+                          : `Pay ${formatNaira(sub?.subscriptionAmountKobo)} to activate`
                       }
                       onPress={handlePayManually}
                       disabled={initMutation.isPending}
@@ -410,7 +418,7 @@ export default function SubscriptionScreen() {
           >
             <Feather name="lock" size={20} color={colors.mutedForeground} />
             <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
-              Subscription payment will be unlocked once your store reaches {ENGAGEMENT_THRESHOLD} customer interactions.
+              Subscription payment will be unlocked once your store reaches {ENGAGEMENT_THRESHOLD} customer interactions. Payments of {formatNaira(sub.subscriptionAmountKobo)} will start by January 1st, 2027 to all verified store owners, with a higher rate for stores with {sub.premiumThreshold}+ interactions in 30 days.
             </Text>
           </View>
         )}

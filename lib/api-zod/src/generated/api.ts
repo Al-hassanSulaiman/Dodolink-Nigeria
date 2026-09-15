@@ -325,12 +325,48 @@ export const ListProductsResponse = zod.array(ListProductsResponseItem)
 /**
  * @summary Register an Expo push token for a user
  */
+export const registerPushTokenBodyAttemptIdMax = 64;
+
+
+
 export const RegisterPushTokenBody = zod.object({
   "userId": zod.string(),
-  "token": zod.string()
+  "token": zod.string(),
+  "attemptId": zod.string().max(registerPushTokenBodyAttemptIdMax).optional()
 })
 
 export const RegisterPushTokenResponse = zod.object({
+  "status": zod.string()
+})
+
+
+/**
+ * @summary Report a safe native push registration stage
+ */
+export const reportPushRegistrationDiagnosticBodyAttemptIdMax = 64;
+
+export const reportPushRegistrationDiagnosticBodyAppVersionMax = 32;
+
+export const reportPushRegistrationDiagnosticBodyBuildVersionMax = 32;
+
+export const reportPushRegistrationDiagnosticBodyPermissionStatusMax = 32;
+
+export const reportPushRegistrationDiagnosticBodyErrorCodeMax = 64;
+
+
+
+export const ReportPushRegistrationDiagnosticBody = zod.object({
+  "attemptId": zod.string().min(1).max(reportPushRegistrationDiagnosticBodyAttemptIdMax),
+  "stage": zod.enum(['started', 'channel', 'permission', 'auth-token', 'expo-token', 'server-registration', 'completed']),
+  "outcome": zod.enum(['started', 'success', 'denied', 'timeout', 'error']),
+  "platform": zod.enum(['android', 'ios']),
+  "appVersion": zod.string().max(reportPushRegistrationDiagnosticBodyAppVersionMax),
+  "buildVersion": zod.string().max(reportPushRegistrationDiagnosticBodyBuildVersionMax),
+  "permissionStatus": zod.string().max(reportPushRegistrationDiagnosticBodyPermissionStatusMax).optional(),
+  "errorCode": zod.string().max(reportPushRegistrationDiagnosticBodyErrorCodeMax).optional()
+})
+
+export const ReportPushRegistrationDiagnosticResponse = zod.object({
   "status": zod.string()
 })
 
@@ -421,6 +457,7 @@ export const ListMessagesResponseItem = zod.object({
   "senderName": zod.string(),
   "senderType": zod.enum(['customer', 'retailer']),
   "body": zod.string(),
+  "mediaUrl": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
 export const ListMessagesResponse = zod.array(ListMessagesResponseItem)
@@ -839,6 +876,57 @@ export const AdminListUsersResponse = zod.array(AdminListUsersResponseItem)
 
 
 /**
+ * @summary List admin accounts (admin only)
+ */
+export const AdminListAdminsResponseItem = zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "addedBy": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const AdminListAdminsResponse = zod.array(AdminListAdminsResponseItem)
+
+
+/**
+ * @summary Grant admin access to an email (admin only)
+ */
+export const adminAddAdminBodyEmailMin = 3;
+export const adminAddAdminBodyEmailMax = 320;
+
+
+
+export const AdminAddAdminBody = zod.object({
+  "email": zod.string().email().min(adminAddAdminBodyEmailMin).max(adminAddAdminBodyEmailMax)
+})
+
+
+/**
+ * @summary Revoke admin access (admin only)
+ */
+export const AdminRemoveAdminParams = zod.object({
+  "adminId": zod.coerce.number()
+})
+
+export const AdminRemoveAdminResponse = zod.object({
+  "status": zod.string()
+})
+
+
+/**
+ * @summary List all contact form leads (admin only)
+ */
+export const AdminListLeadsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "description": zod.string(),
+  "budget": zod.string(),
+  "submittedAt": zod.coerce.date()
+})
+export const AdminListLeadsResponse = zod.array(AdminListLeadsResponseItem)
+
+
+/**
  * @summary List support conversation threads (admin only)
  */
 export const AdminListSupportThreadsResponseItem = zod.object({
@@ -912,6 +1000,8 @@ export const GetSubscriptionParams = zod.object({
 export const GetSubscriptionResponse = zod.object({
   "storeId": zod.number(),
   "engagementCount": zod.number(),
+  "subscriptionAmountKobo": zod.number().describe('Monthly subscription fee in kobo, computed by the server'),
+  "premiumThreshold": zod.number().describe('Engagement count at which the premium fee applies'),
   "qualified": zod.boolean(),
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
   "subscriptionDueAt": zod.coerce.date().nullish(),
@@ -957,6 +1047,8 @@ export const VerifySubscriptionBody = zod.object({
 export const VerifySubscriptionResponse = zod.object({
   "storeId": zod.number(),
   "engagementCount": zod.number(),
+  "subscriptionAmountKobo": zod.number().describe('Monthly subscription fee in kobo, computed by the server'),
+  "premiumThreshold": zod.number().describe('Engagement count at which the premium fee applies'),
   "qualified": zod.boolean(),
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
   "subscriptionDueAt": zod.coerce.date().nullish(),
@@ -981,6 +1073,8 @@ export const ChargeSubscriptionParams = zod.object({
 export const ChargeSubscriptionResponse = zod.object({
   "storeId": zod.number(),
   "engagementCount": zod.number(),
+  "subscriptionAmountKobo": zod.number().describe('Monthly subscription fee in kobo, computed by the server'),
+  "premiumThreshold": zod.number().describe('Engagement count at which the premium fee applies'),
   "qualified": zod.boolean(),
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
   "subscriptionDueAt": zod.coerce.date().nullish(),
@@ -1009,6 +1103,8 @@ export const ToggleAutoPayBody = zod.object({
 export const ToggleAutoPayResponse = zod.object({
   "storeId": zod.number(),
   "engagementCount": zod.number(),
+  "subscriptionAmountKobo": zod.number().describe('Monthly subscription fee in kobo, computed by the server'),
+  "premiumThreshold": zod.number().describe('Engagement count at which the premium fee applies'),
   "qualified": zod.boolean(),
   "subscriptionStatus": zod.enum(['inactive', 'active', 'past_due']),
   "subscriptionDueAt": zod.coerce.date().nullish(),

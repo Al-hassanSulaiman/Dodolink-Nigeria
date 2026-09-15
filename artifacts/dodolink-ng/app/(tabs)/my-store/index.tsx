@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { StyleSheet, View, Text, ScrollView, RefreshControl, Image, Pressable } from 'react-native';
-import { confirmAlert } from '@/utils/alerts';
+import { confirmAlert, showAlert } from '@/utils/alerts';
 import { useAuth } from '@clerk/expo';
 import * as WebBrowser from 'expo-web-browser';
 
@@ -18,6 +19,14 @@ import { router } from 'expo-router';
 import { getImageUrl } from '@/utils/storage';
 import { useQueryClient } from '@tanstack/react-query';
 
+function ProductThumb({ uri, name }: { uri: string | null; name: string }) {
+  const [err, setErr] = useState(false);
+  if (uri && !err) {
+    return <Image source={{ uri }} style={styles.productThumb} resizeMode="cover" onError={() => setErr(true)} />;
+  }
+  return <ImagePlaceholder name={name} size={52} borderRadius={8} />;
+}
+
 export default function MyStoreScreen() {
   const colors = useColors();
   const { signOut } = useAuth();
@@ -29,7 +38,7 @@ export default function MyStoreScreen() {
   };
   const queryClient = useQueryClient();
 
-  const { data: stores, isLoading, refetch } = useListStores(
+  const { data: stores, isLoading, isError: storesError, refetch } = useListStores(
     { ownerUserId: userId ?? undefined },
     { query: { enabled: !!userId, queryKey: getListStoresQueryKey({ ownerUserId: userId ?? undefined }) } }
   );
@@ -46,7 +55,10 @@ export default function MyStoreScreen() {
       onSuccess: () => {
         refetchProducts();
         queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
-      }
+      },
+      onError: () => {
+        showAlert('Delete failed', 'Could not delete the product. Please try again.');
+      },
     }
   });
 
@@ -67,6 +79,26 @@ export default function MyStoreScreen() {
   };
 
   if (!isReady || isLoading) return <LoadingScreen message="Loading dashboard..." />;
+
+  if (storesError) {
+    return (
+      <View style={StyleSheet.flatten([styles.container, { backgroundColor: colors.background }])}>
+        <View style={StyleSheet.flatten([styles.header, { borderBottomColor: colors.border }])}>
+          <Text style={[styles.title, { color: colors.foreground }]}>My Store</Text>
+        </View>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+          <Feather name="wifi-off" size={48} color="#9CA3AF" />
+          <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 18, color: colors.foreground, marginTop: 16, textAlign: 'center' }}>
+            Couldn't load your store
+          </Text>
+          <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 14, color: colors.mutedForeground, marginTop: 8, textAlign: 'center' }}>
+            Check your connection and try again.
+          </Text>
+          <Button title="Retry" onPress={() => refetch()} style={{ marginTop: 20 }} />
+        </View>
+      </View>
+    );
+  }
 
   if (!myStore) {
     return (
@@ -151,7 +183,7 @@ export default function MyStoreScreen() {
                   ? 'Active — renews in 30 days'
                   : myStore.subscriptionStatus === 'past_due'
                   ? '⚠️ Payment overdue'
-                  : 'Manage your ₦5,000/month plan'}
+                  : 'Manage your subscription plan'}
               </Text>
             </View>
           </View>
@@ -183,18 +215,14 @@ export default function MyStoreScreen() {
             products.map(product => {
               const thumbnail = product.imageUrls && product.imageUrls[0]
                 ? getImageUrl(product.imageUrls[0])
-                : product.imageUrl || null;
+                : product.imageUrl ? getImageUrl(product.imageUrl) : null;
 
               return (
                 <View
                   key={product.id}
                   style={StyleSheet.flatten([styles.productRow, { borderBottomColor: colors.border }])}
                 >
-                  {thumbnail ? (
-                    <Image source={{ uri: thumbnail }} style={styles.productThumb} resizeMode="cover" />
-                  ) : (
-                    <ImagePlaceholder name={product.name} size={52} borderRadius={8} />
-                  )}
+                  <ProductThumb uri={thumbnail} name={product.name} />
 
                   <View style={styles.productInfo}>
                     <Text style={[styles.productName, { color: colors.foreground }]} numberOfLines={1}>

@@ -84,6 +84,8 @@ export function StoreAvatar({ store, size = 64, editable = false }: StoreAvatarP
 
   const isVerified = store.verificationStatus === "verified";
 
+  const [imgError, setImgError] = useState(false);
+
   const avatar = (
     <View style={styles.avatarWrapper}>
       <View
@@ -92,8 +94,12 @@ export function StoreAvatar({ store, size = 64, editable = false }: StoreAvatarP
           { width: size, height: size, borderRadius: radius, backgroundColor: colors.primary },
         ]}
       >
-        {photoUri ? (
-          <Image source={{ uri: photoUri }} style={[styles.photo, { borderRadius: radius }]} />
+        {photoUri && !imgError ? (
+          <Image
+            source={{ uri: photoUri }}
+            style={[styles.photo, { borderRadius: radius }]}
+            onError={() => setImgError(true)}
+          />
         ) : (
           <Text style={[styles.initial, { fontSize: size * 0.38, color: colors.primaryForeground }]}>
             {initial}
