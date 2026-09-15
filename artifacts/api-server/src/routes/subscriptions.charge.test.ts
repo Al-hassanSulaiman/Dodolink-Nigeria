@@ -162,6 +162,7 @@ vi.mock("drizzle-orm", () => ({
   eq: (col: unknown, val: unknown) => ({ op: "eq", col, val }),
   and: (...args: unknown[]) => ({ op: "and", args }),
   isNull: (col: unknown) => ({ op: "isNull", col }),
+  isNotNull: (col: unknown) => ({ op: "isNotNull", col }),
   lte: (col: unknown, val: unknown) => ({ op: "lte", col, val }),
   sql: (strings: TemplateStringsArray, ...vals: unknown[]) => ({ op: "sql", strings, vals }),
 }));

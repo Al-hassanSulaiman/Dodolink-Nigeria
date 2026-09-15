@@ -263,7 +263,7 @@ export default function SubscriptionScreen() {
           <Text style={[styles.cardBody, { color: colors.mutedForeground }]}>
             {sub?.qualified
               ? '✓ Your store qualifies for a subscription'
-              : `Verified stores qualify after ${ENGAGEMENT_THRESHOLD} customer interactions (reviews + customer conversations) within 30 days. Once qualified, you have 14 days to make your first payment.`}
+              : `Verified stores qualify after ${ENGAGEMENT_THRESHOLD} distinct customer chat conversations within 30 days. Reviews, comments, and additional messages in an existing chat do not increase this count. Once qualified, you have 14 days to make your first payment.`}
           </Text>
         </View>
 
@@ -324,7 +324,7 @@ export default function SubscriptionScreen() {
             <Text style={[styles.cardBody, { color: colors.mutedForeground, marginBottom: 16 }]}>
               {sub.subscriptionExempt
                 ? `Your current rate is ${formatNaira(sub?.subscriptionAmountKobo)}/month, but payment is optional while your admin exemption is active.`
-                : `Your current rate is ${formatNaira(sub?.subscriptionAmountKobo)}/month, based on customer interactions in the last 30 days. Payment keeps your store visible and accepting orders.`}
+                : `Your current rate is ${formatNaira(sub?.subscriptionAmountKobo)}/month, based on distinct customer chat conversations started in the last 30 days. Payment keeps your store visible and accepting orders.`}
             </Text>
 
             {/* Coming soon banner — shown only if billing is not yet live */}
@@ -433,7 +433,7 @@ export default function SubscriptionScreen() {
           >
             <Feather name="lock" size={20} color={colors.mutedForeground} />
             <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
-              Payment unlocks when your verified store reaches {ENGAGEMENT_THRESHOLD} customer interactions within 30 days. After qualifying, you have 14 days to pay. The monthly fee is ₦2,000 for 7–11 interactions and ₦5,000 for {sub.premiumThreshold}+ interactions.
+              Payment unlocks when your verified store reaches {ENGAGEMENT_THRESHOLD} distinct customer chat conversations within 30 days. Reviews and comments do not count. After qualifying, you have 14 days to pay. The monthly fee is ₦2,000 for 7–11 conversations and ₦5,000 for {sub.premiumThreshold}+ conversations.
             </Text>
           </View>
         )}

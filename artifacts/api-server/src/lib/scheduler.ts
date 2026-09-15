@@ -1,7 +1,8 @@
 import cron from "node-cron";
-import { and, eq, gte, lt, lte, sql } from "drizzle-orm";
+import { and, eq, gte, isNotNull, isNull, lt, lte, sql } from "drizzle-orm";
 import { db, storesTable, pushTokensTable, conversationsTable } from "@workspace/db";
 import { autoChargeDueSubscriptions } from "./subscriptionBilling";
+import { reconcileLegacyQualifications } from "./storeSubscription";
 import { notifyTokens } from "./push";
 import { logger } from "./logger";
 import { clerkClient } from "@clerk/express";
@@ -33,6 +34,7 @@ async function sendRenewalReminders(): Promise<void> {
         eq(storesTable.subscriptionStatus, "active"),
         eq(storesTable.autoPayEnabled, false),
         eq(storesTable.subscriptionExempt, false),
+        isNotNull(storesTable.qualifiedAt),
         gte(storesTable.subscriptionDueAt, windowStart),
         lte(storesTable.subscriptionDueAt, windowEnd)
       )
@@ -127,6 +129,7 @@ async function expireOverdueSubscriptions(): Promise<void> {
       and(
         eq(storesTable.subscriptionStatus, "active"),
         eq(storesTable.subscriptionExempt, false),
+        isNotNull(storesTable.qualifiedAt),
         lt(storesTable.subscriptionDueAt, now)
       )
     )
@@ -136,6 +139,27 @@ async function expireOverdueSubscriptions(): Promise<void> {
     logger.info({ count: result.length, stores: result.map((s) => s.id) }, "Subscription expiry: marked stores past_due");
   } else {
     logger.info("Subscription expiry: no overdue stores");
+  }
+}
+
+async function expirePaidTermsForUnqualifiedStores(): Promise<void> {
+  const result = await db
+    .update(storesTable)
+    .set({ subscriptionStatus: "inactive" })
+    .where(
+      and(
+        eq(storesTable.subscriptionStatus, "active"),
+        isNull(storesTable.qualifiedAt),
+        lt(storesTable.subscriptionDueAt, new Date()),
+      ),
+    )
+    .returning({ id: storesTable.id });
+
+  if (result.length > 0) {
+    logger.info(
+      { count: result.length, stores: result.map((store) => store.id) },
+      "Subscription expiry: completed paid terms for unqualified stores",
+    );
   }
 }
 
@@ -169,6 +193,9 @@ async function runDailyJobs(): Promise<void> {
     await expireOverdueSubscriptions().catch((err) => {
       logger.error({ err }, "Subscription expiry job failed");
     });
+    await expirePaidTermsForUnqualifiedStores().catch((err) => {
+      logger.error({ err }, "Unqualified paid-term expiry job failed");
+    });
   });
 }
 
@@ -186,4 +213,13 @@ export function startScheduler(): void {
   backfillCustomerNames().catch((err) => {
     logger.error({ err }, "customerName backfill failed");
   });
+  reconcileLegacyQualifications()
+    .then((count) => {
+      if (count > 0) {
+        logger.info({ count }, "Subscription eligibility: cleared legacy review-derived qualifications");
+      }
+    })
+    .catch((err) => {
+      logger.error({ err }, "Subscription eligibility reconciliation failed");
+    });
 }

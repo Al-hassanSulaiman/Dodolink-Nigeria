@@ -103,47 +103,57 @@ router.post("/conversations/start", startConversationLimit, async (req, res): Pr
     resolvedCustomerName = authUserId;
   }
 
-  // Return existing conversation if one already exists between this customer and store
-  const [existing] = await db
-    .select()
-    .from(conversationsTable)
-    .where(and(eq(conversationsTable.customerId, customerId), eq(conversationsTable.storeId, storeId)));
+  const result = await db.transaction(async (tx) => {
+    // Serialize starts for this exact customer/store pair. Concurrent requests
+    // cannot both observe "no conversation" and inflate the eligibility count.
+    await tx.execute(sql`
+      SELECT pg_advisory_xact_lock(hashtext(${customerId}), ${storeId})
+    `);
 
-  if (existing) {
-    // Update customerName to email in case it was saved with old display name
-    if (existing.customerName !== resolvedCustomerName) {
-      await db.update(conversationsTable)
-        .set({ customerName: resolvedCustomerName })
-        .where(eq(conversationsTable.id, existing.id));
+    const [existing] = await tx
+      .select()
+      .from(conversationsTable)
+      .where(and(eq(conversationsTable.customerId, customerId), eq(conversationsTable.storeId, storeId)));
+
+    if (existing) {
+      if (existing.customerName !== resolvedCustomerName) {
+        await tx.update(conversationsTable)
+          .set({ customerName: resolvedCustomerName })
+          .where(eq(conversationsTable.id, existing.id));
+      }
+      return { conversation: { ...existing, customerName: resolvedCustomerName }, created: false };
     }
-    res.status(200).json({ ...existing, customerName: resolvedCustomerName, storeName: store.name });
-    return;
+
+    const [conversation] = await tx
+      .insert(conversationsTable)
+      .values({
+        customerId,
+        customerName: resolvedCustomerName,
+        storeId,
+        ...(initialMessage ? { lastMessage: initialMessage, lastMessageAt: new Date() } : {}),
+      })
+      .returning();
+
+    if (initialMessage) {
+      await tx.insert(messagesTable).values({
+        conversationId: conversation.id,
+        senderId: customerId,
+        senderName: resolvedCustomerName,
+        senderType: "customer",
+        body: initialMessage,
+      });
+    }
+
+    return { conversation, created: true };
+  });
+
+  if (result.created) {
+    await checkAndSetQualifiedAt(storeId).catch(() => undefined);
   }
 
-  const [conv] = await db
-    .insert(conversationsTable)
-    .values({
-      customerId,
-      customerName: resolvedCustomerName,
-      storeId,
-      ...(initialMessage ? { lastMessage: initialMessage, lastMessageAt: new Date() } : {}),
-    })
-    .returning();
-
-  if (initialMessage) {
-    await db.insert(messagesTable).values({
-      conversationId: conv.id,
-      senderId: customerId,
-      senderName: resolvedCustomerName,
-      senderType: "customer",
-      body: initialMessage,
-    });
-  }
-
-  // Check if this conversation pushes the store to the engagement threshold
-  await checkAndSetQualifiedAt(storeId).catch(() => undefined);
-
-  res.status(201).json({ ...conv, storeName: store.name });
+  res
+    .status(result.created ? 201 : 200)
+    .json({ ...result.conversation, storeName: store.name });
 });
 
 router.get("/conversations/:conversationId/messages", async (req, res): Promise<void> => {

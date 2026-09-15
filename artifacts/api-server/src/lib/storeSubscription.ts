@@ -1,15 +1,15 @@
-import { eq, count, gte, or, isNull, and } from "drizzle-orm";
-import { db, storesTable, reviewsTable, conversationsTable, pushTokensTable } from "@workspace/db";
+import { eq, countDistinct, gte, or, isNull, and, sql } from "drizzle-orm";
+import { db, storesTable, conversationsTable, pushTokensTable } from "@workspace/db";
 import { notifyTokens } from "./push";
 
 export const ENGAGEMENT_THRESHOLD = 7;
-/** Stores with this many interactions in the window pay the premium rate. */
+/** Stores with this many customer chat conversations in the window pay the premium rate. */
 export const PREMIUM_ENGAGEMENT_THRESHOLD = 12;
 export const GRACE_PERIOD_DAYS = 14;
 
-/** Standard tier: ₦2,000/month for stores with 7-11 interactions. */
+/** Standard tier: ₦2,000/month for stores with 7-11 customer chat conversations. */
 export const STANDARD_AMOUNT_KOBO = 200_000;
-/** Premium tier: ₦5,000/month for stores with 12+ interactions in 30 days. */
+/** Premium tier: ₦5,000/month for stores with 12+ customer chat conversations in 30 days. */
 export const PREMIUM_AMOUNT_KOBO = 500_000;
 
 /** Returns the monthly fee (in kobo) for a store's current engagement level. */
@@ -41,24 +41,55 @@ function effectiveQualifiedAt(qualifiedAt: Date): Date {
 const QUALIFICATION_PUSH_TITLE = "Important Notice";
 const QUALIFICATION_PUSH_BODY =
   "Dear Valued Retailer, your store has reached the qualifying threshold. " +
-  "Starting in 14 days, a monthly subscription fee will apply (₦2,000/month, or ₦5,000/month for stores with 12+ interactions in 30 days). " +
+  "Starting in 14 days, a monthly subscription fee will apply (₦2,000/month, or ₦5,000/month for stores with 12+ customer chat conversations in 30 days). " +
   "This helps us maintain a secure, reliable marketplace for your business. " +
   "Warm regards, Al-Hassan Sulaiman — Founder & CEO, DodoLink.";
 
 const ENGAGEMENT_WINDOW_DAYS = 30;
+const CONVERSATION_ONLY_RULE_CUTOFF = new Date("2026-09-15T00:00:00.000Z");
 
 export async function getEngagementCount(storeId: number): Promise<number> {
   const windowStart = new Date(Date.now() - ENGAGEMENT_WINDOW_DAYS * 24 * 60 * 60 * 1000);
 
-  const [revResult] = await db
-    .select({ count: count() })
-    .from(reviewsTable)
-    .where(and(eq(reviewsTable.storeId, storeId), gte(reviewsTable.createdAt, windowStart)));
   const [convResult] = await db
-    .select({ count: count() })
+    .select({ count: countDistinct(conversationsTable.customerId) })
     .from(conversationsTable)
     .where(and(eq(conversationsTable.storeId, storeId), gte(conversationsTable.createdAt, windowStart)));
-  return (revResult?.count ?? 0) + (convResult?.count ?? 0);
+  return convResult?.count ?? 0;
+}
+
+/**
+ * One-time-compatible reconciliation for stores qualified before conversations
+ * became the sole eligibility metric. Running this repeatedly is safe because
+ * it only examines qualification timestamps from before the rule change.
+ */
+export async function reconcileLegacyQualifications(): Promise<number> {
+  const windowStart = new Date(
+    CONVERSATION_ONLY_RULE_CUTOFF.getTime() -
+      ENGAGEMENT_WINDOW_DAYS * 24 * 60 * 60 * 1000,
+  );
+  const result = await db.execute(sql`
+    UPDATE stores AS store
+    SET qualified_at = NULL,
+        subscription_status = CASE
+          WHEN store.subscription_status = 'active'
+            AND store.subscription_due_at > NOW()
+          THEN 'active'
+          ELSE 'inactive'
+        END
+    WHERE store.qualified_at IS NOT NULL
+      AND store.qualified_at < ${CONVERSATION_ONLY_RULE_CUTOFF}
+      AND (
+        SELECT COUNT(DISTINCT conversation.customer_id)
+        FROM conversations AS conversation
+        WHERE conversation.store_id = store.id
+          AND conversation.created_at >= ${windowStart}
+          AND conversation.created_at < ${CONVERSATION_ONLY_RULE_CUTOFF}
+      ) < ${ENGAGEMENT_THRESHOLD}
+    RETURNING store.id
+  `);
+  const rows = (result as any).rows ?? result;
+  return Array.isArray(rows) ? rows.length : 0;
 }
 
 /** Set qualifiedAt once when a verified store first reaches the engagement threshold. */

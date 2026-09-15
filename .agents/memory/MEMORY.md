@@ -18,3 +18,4 @@
 - [GitHub connector HTML upload filter](github-connector-html-upload.md) — connector API may Cloudflare-block HTML payloads; generate the page shell from an uploaded server module
 - [Publish dependency scan coverage](publish-dependency-scan.md) — Publish scans build/dev transitives; no-fix build-tool advisories need a compatible safe replacement
 - [Store payment exemptions](store-payment-exemptions.md) — exempt stores stay public and skip automatic billing; explicit admin hiding wins and manual payment remains optional
+- [Subscription chat threshold](subscription-chat-threshold.md) — eligibility and pricing count distinct customer-store chat threads only; reviews and repeat messages never count

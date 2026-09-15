@@ -1,4 +1,4 @@
-import { and, eq, isNull, lte, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import { db, storesTable, subscriptionPaymentsTable, pushTokensTable } from "@workspace/db";
 import { paystackChargeAuthorization, paystackVerify } from "./paystack";
 import { getEngagementCount, getSubscriptionAmountKobo, isPaymentsLive } from "./storeSubscription";
@@ -290,6 +290,7 @@ export async function autoChargeDueSubscriptions(): Promise<void> {
         eq(storesTable.subscriptionStatus, "active"),
         eq(storesTable.autoPayEnabled, true),
         eq(storesTable.subscriptionExempt, false),
+        isNotNull(storesTable.qualifiedAt),
         lte(storesTable.subscriptionDueAt, windowEnd),
       ),
     );

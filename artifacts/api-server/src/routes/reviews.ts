@@ -3,7 +3,6 @@ import { eq, avg, count } from "drizzle-orm";
 import { db, reviewsTable, storesTable, pushTokensTable } from "@workspace/db";
 import { CreateReviewBody } from "@workspace/api-zod";
 import { notifyTokens } from "../lib/push";
-import { checkAndSetQualifiedAt } from "../lib/storeSubscription";
 import { requireUser } from "../lib/auth";
 import { rateLimit } from "../lib/rateLimit";
 
@@ -76,9 +75,6 @@ router.post("/stores/:storeId/reviews", reviewCreateLimit, async (req, res): Pro
       { storeId },
     );
   }
-
-  // Check if this review pushes the store to the engagement threshold
-  await checkAndSetQualifiedAt(storeId).catch(() => undefined);
 
   res.status(201).json(review);
 });
