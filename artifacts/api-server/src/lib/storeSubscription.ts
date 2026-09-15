@@ -1,15 +1,15 @@
 import { eq, countDistinct, gte, or, isNull, and, sql } from "drizzle-orm";
-import { db, storesTable, conversationsTable, pushTokensTable } from "@workspace/db";
+import { db, storesTable, conversationsTable, messagesTable, pushTokensTable } from "@workspace/db";
 import { notifyTokens } from "./push";
 
 export const ENGAGEMENT_THRESHOLD = 7;
-/** Stores with this many customer chat conversations in the window pay the premium rate. */
+/** Stores with this many distinct customers actively chatting in the window pay the premium rate. */
 export const PREMIUM_ENGAGEMENT_THRESHOLD = 12;
 export const GRACE_PERIOD_DAYS = 14;
 
-/** Standard tier: ₦2,000/month for stores with 7-11 customer chat conversations. */
+/** Standard tier: ₦2,000/month for stores with 7-11 distinct active customer chats. */
 export const STANDARD_AMOUNT_KOBO = 200_000;
-/** Premium tier: ₦5,000/month for stores with 12+ customer chat conversations in 30 days. */
+/** Premium tier: ₦5,000/month for stores with 12+ distinct active customer chats in 30 days. */
 export const PREMIUM_AMOUNT_KOBO = 500_000;
 
 /** Returns the monthly fee (in kobo) for a store's current engagement level. */
@@ -41,7 +41,7 @@ function effectiveQualifiedAt(qualifiedAt: Date): Date {
 const QUALIFICATION_PUSH_TITLE = "Important Notice";
 const QUALIFICATION_PUSH_BODY =
   "Dear Valued Retailer, your store has reached the qualifying threshold. " +
-  "Starting in 14 days, a monthly subscription fee will apply (₦2,000/month, or ₦5,000/month for stores with 12+ customer chat conversations in 30 days). " +
+  "Starting in 14 days, a monthly subscription fee will apply (₦2,000/month, or ₦5,000/month for stores with 12+ distinct active customer chats in 30 days). " +
   "This helps us maintain a secure, reliable marketplace for your business. " +
   "Warm regards, Al-Hassan Sulaiman — Founder & CEO, DodoLink.";
 
@@ -54,7 +54,14 @@ export async function getEngagementCount(storeId: number): Promise<number> {
   const [convResult] = await db
     .select({ count: countDistinct(conversationsTable.customerId) })
     .from(conversationsTable)
-    .where(and(eq(conversationsTable.storeId, storeId), gte(conversationsTable.createdAt, windowStart)));
+    .innerJoin(messagesTable, eq(messagesTable.conversationId, conversationsTable.id))
+    .where(
+      and(
+        eq(conversationsTable.storeId, storeId),
+        eq(messagesTable.senderType, "customer"),
+        gte(messagesTable.createdAt, windowStart),
+      ),
+    );
   return convResult?.count ?? 0;
 }
 
@@ -82,9 +89,11 @@ export async function reconcileLegacyQualifications(): Promise<number> {
       AND (
         SELECT COUNT(DISTINCT conversation.customer_id)
         FROM conversations AS conversation
+        INNER JOIN messages AS message ON message.conversation_id = conversation.id
         WHERE conversation.store_id = store.id
-          AND conversation.created_at >= ${windowStart}
-          AND conversation.created_at < ${CONVERSATION_ONLY_RULE_CUTOFF}
+          AND message.sender_type = 'customer'
+          AND message.created_at >= ${windowStart}
+          AND message.created_at < ${CONVERSATION_ONLY_RULE_CUTOFF}
       ) < ${ENGAGEMENT_THRESHOLD}
     RETURNING store.id
   `);

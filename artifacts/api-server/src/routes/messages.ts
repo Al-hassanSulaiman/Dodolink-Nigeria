@@ -276,6 +276,12 @@ router.post("/conversations/:conversationId/messages", sendMessageLimit, async (
     })
     .where(eq(conversationsTable.id, conversationId));
 
+  // Customer activity in an existing thread can qualify the store again after
+  // the previous 30-day window has passed. Retailer replies do not count.
+  if (senderIsCustomer) {
+    await checkAndSetQualifiedAt(conversation.storeId).catch(() => undefined);
+  }
+
   // Respond immediately — push is best-effort and must not block the sender.
   res.status(201).json(msg);
 
