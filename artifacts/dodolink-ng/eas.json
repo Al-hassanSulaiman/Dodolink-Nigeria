@@ -9,7 +9,17 @@
       "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "pnpm": "10.14.0",
+      "env": {
+        "EXPO_PUBLIC_DOMAIN": "dodolink.com.ng",
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsuZG9kb2xpbmsuY29tLm5nJA",
+        "EXPO_PUBLIC_CLERK_PROXY_URL": "https://dodolink.com.ng/api/__clerk"
+      },
+      "android": {
+        "buildType": "apk",
+        "image": "ubuntu-24.04-jdk-17-ndk-r27b"
+      }
     },
     "production": {
       "pnpm": "10.14.0",
