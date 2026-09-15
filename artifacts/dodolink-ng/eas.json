@@ -23,6 +23,9 @@
     },
     "production": {
       "pnpm": "10.14.0",
+      "cache": {
+        "key": "native-signin-build-2026-09-15"
+      },
       "env": {
         "EXPO_PUBLIC_DOMAIN": "dodolink.com.ng",
         "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsuZG9kb2xpbmsuY29tLm5nJA",
