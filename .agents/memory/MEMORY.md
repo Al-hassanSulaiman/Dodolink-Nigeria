@@ -19,3 +19,4 @@
 - [Publish dependency scan coverage](publish-dependency-scan.md) — Publish scans build/dev transitives; no-fix build-tool advisories need a compatible safe replacement
 - [Store payment exemptions](store-payment-exemptions.md) — exempt stores stay public and skip automatic billing; explicit admin hiding wins and manual payment remains optional
 - [Subscription chat threshold](subscription-chat-threshold.md) — count distinct customers with chat activity in the rolling 30-day window; reviews and retailer replies never count
+- [Clerk reviewer access](clerk-reviewer-access.md) — use an isolated non-admin review account with a per-user Device Trust exception, never a client-side OTP bypass

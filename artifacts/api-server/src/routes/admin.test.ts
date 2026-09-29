@@ -111,10 +111,16 @@ vi.mock("drizzle-orm", () => ({
 
 const getAuthMock = vi.fn();
 const getUserMock = vi.fn();
+const getUserListMock = vi.fn().mockResolvedValue({ data: [], totalCount: 0 });
 
 vi.mock("@clerk/express", () => ({
   getAuth: (req: unknown) => getAuthMock(req),
-  clerkClient: { users: { getUser: (id: string) => getUserMock(id) } },
+  clerkClient: {
+    users: {
+      getUser: (id: string) => getUserMock(id),
+      getUserList: (params: unknown) => getUserListMock(params),
+    },
+  },
 }));
 
 vi.mock("@workspace/api-zod", () => {
@@ -208,6 +214,21 @@ describe("requireAdmin middleware", () => {
     const res = await request(app).get("/admin/admins");
     expect(res.status).toBe(403);
     expect(res.body.error).toMatch(/not an admin/i);
+  });
+
+  it("never grants admin access to a review account, even if its email is allowlisted", async () => {
+    authedAs("user_review", [ADMIN_EMAIL]);
+    getUserMock.mockResolvedValue({
+      emailAddresses: [{ emailAddress: ADMIN_EMAIL }],
+      privateMetadata: { dodolinkAppReview: true },
+    });
+    const { db } = await import("@workspace/db");
+    setupSelectMock(db as any, [BOOTSTRAP_COUNT]);
+
+    const app = await buildApp();
+    const res = await request(app).get("/admin/admins");
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/review accounts/i);
   });
 
   it("lets a user whose email IS in the admins table through (200)", async () => {
@@ -333,6 +354,27 @@ describe("POST /admin/admins", () => {
     const res = await request(app).post("/admin/admins").send({ email: OTHER_ADMIN_EMAIL });
     expect(res.status).toBe(409);
     expect(res.body.error).toMatch(/already an admin/i);
+    expect((db as any).insert).not.toHaveBeenCalled();
+  });
+
+  it("refuses to promote an existing review account to admin", async () => {
+    authedAs(ADMIN_USER_ID, [ADMIN_EMAIL]);
+    const { db } = await import("@workspace/db");
+    setupSelectMock(db as any, [
+      BOOTSTRAP_COUNT,
+      [{ id: 1, email: ADMIN_EMAIL }],
+      [],
+    ]);
+    getUserListMock.mockResolvedValueOnce({
+      data: [{
+        privateMetadata: { dodolinkAppReview: true },
+        emailAddresses: [{ emailAddress: "review@example.com" }],
+      }],
+      totalCount: 1,
+    });
+    const app = await buildApp();
+    const res = await request(app).post("/admin/admins").send({ email: "review@example.com" });
+    expect(res.status).toBe(400);
     expect((db as any).insert).not.toHaveBeenCalled();
   });
 

@@ -20,6 +20,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { ShieldCheck, UserPlus, Trash2 } from "lucide-react";
+import ReviewAccessSection from "./review-access";
 
 function formatDate(value: string): string {
   return new Date(value).toLocaleDateString("en-NG", {
@@ -166,6 +167,7 @@ export default function AdminsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ReviewAccessSection />
     </div>
   );
 }

@@ -10,6 +10,7 @@ import {
   isVerifiedStoreNameUniqueViolation,
   STORE_NAME_ALREADY_EXISTS,
 } from "../lib/storeName";
+import adminReviewAccessRouter from "./adminReviewAccess";
 
 /**
  * Bootstrap seed only: if the admins table is empty (first run after the
@@ -68,6 +69,12 @@ async function requireAdmin(req: Request, res: Response, next: NextFunction): Pr
   try {
     await ensureBootstrapAdmins();
     const user = await clerkClient.users.getUser(userId);
+    // A reviewer must never become an admin, even if someone later allowlists
+    // one of the account's email addresses.
+    if (user.privateMetadata?.dodolinkAppReview === true) {
+      res.status(403).json({ error: "Review accounts cannot access the admin console" });
+      return;
+    }
     const emails = user.emailAddresses.map((e: { emailAddress: string }) => e.emailAddress.toLowerCase());
     const adminEmails = await getAdminEmailSet();
     const isAdmin = emails.some((email) => adminEmails.has(email));
@@ -94,6 +101,7 @@ function toSafeStore<T extends Record<string, unknown>>(store: T) {
 const router: IRouter = Router();
 
 router.use("/admin", requireAdmin);
+router.use(adminReviewAccessRouter);
 
 router.get("/admin/stores", async (req, res): Promise<void> => {
   const { status, limit = 50, offset = 0 } = req.query;
@@ -376,6 +384,15 @@ router.post("/admin/admins", async (req, res): Promise<void> => {
 
   const [existing] = await db.select().from(adminsTable).where(eq(adminsTable.email, email)).limit(1);
   if (existing) { res.status(409).json({ error: "This email is already an admin" }); return; }
+
+  const { data: matchingUsers } = await clerkClient.users.getUserList({ emailAddress: [email], limit: 10 });
+  if (matchingUsers.some((user) =>
+    user.privateMetadata?.dodolinkAppReview === true &&
+    user.emailAddresses.some((address) => address.emailAddress.toLowerCase() === email),
+  )) {
+    res.status(400).json({ error: "Review accounts cannot be granted admin access" });
+    return;
+  }
 
   const [admin] = await db
     .insert(adminsTable)

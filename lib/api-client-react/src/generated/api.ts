@@ -28,6 +28,7 @@ import type {
   AddAdminBody,
   AdminAnalytics,
   AdminEntry,
+  AdminGetReviewAccessParams,
   AdminListStoresParams,
   AdminListUsersParams,
   AdminMarkSupportRead200,
@@ -53,6 +54,8 @@ import type {
   PushRegistrationDiagnosticBody,
   RegisterPushTokenBody,
   Review,
+  ReviewAccess,
+  ReviewAccessInput,
   SearchParams,
   SearchResults,
   SendMessageBody,
@@ -3256,6 +3259,256 @@ export const useAdminRemoveAdmin = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getAdminRemoveAdminMutationOptions(options), queryClient);
+    }
+
+export const getAdminGetReviewAccessUrl = (params: AdminGetReviewAccessParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/review-access?${stringifiedParams}` : `/api/admin/review-access`
+}
+
+/**
+ * @summary Look up a dedicated app-review account (admin only)
+ */
+export const adminGetReviewAccess = async (params: AdminGetReviewAccessParams, options?: RequestInit): Promise<ReviewAccess> => {
+
+  return customFetch<ReviewAccess>(getAdminGetReviewAccessUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminGetReviewAccessQueryKey = (params?: AdminGetReviewAccessParams,) => {
+    return [
+    `/api/admin/review-access`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getAdminGetReviewAccessQueryOptions = <TData = Awaited<ReturnType<typeof adminGetReviewAccess>>, TError = ErrorType<void>>(params: AdminGetReviewAccessParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof adminGetReviewAccess>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminGetReviewAccessQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminGetReviewAccess>>> = ({ signal }) => adminGetReviewAccess(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminGetReviewAccess>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type AdminGetReviewAccessQueryResult = NonNullable<Awaited<ReturnType<typeof adminGetReviewAccess>>>
+export type AdminGetReviewAccessQueryError = ErrorType<void>
+
+
+export function useAdminGetReviewAccess<TData = Awaited<ReturnType<typeof adminGetReviewAccess>>, TError = ErrorType<void>>(
+ params: AdminGetReviewAccessParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof adminGetReviewAccess>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof adminGetReviewAccess>>,
+          TError,
+          Awaited<ReturnType<typeof adminGetReviewAccess>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAdminGetReviewAccess<TData = Awaited<ReturnType<typeof adminGetReviewAccess>>, TError = ErrorType<void>>(
+ params: AdminGetReviewAccessParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof adminGetReviewAccess>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof adminGetReviewAccess>>,
+          TError,
+          Awaited<ReturnType<typeof adminGetReviewAccess>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAdminGetReviewAccess<TData = Awaited<ReturnType<typeof adminGetReviewAccess>>, TError = ErrorType<void>>(
+ params: AdminGetReviewAccessParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof adminGetReviewAccess>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Look up a dedicated app-review account (admin only)
+ */
+
+export function useAdminGetReviewAccess<TData = Awaited<ReturnType<typeof adminGetReviewAccess>>, TError = ErrorType<void>>(
+ params: AdminGetReviewAccessParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof adminGetReviewAccess>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getAdminGetReviewAccessQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminCreateReviewAccessUrl = () => {
+
+
+
+
+  return `/api/admin/review-access`
+}
+
+/**
+ * @summary Create a non-admin review account exempt from new-device checks (admin only)
+ */
+export const adminCreateReviewAccess = async (reviewAccessInput: ReviewAccessInput, options?: RequestInit): Promise<ReviewAccess> => {
+
+  return customFetch<ReviewAccess>(getAdminCreateReviewAccessUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(reviewAccessInput)
+  }
+);}
+
+
+
+
+
+export const getAdminCreateReviewAccessMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateReviewAccess>>, TError,{data: BodyType<ReviewAccessInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminCreateReviewAccess>>, TError,{data: BodyType<ReviewAccessInput>}, TContext> => {
+
+const mutationKey = ['adminCreateReviewAccess'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminCreateReviewAccess>>, {data: BodyType<ReviewAccessInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminCreateReviewAccess(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminCreateReviewAccessMutationResult = NonNullable<Awaited<ReturnType<typeof adminCreateReviewAccess>>>
+    export type AdminCreateReviewAccessMutationBody = BodyType<ReviewAccessInput>
+    export type AdminCreateReviewAccessMutationError = ErrorType<void>
+
+    /**
+ * @summary Create a non-admin review account exempt from new-device checks (admin only)
+ */
+export const useAdminCreateReviewAccess = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateReviewAccess>>, TError,{data: BodyType<ReviewAccessInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof adminCreateReviewAccess>>,
+        TError,
+        {data: BodyType<ReviewAccessInput>},
+        TContext
+      > => {
+      return useMutation(getAdminCreateReviewAccessMutationOptions(options), queryClient);
+    }
+
+export const getAdminRevokeReviewAccessUrl = (userId: string,) => {
+
+
+
+
+  return `/api/admin/review-access/${userId}`
+}
+
+/**
+ * @summary Ban a dedicated review account and revoke all sessions (admin only)
+ */
+export const adminRevokeReviewAccess = async (userId: string, options?: RequestInit): Promise<ReviewAccess> => {
+
+  return customFetch<ReviewAccess>(getAdminRevokeReviewAccessUrl(userId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminRevokeReviewAccessMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminRevokeReviewAccess>>, TError,{userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminRevokeReviewAccess>>, TError,{userId: string}, TContext> => {
+
+const mutationKey = ['adminRevokeReviewAccess'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminRevokeReviewAccess>>, {userId: string}> = (props) => {
+          const {userId} = props ?? {};
+
+          return  adminRevokeReviewAccess(userId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminRevokeReviewAccessMutationResult = NonNullable<Awaited<ReturnType<typeof adminRevokeReviewAccess>>>
+
+    export type AdminRevokeReviewAccessMutationError = ErrorType<void>
+
+    /**
+ * @summary Ban a dedicated review account and revoke all sessions (admin only)
+ */
+export const useAdminRevokeReviewAccess = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminRevokeReviewAccess>>, TError,{userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof adminRevokeReviewAccess>>,
+        TError,
+        {userId: string},
+        TContext
+      > => {
+      return useMutation(getAdminRevokeReviewAccessMutationOptions(options), queryClient);
     }
 
 export const getAdminListLeadsUrl = () => {

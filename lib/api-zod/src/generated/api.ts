@@ -1068,6 +1068,56 @@ export const AdminRemoveAdminResponse = zod.object({
 
 
 /**
+ * @summary Look up a dedicated app-review account (admin only)
+ */
+export const AdminGetReviewAccessQueryParams = zod.object({
+  "email": zod.email()
+})
+
+export const AdminGetReviewAccessResponse = zod.object({
+  "id": zod.string(),
+  "email": zod.email(),
+  "revoked": zod.boolean()
+})
+
+
+/**
+ * @summary Create a non-admin review account exempt from new-device checks (admin only)
+ */
+export const adminCreateReviewAccessBodyEmailMax = 320;
+
+export const adminCreateReviewAccessBodyPasswordMin = 16;
+export const adminCreateReviewAccessBodyPasswordMax = 128;
+
+
+
+export const AdminCreateReviewAccessBody = zod.object({
+  "email": zod.email().max(adminCreateReviewAccessBodyEmailMax),
+  "password": zod.string().min(adminCreateReviewAccessBodyPasswordMin).max(adminCreateReviewAccessBodyPasswordMax)
+})
+
+export const AdminCreateReviewAccessResponse = zod.object({
+  "id": zod.string(),
+  "email": zod.email(),
+  "revoked": zod.boolean()
+})
+
+
+/**
+ * @summary Ban a dedicated review account and revoke all sessions (admin only)
+ */
+export const AdminRevokeReviewAccessParams = zod.object({
+  "userId": zod.coerce.string()
+})
+
+export const AdminRevokeReviewAccessResponse = zod.object({
+  "id": zod.string(),
+  "email": zod.email(),
+  "revoked": zod.boolean()
+})
+
+
+/**
  * @summary List all contact form leads (admin only)
  */
 export const AdminListLeadsResponseItem = zod.object({

@@ -230,6 +230,22 @@ export interface AddAdminBody {
   email: string;
 }
 
+export interface ReviewAccessInput {
+  /** @maxLength 320 */
+  email: string;
+  /**
+     * @minLength 16
+     * @maxLength 128
+     */
+  password: string;
+}
+
+export interface ReviewAccess {
+  id: string;
+  email: string;
+  revoked: boolean;
+}
+
 export interface AdminUpdateStoreBody {
   /** @minLength 1 */
   name?: string;
@@ -537,6 +553,10 @@ export const AdminListUsersStatus = {
 
 export type AdminRemoveAdmin200 = {
   status: string;
+};
+
+export type AdminGetReviewAccessParams = {
+email: string;
 };
 
 export type AdminMarkSupportRead200 = {

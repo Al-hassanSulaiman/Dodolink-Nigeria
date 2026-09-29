@@ -925,6 +925,90 @@ paths:
         "404":
           description: Admin not found
 
+  /admin/review-access:
+    get:
+      operationId: adminGetReviewAccess
+      tags: [admin]
+      summary: Look up a dedicated app-review account (admin only)
+      parameters:
+        - name: email
+          in: query
+          required: true
+          schema:
+            type: string
+            format: email
+      responses:
+        "200":
+          description: Review account status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewAccess"
+        "400":
+          description: Invalid email
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not a review account
+    post:
+      operationId: adminCreateReviewAccess
+      tags: [admin]
+      summary: Create a non-admin review account exempt from new-device checks (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewAccessInput"
+      responses:
+        "201":
+          description: Review account created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewAccess"
+        "400":
+          description: Invalid input or admin email
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "409":
+          description: Account already exists
+        "422":
+          description: Clerk rejected the password or account
+        "503":
+          description: Clerk is unavailable
+
+  /admin/review-access/{userId}:
+    delete:
+      operationId: adminRevokeReviewAccess
+      tags: [admin]
+      summary: Ban a dedicated review account and revoke all sessions (admin only)
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Review account revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewAccess"
+        "400":
+          description: Invalid ID
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not a review account
+
   /admin/leads:
     get:
       operationId: adminListLeads
@@ -1551,6 +1635,31 @@ components:
           minLength: 3
           maxLength: 320
       required: [email]
+
+    ReviewAccessInput:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 320
+        password:
+          type: string
+          minLength: 16
+          maxLength: 128
+      required: [email, password]
+
+    ReviewAccess:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        revoked:
+          type: boolean
+      required: [id, email, revoked]
 
     AdminUpdateStoreBody:
       type: object
