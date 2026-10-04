@@ -22,3 +22,4 @@
 - [Clerk reviewer access](clerk-reviewer-access.md) — use an isolated non-admin review account with a per-user Device Trust exception, never a client-side OTP bypass
 - [Video preview proportions](video-preview-proportions.md) — portrait metadata may leave a wide canvas iframe; size the film independently to avoid crowded endings.
 - [Generated image proportions](generated-image-proportions.md) — image edits may ignore the requested ratio; inspect dimensions and protect every face when fitting a portrait film.
+- [Approved promotional film](promo-approved-elements.md) — the user approved the visuals and music; targeted corrections must leave every other element unchanged.

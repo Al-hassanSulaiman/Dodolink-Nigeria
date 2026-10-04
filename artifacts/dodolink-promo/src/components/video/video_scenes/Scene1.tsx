@@ -10,7 +10,7 @@ export function Scene1() {
     <SceneShell className="scene-local" label="Local finds">
       <motion.img
         className="entrepreneur"
-        src={asset('family-opening-portrait.jpg')}
+        src={asset('family-opening-face-corrected.png')}
         alt="AI-composited portrait of Al-Hassan Sulaiman and his father"
         initial={{ scale: 1.05 }}
         animate={{ scale: handoff ? 1.08 : 1.02, x: handoff ? '2%' : 0 }}

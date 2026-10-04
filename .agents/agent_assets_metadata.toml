@@ -193,3 +193,17 @@ mtime_ms = 1791138154964
 storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:80797e59-98ac-4e0d-9650-858724a9c14d/fadee2a8-ae33-4f4a-8eb3-eba2720984e0/faa73927-3d8c-44ed-a298-e055bcf11a94"
 storage_version_token = "1791138197402870"
 content_type = "video/mp4"
+
+[[outputs]]
+id = "V7G2R4U0pagM0gTh1sjS9"
+uri = "file://attached_assets/dodolink-promo/DodoLink-NG-Face-Corrected.mp4"
+type = "video"
+title = "DodoLink — Face-Corrected Video"
+description = "Updated 25-second HD video with the father’s face corrected using the new reference photo. All other portrait details are preserved; the approved soundtrack is retained unchanged."
+logical_id = "d51d3cef-6738-417b-9bf4-9d03f5cf0972"
+content_hash = "sha256:ce0d8a2004721b22341e99dc5d896c6152b6cd1e96c60e109401d928f4dc62bf"
+size = 5018773
+mtime_ms = 1791138965084
+storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:80797e59-98ac-4e0d-9650-858724a9c14d/d51d3cef-6738-417b-9bf4-9d03f5cf0972/7e1fabe0-e48f-4155-b261-abad55f8a4f7"
+storage_version_token = "1791139025807880"
+content_type = "video/mp4"
