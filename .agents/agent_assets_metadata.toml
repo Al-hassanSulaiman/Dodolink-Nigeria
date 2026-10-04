@@ -184,14 +184,14 @@ logical_id = "6fafd2b4-704e-4c21-b1c5-4a167f311386"
 id = "dCE5ohfT_gwrP9OFRk7eL"
 uri = "file://attached_assets/dodolink-promo/DodoLink-NG-Updated.mp4"
 type = "video"
-title = "DodoLink — Updated Promo"
-description = "25-second vertical HD video with the AI-composited father-and-son opening, gentle beatless instrumental music, and Google Play QR code."
+title = "DodoLink — Earlier HD Video"
+description = "The earlier 1080 × 1920 MP4, before the latest face correction. Download this version to your computer."
 logical_id = "fadee2a8-ae33-4f4a-8eb3-eba2720984e0"
 content_hash = "sha256:d1fcae041fbc35cf8ea594f6bc4e23b4ba56864ec5d2fa5d0ec1b282155ab828"
 size = 5196235
 mtime_ms = 1791138154964
-storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:80797e59-98ac-4e0d-9650-858724a9c14d/fadee2a8-ae33-4f4a-8eb3-eba2720984e0/faa73927-3d8c-44ed-a298-e055bcf11a94"
-storage_version_token = "1791138197402870"
+storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:80797e59-98ac-4e0d-9650-858724a9c14d/fadee2a8-ae33-4f4a-8eb3-eba2720984e0/e9060443-8df7-4bc4-8c3a-1c74e6f44f34"
+storage_version_token = "1791140094594006"
 content_type = "video/mp4"
 
 [[outputs]]
