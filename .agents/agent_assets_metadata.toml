@@ -18,6 +18,7 @@ uri = "file://attached_assets/dodolink_featured_graphic_1024x500.jpg"
 type = "image"
 title = "Dodolink NG — Featured Graphic (1024×500)"
 description = "Google Play Store featured graphic, ready to upload. JPEG, 1024×500px."
+logical_id = "cacdc401-4999-431e-ac27-640ddb585b33"
 
 [[outputs]]
 id = "ZlRPZQ-r8_MRSpNvQEjqe"
@@ -25,6 +26,7 @@ uri = "file://attached_assets/screenshot-1.jpeg"
 type = "image"
 title = "Screenshot 1 — Sign Up (1080×1920)"
 description = "Phone screenshot, 9:16, ready for Play Store"
+logical_id = "3d4303a6-6c61-4e66-b898-abefb6e6b4df"
 
 [[outputs]]
 id = "KXcUrdHHunlV6YUvypLWj"
@@ -32,6 +34,7 @@ uri = "file://attached_assets/screenshot-2.jpeg"
 type = "image"
 title = "Screenshot 2 — Marketplace Feed (1080×1920)"
 description = "Phone screenshot, 9:16, ready for Play Store"
+logical_id = "ca877fb5-b39f-4a09-b6f4-7f2ec767e269"
 
 [[outputs]]
 id = "B_Pjfy4fuUk7PE4SFIwFb"
@@ -39,6 +42,7 @@ uri = "file://attached_assets/screenshot-3.jpeg"
 type = "image"
 title = "Screenshot 3 — Create Store (1080×1920)"
 description = "Phone screenshot, 9:16, ready for Play Store"
+logical_id = "ccdd59e1-3b8c-4967-87a5-bf18cba4638b"
 
 [[outputs]]
 id = "YhpeJP-DAYPiLvIbbhQRK"
@@ -46,6 +50,7 @@ uri = "file://attached_assets/screenshot-4.jpeg"
 type = "image"
 title = "Screenshot 4 — Store Dashboard (1080×1920)"
 description = "Phone screenshot, 9:16, ready for Play Store"
+logical_id = "0e8c2aef-ecca-4072-b9e4-24f0872dd055"
 
 [[outputs]]
 id = "2Rh3Q9D0R2Kh7Mtcz4kwb"
@@ -53,6 +58,7 @@ uri = "file://attached_assets/screenshot-5.jpeg"
 type = "image"
 title = "Screenshot 5 — In-app Chat (1080×1920)"
 description = "Phone screenshot, 9:16, ready for Play Store"
+logical_id = "46501843-d0aa-4b14-a056-3c3ae67d1339"
 
 [[outputs]]
 id = "aystbODOLBVPj_nrOubs2"
@@ -60,6 +66,7 @@ uri = "file://attached_assets/screenshot-6.jpeg"
 type = "image"
 title = "Screenshot 6 — Reviews & Ratings (1080×1920)"
 description = "Phone screenshot, 9:16, ready for Play Store"
+logical_id = "68e737d2-817f-4bcc-9df4-7821d6637e2f"
 
 [[outputs]]
 id = "7-rD54TYiqyaRcf3_PCrL"
@@ -67,6 +74,7 @@ uri = "file://attached_assets/dodolink_icon_512x512.png"
 type = "image"
 title = "App Icon — 512×512 PNG"
 description = "Upload this to Play Console → Store listings → App icon. Replaces the 1024×1024 that was rejected."
+logical_id = "0254d75f-482d-44ee-9c28-a038a3b4fb08"
 
 [[outputs]]
 id = "MvNDHayqYp_hIoheZH6fF"
@@ -74,6 +82,7 @@ uri = "file://attached_assets/play_screenshot_signin.jpg"
 type = "image"
 title = "Screenshot 1 — Sign In (1080×1920)"
 description = "Real screenshot from the live app. Upload to Play Console → Screenshots."
+logical_id = "d62d086e-060c-4d54-b485-326b77a9371a"
 
 [[outputs]]
 id = "0C7sbF85fbOhv8iVC6ikh"
@@ -81,6 +90,7 @@ uri = "file://attached_assets/play_screenshot_signup.jpg"
 type = "image"
 title = "Screenshot 2 — Create Account (1080×1920)"
 description = "Real screenshot from the live app."
+logical_id = "a9b81d35-6b3d-4ecb-8f01-bfd3f89fcd90"
 
 [[outputs]]
 id = "XoX0wZPZ_GA3z6dGOu622"
@@ -88,6 +98,7 @@ uri = "file://attached_assets/play_screenshot_forgot.jpg"
 type = "image"
 title = "Screenshot 3 — Reset Password (1080×1920)"
 description = "Real screenshot from the live app."
+logical_id = "e3eb991a-168a-4539-a050-996ee9e35c0b"
 
 [[outputs]]
 id = "2WSBq1V4gGRnZ5gFtwfNf"
@@ -95,6 +106,7 @@ uri = "file://attached_assets/apple_1290x2796_signin.jpg"
 type = "image"
 title = "Apple Screenshot — Sign In (6.7\" 1290×2796)"
 description = "Upload to App Store Connect → Screenshots → iPhone 6.7\" Display"
+logical_id = "80daff8c-7af5-418f-b81d-d2e013d4e987"
 
 [[outputs]]
 id = "QO5ecFTgmGHuJgLvU1jdy"
@@ -102,6 +114,7 @@ uri = "file://attached_assets/apple_1290x2796_signup.jpg"
 type = "image"
 title = "Apple Screenshot — Create Account (6.7\" 1290×2796)"
 description = "Upload to App Store Connect → Screenshots → iPhone 6.7\" Display"
+logical_id = "f843d9c5-a63e-4d59-be82-e10517ebfee6"
 
 [[outputs]]
 id = "szasTlCNK4hy2ofFvwyyu"
@@ -109,6 +122,7 @@ uri = "file://attached_assets/apple_1290x2796_forgot.jpg"
 type = "image"
 title = "Apple Screenshot — Reset Password (6.7\" 1290×2796)"
 description = "Upload to App Store Connect → Screenshots → iPhone 6.7\" Display"
+logical_id = "4ce3933f-a67b-4dab-969a-65e9ddb06ecf"
 
 [[outputs]]
 id = "KMvBkpsoEvydsVYdIlf1n"
@@ -116,6 +130,7 @@ uri = "file://attached_assets/apple_1242x2688_signin.jpg"
 type = "image"
 title = "Apple Screenshot — Sign In (6.5\" 1242×2688)"
 description = "Upload to App Store Connect → Screenshots → iPhone 6.5\" Display"
+logical_id = "0a353e55-7535-4157-8c2d-7b8b04809eaa"
 
 [[outputs]]
 id = "jP0DZTxjhlukObdHAFSBV"
@@ -123,6 +138,7 @@ uri = "file://attached_assets/apple_1242x2688_signup.jpg"
 type = "image"
 title = "Apple Screenshot — Create Account (6.5\" 1242×2688)"
 description = "Upload to App Store Connect → Screenshots → iPhone 6.5\" Display"
+logical_id = "d29c3f25-2da8-4462-b51c-6cb31788a8e4"
 
 [[outputs]]
 id = "1A912W_bKbReEhqAaqulM"
@@ -130,6 +146,7 @@ uri = "file://attached_assets/apple_1242x2688_forgot.jpg"
 type = "image"
 title = "Apple Screenshot — Reset Password (6.5\" 1242×2688)"
 description = "Upload to App Store Connect → Screenshots → iPhone 6.5\" Display"
+logical_id = "48fa5647-75c8-4584-9025-b71e2b3fdfc6"
 
 [[outputs]]
 id = "ja3JhwRle7HMhSOq747Gb"
@@ -137,6 +154,7 @@ uri = "file://attached_assets/apple_icon_1024x1024.png"
 type = "image"
 title = "Apple App Icon — 1024×1024 PNG"
 description = "Upload this to App Store Connect → App Information → App Icon"
+logical_id = "d1874c67-3ea8-42d4-ad7e-57320e7bd6cf"
 
 [[outputs]]
 id = "9qP9PRzuYPNfnGCdkZ4OE"
@@ -144,3 +162,34 @@ uri = "file://dodolink-ng.aab"
 type = "unspecified"
 title = "dodolink-ng.aab"
 description = "Android App Bundle — versionCode 4, production Clerk key + proxy baked in. Upload to Play Console → closed test track → Create new release."
+logical_id = "8778b30d-f5f3-4338-8f3d-950427ed6d83"
+
+[[outputs]]
+id = "bZJE1HWDISQf3akoQXA4z"
+uri = "file://artifacts/dodolink-promo/public/audio/bg_music.mp3"
+type = "audio"
+title = "DodoLink warm rhythmic promo music"
+description = "Generated music: Original contemporary Afrobeats-inspired instrumental background music for a 25-second Nigerian local-commerce app promotional film. Warm bright plucked guitar, round bass, crisp sha…"
+logical_id = "6f22fd37-80cb-43c9-aeb2-27da435c154c"
+
+[[outputs]]
+id = "UYQQwDcxnNFOvPpOzwlcP"
+uri = "file://artifacts/dodolink-promo/public/audio/calm-instrumental.mp3"
+type = "audio"
+title = "Warm beatless strings and flute"
+description = "Generated music: A beautiful warm cinematic ambient instrumental for a welcoming family and local-business film. STRICTLY DRUM-FREE AND BEATLESS. Only smooth sustained orchestral strings, gentle brea…"
+logical_id = "6fafd2b4-704e-4c21-b1c5-4a167f311386"
+
+[[outputs]]
+id = "dCE5ohfT_gwrP9OFRk7eL"
+uri = "file://attached_assets/dodolink-promo/DodoLink-NG-Updated.mp4"
+type = "video"
+title = "DodoLink — Updated Promo"
+description = "25-second vertical HD video with the AI-composited father-and-son opening, gentle beatless instrumental music, and Google Play QR code."
+logical_id = "fadee2a8-ae33-4f4a-8eb3-eba2720984e0"
+content_hash = "sha256:d1fcae041fbc35cf8ea594f6bc4e23b4ba56864ec5d2fa5d0ec1b282155ab828"
+size = 5196235
+mtime_ms = 1791138154964
+storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:80797e59-98ac-4e0d-9650-858724a9c14d/fadee2a8-ae33-4f4a-8eb3-eba2720984e0/faa73927-3d8c-44ed-a298-e055bcf11a94"
+storage_version_token = "1791138197402870"
+content_type = "video/mp4"

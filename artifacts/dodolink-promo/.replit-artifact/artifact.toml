@@ -1,0 +1,29 @@
+kind = "video"
+videoAspectRatio = "9:16"
+previewPath = "/dodolink-promo/"
+title = "DodoLink — Your Next Customer"
+description = "A 25-second vertical promotional film introducing DodoLink to Nigerian buyers and local businesses, using verified app branding and real interface screenshots."
+version = "1.0.0"
+id = "artifacts/dodolink-promo"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/dodolink-promo/" ]
+localPort = 26001
+
+[services.development]
+run = "pnpm --filter @workspace/dodolink-promo run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/dodolink-promo", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/dodolink-promo/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "26001"
+BASE_PATH = "/dodolink-promo/"
