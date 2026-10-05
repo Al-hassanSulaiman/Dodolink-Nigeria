@@ -5,4 +5,4 @@ jobs:
     type: submit
     params:
       build_id: a362711e-262c-4cd2-9248-a20db59f9f0c
-      profile: cloud-submit
+      profile: production
