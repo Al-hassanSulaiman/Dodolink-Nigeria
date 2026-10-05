@@ -46,6 +46,12 @@
         "ascApiKeyId": "5B5WP5KMAG",
         "ascApiKeyIssuerId": "1885009b-8be5-4355-b76a-96d4b53e5230"
       }
+    },
+    "cloud-submit": {
+      "ios": {
+        "ascAppId": "6801929226",
+        "appleTeamId": "SNMA9WRJY2"
+      }
     }
   }
 }

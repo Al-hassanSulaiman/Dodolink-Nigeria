@@ -1,0 +1,8 @@
+name: Upload completed iPhone build
+jobs:
+  upload_ios:
+    name: Upload iPhone build to App Store Connect
+    type: submit
+    params:
+      build_id: a362711e-262c-4cd2-9248-a20db59f9f0c
+      profile: cloud-submit
