@@ -17,6 +17,22 @@ const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
 let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
+let _requestTimeoutMs = 0;
+let _publicReadAuthEnabled = true;
+export function setPublicReadAuthEnabled(enabled: boolean): void {
+  _publicReadAuthEnabled = enabled;
+}
+
+export function setRequestTimeout(milliseconds: number): void {
+  _requestTimeoutMs = Math.max(0, milliseconds);
+}
+
+export function isPublicRead(url: string, method: string): boolean {
+  if (method !== "GET") return false;
+  const parsed = new URL(url, "https://local.invalid");
+  if (parsed.searchParams.has("ownerUserId")) return false;
+  return /^\/api\/(healthz|search|products(?:\/\d+)?|stores(?:\/\d+(?:\/products|\/reviews)?)?)$/.test(parsed.pathname);
+}
 
 /**
  * Set a base URL that is prepended to every relative request URL
@@ -351,8 +367,17 @@ export async function customFetch<T = unknown>(
 
   // Attach bearer token when an auth getter is configured and no
   // Authorization header has been explicitly provided.
-  if (_authTokenGetter && !headers.has("authorization")) {
-    const token = await _authTokenGetter();
+  if (_authTokenGetter && !headers.has("authorization") && (_publicReadAuthEnabled || !isPublicRead(resolveUrl(input), method))) {
+    let authTimer: ReturnType<typeof setTimeout> | undefined;
+    let token: string | null;
+    try {
+      token = _requestTimeoutMs ? await Promise.race([
+        Promise.resolve().then(_authTokenGetter),
+        new Promise<never>((_resolve, reject) => {
+          authTimer = setTimeout(() => reject(new Error("Account verification is taking too long. Check your connection and try again.")), Math.min(_requestTimeoutMs, 15000));
+        }),
+      ]) : await _authTokenGetter();
+    } finally { if (authTimer) clearTimeout(authTimer); }
     if (token) {
       headers.set("authorization", `Bearer ${token}`);
     }
@@ -360,7 +385,13 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  const response = await fetch(input, { ...init, method, headers });
+  const controller = _requestTimeoutMs ? new AbortController() : null;
+  const abort = () => controller?.abort();
+  if (init.signal?.aborted) abort();
+  init.signal?.addEventListener("abort", abort);
+  const timer = controller ? setTimeout(abort, _requestTimeoutMs) : null;
+  try {
+  const response = await fetch(input, { ...init, method, headers, signal: controller?.signal ?? init.signal });
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);
@@ -368,4 +399,8 @@ export async function customFetch<T = unknown>(
   }
 
   return (await parseSuccessBody(response, responseType, requestInfo)) as T;
+  } finally {
+    if (timer) clearTimeout(timer);
+    init.signal?.removeEventListener("abort", abort);
+  }
 }

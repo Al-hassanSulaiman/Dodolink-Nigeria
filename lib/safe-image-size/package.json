@@ -1,0 +1,9 @@
+{
+  "name": "image-size",
+  "version": "2.0.3-dodolink.1",
+  "private": true,
+  "description": "Bounded image dimension parser used by Metro during DodoLink builds",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "license": "MIT"
+}
