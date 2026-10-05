@@ -19,6 +19,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { LoadingScreen } from '@/components/Loading';
 import { Feather } from '@expo/vector-icons';
 import { KeyboardAvoidingView as KeyboardControllerView } from 'react-native-keyboard-controller';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { getImageUrl, uploadMediaToStorage } from '@/utils/storage';
 import { showAlert } from '@/utils/alerts';
 import { useActiveScreen } from '@/hooks/useActiveScreen';
@@ -226,7 +227,10 @@ export default function ChatThreadScreen() {
   const isBusy = uploading || sendMessage.isPending;
 
   return (
-    <KeyboardControllerView style={[styles.container, { backgroundColor: colors.background }]} behavior="padding" keyboardVerticalOffset={100}>
+    // The navigation header handles the top inset. Reserve the bottom system
+    // bar outside keyboard avoidance so it is not also added above the keyboard.
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom', 'left', 'right']}>
+    <KeyboardControllerView style={styles.container} behavior="padding" keyboardVerticalOffset={100}>
       <Stack.Screen options={{ title: isRetailer ? (conversation?.customerName ?? "Chat") : (conversation?.storeName ?? "Chat") }} />
       <FlatList
         data={messages ? [...messages].reverse() : []}
@@ -271,6 +275,7 @@ export default function ChatThreadScreen() {
         </Pressable>
       </View>
     </KeyboardControllerView>
+    </SafeAreaView>
   );
 }
 

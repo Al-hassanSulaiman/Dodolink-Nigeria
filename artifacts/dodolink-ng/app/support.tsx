@@ -13,6 +13,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { LoadingScreen } from '@/components/Loading';
 import { Feather } from '@expo/vector-icons';
 import { KeyboardAvoidingView as KeyboardControllerView } from 'react-native-keyboard-controller';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { RequireAccount } from '@/components/RequireAccount';
 import { useActiveScreen } from '@/hooks/useActiveScreen';
 
@@ -85,8 +86,9 @@ function SupportContent() {
   const hasMessages = !!messages && messages.length > 0;
 
   return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom', 'left', 'right']}>
     <KeyboardControllerView
-      style={[styles.container, { backgroundColor: colors.background }]}
+      style={styles.container}
       behavior="padding"
       keyboardVerticalOffset={100}
     >
@@ -133,6 +135,7 @@ function SupportContent() {
         </Pressable>
       </View>
     </KeyboardControllerView>
+    </SafeAreaView>
   );
 }
 
