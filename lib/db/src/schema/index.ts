@@ -8,3 +8,5 @@ export * from "./support_messages";
 export * from "./subscription_payments";
 export * from "./admins";
 export * from "./contact_leads";
+export * from "./account_deletions";
+export * from "./media_uploads";

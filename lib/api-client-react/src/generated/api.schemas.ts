@@ -483,6 +483,41 @@ export interface AdminUser {
   storeName?: string | null;
 }
 
+export type DeleteMyAccountBodyConfirmation = typeof DeleteMyAccountBodyConfirmation[keyof typeof DeleteMyAccountBodyConfirmation];
+
+
+export const DeleteMyAccountBodyConfirmation = {
+  DELETE: 'DELETE',
+} as const;
+
+export type DeleteMyAccountBody = {
+  confirmation: DeleteMyAccountBodyConfirmation;
+};
+
+export type DeleteMyAccount200Status = typeof DeleteMyAccount200Status[keyof typeof DeleteMyAccount200Status];
+
+
+export const DeleteMyAccount200Status = {
+  deleted: 'deleted',
+  pending: 'pending',
+} as const;
+
+export type DeleteMyAccount200 = {
+  status: DeleteMyAccount200Status;
+};
+
+export type DeleteMyAccount202Status = typeof DeleteMyAccount202Status[keyof typeof DeleteMyAccount202Status];
+
+
+export const DeleteMyAccount202Status = {
+  deleted: 'deleted',
+  pending: 'pending',
+} as const;
+
+export type DeleteMyAccount202 = {
+  status: DeleteMyAccount202Status;
+};
+
 export type ListStoresParams = {
 category?: string;
 /**

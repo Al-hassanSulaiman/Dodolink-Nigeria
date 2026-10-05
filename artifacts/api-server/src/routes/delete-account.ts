@@ -1,8 +1,26 @@
 import { Router } from "express";
 import nodemailer from "nodemailer";
 import { z } from "zod";
+import { requireUser } from "../lib/auth";
+import { requestAccountDeletion } from "../lib/accountDeletion";
 
 const router = Router();
+
+router.delete("/account", async (req, res) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+  if (req.body?.confirmation !== "DELETE") {
+    res.status(400).json({ error: "Explicit deletion confirmation is required." });
+    return;
+  }
+  try {
+    const completed = await requestAccountDeletion(userId);
+    res.status(completed ? 200 : 202).json({ status: completed ? "deleted" : "pending" });
+  } catch (err) {
+    req.log.error({ err }, "Could not accept account deletion");
+    res.status(503).json({ error: "Could not accept deletion. Please try again." });
+  }
+});
 
 const schema = z.object({
   email: z.string().email().max(200),

@@ -26,6 +26,50 @@ tags:
     description: Admin-only operations
 
 paths:
+  /account:
+    delete:
+      operationId: deleteMyAccount
+      tags: [account]
+      summary: Permanently delete the authenticated account and associated data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirmation]
+              properties:
+                confirmation:
+                  type: string
+                  enum: [DELETE]
+      responses:
+        "200":
+          description: Account deletion completed
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    enum: [deleted, pending]
+        "202":
+          description: Deletion accepted and will be retried automatically
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    enum: [deleted, pending]
+        "401":
+          description: Authentication required
+        "400":
+          description: Explicit deletion confirmation required
+
   /healthz:
     get:
       operationId: healthCheck

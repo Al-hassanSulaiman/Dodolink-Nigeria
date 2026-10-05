@@ -11,10 +11,10 @@ import { useAuth } from "@clerk/expo";
 
 export default function HomeScreen() {
   const colors = useColors();
-  const { signOut } = useAuth();
+  const { isSignedIn } = useAuth();
   const router = useRouter();
-  const { data: products, isLoading: isLoadingProducts, refetch: refetchProducts } = useListProducts({ limit: 6, featured: true });
-  const { data: stores, isLoading: isLoadingStores, refetch: refetchStores } = useListStores({ limit: 5, top: true });
+  const { data: products, isLoading: isLoadingProducts, isError: productsError, refetch: refetchProducts } = useListProducts({ limit: 6, featured: true });
+  const { data: stores, isLoading: isLoadingStores, isError: storesError, refetch: refetchStores } = useListStores({ limit: 5, top: true });
 
   const refreshing = isLoadingProducts || isLoadingStores;
   const onRefresh = () => {
@@ -23,12 +23,20 @@ export default function HomeScreen() {
   };
 
   const handleSignOut = async () => {
-    await signOut();
-    router.replace("/(auth)/sign-in" as Href);
+    router.push(isSignedIn ? "/account" : "/(auth)/sign-in");
   };
 
   if (isLoadingProducts && !products) {
     return <LoadingScreen message="Loading Dodolink..." />;
+  }
+  if ((productsError && !products) || (storesError && !stores)) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', padding: 24, gap: 16 }}>
+        <Text style={{ color: colors.foreground, fontSize: 20 }}>Couldn't load the marketplace</Text>
+        <Text style={{ color: colors.mutedForeground }}>Check your connection and try again. Previously loaded items remain available while the app is open.</Text>
+        <Pressable onPress={onRefresh}><Text style={{ color: colors.primary, fontSize: 18 }}>Try again</Text></Pressable>
+      </View>
+    );
   }
 
   return (
@@ -47,7 +55,7 @@ export default function HomeScreen() {
             <Feather name="help-circle" size={20} color={colors.mutedForeground} />
           </Pressable>
           <Pressable onPress={handleSignOut} hitSlop={8} style={styles.signOutBtn}>
-            <Feather name="log-out" size={20} color={colors.mutedForeground} />
+            <Feather name={isSignedIn ? "settings" : "log-in"} size={20} color={colors.mutedForeground} />
           </Pressable>
         </View>
       </View>

@@ -2,6 +2,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { startScheduler } from "./lib/scheduler";
 import { validatePaystackKey } from "./lib/paystack";
+import { initializeAccountDeletion, retryAccountDeletions } from "./lib/accountDeletion";
 
 // Refuse to start a production deployment with a missing or test-mode
 // Paystack key — real checkouts would silently be fake otherwise.
@@ -21,6 +22,7 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
+await initializeAccountDeletion();
 app.listen(port, (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
@@ -29,4 +31,6 @@ app.listen(port, (err) => {
 
   logger.info({ port }, "Server listening");
   startScheduler();
+  void retryAccountDeletions();
+  setInterval(() => { void retryAccountDeletions(); }, 60000).unref();
 });

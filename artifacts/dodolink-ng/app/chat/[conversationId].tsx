@@ -21,6 +21,7 @@ import { Feather } from '@expo/vector-icons';
 import { KeyboardAvoidingView as KeyboardControllerView } from 'react-native-keyboard-controller';
 import { getImageUrl, uploadMediaToStorage } from '@/utils/storage';
 import { showAlert } from '@/utils/alerts';
+import { useActiveScreen } from '@/hooks/useActiveScreen';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const MEDIA_WIDTH = SCREEN_WIDTH * 0.65;
@@ -73,9 +74,10 @@ export default function ChatThreadScreen() {
   const [uploading, setUploading] = useState(false);
   const queryClient = useQueryClient();
   const inputRef = useRef<TextInput>(null);
+  const active = useActiveScreen();
 
   const { data: messages, isLoading, isError: messagesError, refetch: refetchMessages } = useListMessages(id, {
-    query: { enabled: !!id, queryKey: getListMessagesQueryKey(id) }
+    query: { enabled: !!id && !!userId, queryKey: getListMessagesQueryKey(id), refetchInterval: active ? 10000 : false, refetchIntervalInBackground: false }
   });
 
   // Mark conversation as read when chat is opened
@@ -90,17 +92,21 @@ export default function ChatThreadScreen() {
 
   const handleSend = () => {
     if (!message.trim() || !userId || !userName) return;
+    const submittedMessage = message.trim();
     sendMessage.mutate(
       { conversationId: id, data: {
         senderId: userId,
         senderName: senderName,
         senderType: senderType,
-        body: message.trim(),
+        body: submittedMessage,
       }},
       {
-        onSuccess: () => {
-          setMessage('');
-          queryClient.invalidateQueries({ queryKey: getListMessagesQueryKey(id) });
+        onSuccess: async (sent) => {
+          setMessage(current => current.trim() === submittedMessage ? '' : current);
+          await queryClient.cancelQueries({ queryKey: getListMessagesQueryKey(id) });
+          queryClient.setQueryData<Message[]>(getListMessagesQueryKey(id), old =>
+            old?.some(m => m.id === sent.id) ? old : [...(old ?? []), sent]);
+          queryClient.invalidateQueries({ queryKey: getListConversationsQueryKey() });
           inputRef.current?.focus();
         },
         onError: () => {

@@ -23,3 +23,4 @@
 - [Video preview proportions](video-preview-proportions.md) — portrait metadata may leave a wide canvas iframe; size the film independently to avoid crowded endings.
 - [Generated image proportions](generated-image-proportions.md) — image edits may ignore the requested ratio; inspect dimensions and protect every face when fitting a portrait film.
 - [Approved promotional film](promo-approved-elements.md) — the user approved the visuals and music; targeted corrections must leave every other element unchanged.
+- [Account-deletion media safety](account-deletion-media-safety.md) — legacy attachment URLs do not prove upload ownership; active signed upload links can recreate deleted files.

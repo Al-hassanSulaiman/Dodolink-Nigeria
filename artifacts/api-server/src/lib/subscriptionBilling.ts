@@ -11,7 +11,7 @@ export const SUBSCRIPTION_DAYS = 30;
  * Namespace for our Postgres advisory locks so a store id can never collide
  * with a lock taken by unrelated code using the same numeric key.
  */
-const SUBSCRIPTION_LOCK_NAMESPACE = 4242;
+export const SUBSCRIPTION_LOCK_NAMESPACE = 4242;
 
 /**
  * Runs `fn` while holding a Postgres transaction-scoped advisory lock keyed on
@@ -137,7 +137,7 @@ export async function chargeStoreSubscription(params: {
     // automatic provider charge cannot proceed on stale data.
     if (automatic) {
       const [lockedStore] = await db.select().from(storesTable).where(eq(storesTable.id, storeId));
-      if (lockedStore?.subscriptionExempt) return { kind: "exempt" };
+      if (!lockedStore || !lockedStore.autoPayEnabled || lockedStore.subscriptionExempt) return { kind: "exempt" };
     }
 
     // Step 1: reconcile ALL unconsumed attempts for this store (any prefix).

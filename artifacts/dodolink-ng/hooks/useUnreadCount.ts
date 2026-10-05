@@ -9,8 +9,9 @@ export function useUnreadCount(): number {
     {
       query: {
         enabled: !!userId,
-        refetchInterval: 15000,
-        staleTime: 10000,
+        refetchInterval: 60000,
+        refetchIntervalInBackground: false,
+        staleTime: 30000,
         queryKey: getListConversationsQueryKey({ userId: userId || '' }),
       },
     }

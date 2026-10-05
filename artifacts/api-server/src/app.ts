@@ -10,6 +10,7 @@ import {
 } from "./middlewares/clerkProxyMiddleware";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { preventDeletedAccountWrites } from "./lib/accountDeletion";
 
 const app: Express = express();
 
@@ -90,6 +91,6 @@ app.use(
   })),
 );
 
-app.use("/api", router);
+app.use("/api", preventDeletedAccountWrites, router);
 
 export default app;

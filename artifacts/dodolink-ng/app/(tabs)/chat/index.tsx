@@ -7,6 +7,7 @@ import { LoadingScreen } from '@/components/Loading';
 import { EmptyState } from '@/components/EmptyState';
 import { ImagePlaceholder } from '@/components/ImagePlaceholder';
 import { Feather } from '@expo/vector-icons';
+import { RequireAccount } from '@/components/RequireAccount';
 
 export default function ChatsScreen() {
   const colors = useColors();
@@ -15,6 +16,7 @@ export default function ChatsScreen() {
   const { data: conversations, isLoading } = useListConversations({ userId: userId || '' }, {
     query: { enabled: !!userId, queryKey: getListConversationsQueryKey({ userId: userId || '' }) }
   });
+  if (!userId) return <RequireAccount />;
 
   if (isLoading && !conversations) return <LoadingScreen message="Loading chats..." />;
 

@@ -139,9 +139,6 @@ export default function TabLayout() {
     setAuthTokenGetter(() => getToken());
   }, [getToken]);
 
-  if (!isLoaded) return null;
-  if (!isSignedIn) return <Redirect href="/(auth)/sign-in" />;
-
   if (isLiquidGlassAvailable()) {
     return <NativeTabLayout />;
   }

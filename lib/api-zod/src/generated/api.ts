@@ -8,6 +8,18 @@
 import * as zod from 'zod';
 
 /**
+ * @summary Permanently delete the authenticated account and associated data
+ */
+export const DeleteMyAccountBody = zod.object({
+  "confirmation": zod.enum(['DELETE'])
+})
+
+export const DeleteMyAccountResponse = zod.object({
+  "status": zod.enum(['deleted', 'pending'])
+})
+
+
+/**
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({

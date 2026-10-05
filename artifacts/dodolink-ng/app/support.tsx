@@ -13,17 +13,25 @@ import { useQueryClient } from '@tanstack/react-query';
 import { LoadingScreen } from '@/components/Loading';
 import { Feather } from '@expo/vector-icons';
 import { KeyboardAvoidingView as KeyboardControllerView } from 'react-native-keyboard-controller';
+import { RequireAccount } from '@/components/RequireAccount';
+import { useActiveScreen } from '@/hooks/useActiveScreen';
 
 export default function SupportScreen() {
+  return <RequireAccount><SupportContent /></RequireAccount>;
+}
+
+function SupportContent() {
   const colors = useColors();
   const [message, setMessage] = useState('');
   const queryClient = useQueryClient();
   const inputRef = useRef<TextInput>(null);
+  const active = useActiveScreen();
 
   const { data: messages, isLoading } = useListSupportMessages({
     query: {
       queryKey: getListSupportMessagesQueryKey(),
-      refetchInterval: 15000,
+      refetchInterval: active ? 15000 : false,
+      refetchIntervalInBackground: false,
     },
   });
 

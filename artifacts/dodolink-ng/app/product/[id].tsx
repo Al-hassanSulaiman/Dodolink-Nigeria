@@ -49,7 +49,7 @@ export default function ProductScreen() {
   const handleChat = () => {
     if (!product) return;
     if (!userId || !userName) {
-      router.push('/(auth)/sign-in');
+      router.push({ pathname: '/(auth)/sign-in', params: { returnTo: `/product/${id}` } });
       return;
     }
     startConversation.mutate({ data: {

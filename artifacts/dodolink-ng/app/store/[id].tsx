@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { StyleSheet, View, Text, ScrollView, RefreshControl, Pressable, Image } from 'react-native';
 import { showAlert } from '@/utils/alerts';
 import { isStoreNameAlreadyExistsError } from '@/utils/storeErrors';
-import { useLocalSearchParams, Stack } from 'expo-router';
+import { useLocalSearchParams, Stack, router } from 'expo-router';
 import {
   useGetStore,
   useListStoreProducts,
@@ -123,6 +123,10 @@ export default function StoreScreen() {
   };
 
   const handleSubmitReview = () => {
+    if (!userId) {
+      router.push({ pathname: '/(auth)/sign-in', params: { returnTo: `/store/${storeId}` } });
+      return;
+    }
     if (!rating || !userId || !userName) return;
     createReview.mutate({ storeId, data: {
       rating,

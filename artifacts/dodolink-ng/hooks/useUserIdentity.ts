@@ -1,9 +1,10 @@
-import { useUser } from "@clerk/expo";
+import { useUser, useAuth } from "@clerk/expo";
 
 export function useUserIdentity() {
   const { user, isLoaded } = useUser();
+  const auth = useAuth();
 
-  const userId = user?.id ?? null;
+  const userId = user?.id ?? auth.userId ?? null;
   const userEmail = user?.primaryEmailAddress?.emailAddress ?? null;
   const userName =
     user?.fullName ||
@@ -31,5 +32,5 @@ export function useUserIdentity() {
     await user.setProfileImage({ file });
   };
 
-  return { userId, userName, userEmail, imageUrl, updateUserName, updateProfileImage, isReady: isLoaded };
+  return { userId, userName, userEmail, imageUrl, updateUserName, updateProfileImage, isReady: auth.isLoaded };
 }

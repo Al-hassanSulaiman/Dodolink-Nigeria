@@ -18,6 +18,7 @@ import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { getImageUrl } from '@/utils/storage';
 import { useQueryClient } from '@tanstack/react-query';
+import { RequireAccount } from '@/components/RequireAccount';
 
 function ProductThumb({ uri, name }: { uri: string | null; name: string }) {
   const [err, setErr] = useState(false);
@@ -33,8 +34,10 @@ export default function MyStoreScreen() {
   const { userId, isReady } = useUserIdentity();
 
   const handleSignOut = async () => {
+    await queryClient.cancelQueries();
     await signOut();
-    router.replace('/(auth)/sign-in');
+    queryClient.clear();
+    router.replace('/(tabs)');
   };
   const queryClient = useQueryClient();
 
@@ -78,7 +81,8 @@ export default function MyStoreScreen() {
     refetchProducts();
   };
 
-  if (!isReady || isLoading) return <LoadingScreen message="Loading dashboard..." />;
+  if (!userId) return <RequireAccount />;
+  if (!isReady || (isLoading && !stores)) return <LoadingScreen message="Loading dashboard..." />;
 
   if (storesError) {
     return (

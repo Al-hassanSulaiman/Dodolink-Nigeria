@@ -7,6 +7,10 @@ import {
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 import { ObjectPermission } from "../lib/objectAcl";
 import { requireUser } from "../lib/auth";
+import { db } from "@workspace/db";
+import { mediaUploadsTable, accountDeletionsTable } from "@workspace/db";
+import { eq, sql } from "drizzle-orm";
+import { ACCOUNT_DELETION_LOCK_NAMESPACE } from "../lib/accountDeletion";
 import { rateLimit } from "../lib/rateLimit";
 
 const uploadUrlLimit = rateLimit({ name: "upload-url", max: 30, windowMs: 60 * 1000 });
@@ -58,6 +62,20 @@ router.post("/storage/uploads/request-url", uploadUrlLimit, async (req: Request,
   try {
     const uploadURL = await objectStorageService.getObjectEntityUploadURL();
     const objectPath = objectStorageService.normalizeObjectEntityPath(uploadURL);
+    // Signing can finish after a deletion request began. Register under the
+    // same per-account lock as deletion, and never return a late upload link.
+    const registered = await db.transaction(async tx => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${ACCOUNT_DELETION_LOCK_NAMESPACE}, hashtext(${userId}))`);
+      const [job] = await tx.select({ userId: accountDeletionsTable.userId })
+        .from(accountDeletionsTable).where(eq(accountDeletionsTable.userId, userId));
+      if (job) return false;
+      await tx.insert(mediaUploadsTable).values({ path: objectPath, userId });
+      return true;
+    });
+    if (!registered) {
+      res.status(403).json({ error: "Account deletion is in progress. Uploads are disabled." });
+      return;
+    }
 
     res.json(
       RequestUploadUrlResponse.parse({

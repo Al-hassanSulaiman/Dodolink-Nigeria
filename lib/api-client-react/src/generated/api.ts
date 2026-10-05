@@ -41,6 +41,9 @@ import type {
   CreateProductBody,
   CreateReviewBody,
   CreateStoreBody,
+  DeleteMyAccount200,
+  DeleteMyAccount202,
+  DeleteMyAccountBody,
   ErrorResponse,
   HealthStatus,
   ListConversationsParams,
@@ -103,6 +106,77 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getDeleteMyAccountUrl = () => {
+
+
+
+
+  return `/api/account`
+}
+
+/**
+ * @summary Permanently delete the authenticated account and associated data
+ */
+export const deleteMyAccount = async (deleteMyAccountBody: DeleteMyAccountBody, options?: RequestInit): Promise<DeleteMyAccount200 | DeleteMyAccount202> => {
+
+  return customFetch<DeleteMyAccount200 | DeleteMyAccount202>(getDeleteMyAccountUrl(),
+  {
+    ...options,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(deleteMyAccountBody)
+  }
+);}
+
+
+
+
+
+export const getDeleteMyAccountMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMyAccount>>, TError,{data: BodyType<DeleteMyAccountBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteMyAccount>>, TError,{data: BodyType<DeleteMyAccountBody>}, TContext> => {
+
+const mutationKey = ['deleteMyAccount'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteMyAccount>>, {data: BodyType<DeleteMyAccountBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  deleteMyAccount(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteMyAccountMutationResult = NonNullable<Awaited<ReturnType<typeof deleteMyAccount>>>
+    export type DeleteMyAccountMutationBody = BodyType<DeleteMyAccountBody>
+    export type DeleteMyAccountMutationError = ErrorType<void>
+
+    /**
+ * @summary Permanently delete the authenticated account and associated data
+ */
+export const useDeleteMyAccount = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMyAccount>>, TError,{data: BodyType<DeleteMyAccountBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteMyAccount>>,
+        TError,
+        {data: BodyType<DeleteMyAccountBody>},
+        TContext
+      > => {
+      return useMutation(getDeleteMyAccountMutationOptions(options), queryClient);
+    }
 
 export const getHealthCheckUrl = () => {
 

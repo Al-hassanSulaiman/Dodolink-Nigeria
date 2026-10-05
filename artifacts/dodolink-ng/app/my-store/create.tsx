@@ -27,7 +27,9 @@ export default function CreateStoreScreen() {
 
   const createStore = useCreateStore({
     mutation: {
-      onSuccess: () => {
+      onSuccess: (created) => {
+        queryClient.setQueryData(getListStoresQueryKey({ ownerUserId: userId ?? undefined }), (old: typeof created[] | undefined) =>
+          [created, ...(old ?? []).filter(store => store.id !== created.id)]);
         queryClient.invalidateQueries({ queryKey: getListStoresQueryKey() });
         router.replace('/(tabs)/my-store');
       },
@@ -39,7 +41,8 @@ export default function CreateStoreScreen() {
           );
           return;
         }
-        showAlert('Store creation failed', 'Could not create the store. Please try again.');
+        queryClient.invalidateQueries({ queryKey: getListStoresQueryKey({ ownerUserId: userId ?? undefined }) });
+        showAlert('Store creation could not be confirmed', 'Your entries are still here. Check My Store before trying again, in case the store was saved before the connection dropped.');
       },
     }
   });
