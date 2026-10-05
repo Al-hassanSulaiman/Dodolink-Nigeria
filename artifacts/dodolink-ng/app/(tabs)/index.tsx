@@ -51,10 +51,10 @@ export default function HomeScreen() {
           <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Connecting Nigerian businesses to customers</Text>
         </View>
         <View style={styles.headerActions}>
-          <Pressable onPress={() => router.push("/support" as Href)} hitSlop={8} style={styles.signOutBtn}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Contact support" onPress={() => router.push("/support" as Href)} style={styles.signOutBtn}>
             <Feather name="help-circle" size={20} color={colors.mutedForeground} />
           </Pressable>
-          <Pressable onPress={handleSignOut} hitSlop={8} style={styles.signOutBtn}>
+          <Pressable accessibilityRole="button" accessibilityLabel={isSignedIn ? "Account settings" : "Sign in"} onPress={handleSignOut} style={styles.signOutBtn}>
             <Feather name={isSignedIn ? "settings" : "log-in"} size={20} color={colors.mutedForeground} />
           </Pressable>
         </View>
@@ -117,11 +117,14 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 24,
+    marginLeft: 12,
   },
   signOutBtn: {
-    paddingTop: 4,
-    paddingLeft: 8,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     fontFamily: "Inter_700Bold",

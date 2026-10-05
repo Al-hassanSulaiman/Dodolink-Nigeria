@@ -9,6 +9,8 @@ import {
   useListStoreReviews,
   useCreateReview,
   useUpdateStore,
+  useStartConversation,
+  getListConversationsQueryKey,
   getGetStoreQueryKey,
   getListStoresQueryKey,
   getListStoreReviewsQueryKey,
@@ -36,6 +38,7 @@ export default function StoreScreen() {
 
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
+  const [chatError, setChatError] = useState('');
 
   const [isEditing, setIsEditing] = useState(false);
   const [storeImgError, setStoreImgError] = useState(false);
@@ -91,6 +94,30 @@ export default function StoreScreen() {
 
   const isOwner = !!userId && !!store && store.ownerUserId === userId;
   const detailsLocked = !!store?.detailsLockedByAdmin;
+  const startConversation = useStartConversation({
+    mutation: {
+      onSuccess: (conversation) => {
+        queryClient.invalidateQueries({ queryKey: getListConversationsQueryKey() });
+        router.push(`/chat/${conversation.id}`);
+      },
+      onError: () => {
+        setChatError('Could not open the chat. Check your connection and try again.');
+      },
+    },
+  });
+  const handleChat = () => {
+    if (!store || isOwner || startConversation.isPending) return;
+    setChatError('');
+    if (!userId) {
+      router.push({ pathname: '/(auth)/sign-in', params: { returnTo: `/store/${storeId}` } });
+      return;
+    }
+    startConversation.mutate({ data: {
+      customerId: userId,
+      customerName: userName,
+      storeId,
+    } });
+  };
 
   const handleStartEdit = () => {
     if (!store) return;
@@ -244,6 +271,17 @@ export default function StoreScreen() {
             )}
           </View>
         </View>
+
+        {!isOwner && !isEditing && (
+          <View style={styles.section}>
+            <Button
+              title={startConversation.isPending ? 'Opening chat…' : 'Chat with seller'}
+              onPress={handleChat}
+              disabled={startConversation.isPending}
+            />
+            {!!chatError && <Text accessibilityRole="alert" style={{ color: colors.destructive, marginTop: 8 }}>{chatError}</Text>}
+          </View>
+        )}
 
         {isEditing ? (
           <View style={styles.section}>
