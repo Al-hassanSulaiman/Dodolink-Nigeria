@@ -12,9 +12,9 @@
 - [ASC review build swap](asc-review-build-swap.md) — can't swap build while WAITING_FOR_REVIEW; cancel submission, wait ~30s, attach, resubmit (metadata kept)
 - [Clerk + RN spm.rb nil crash](clerk-spm-nil-crash.md) — @clerk/expo causes pod install crash; fix is a config plugin nil-guard, NOT a RN version bump
 - [React Native upload timeouts](react-native-upload-timeouts.md) — production Android/iOS lacks AbortSignal.timeout; use AbortController plus a cleared timer
-- [EAS Submit credential conflicts](eas-submit-credential-conflicts.md) — Expo MCP may combine incompatible Apple auth; submit by build ID with EAS CLI from the mobile app directory
+- [EAS Submit credential conflicts](eas-submit-credential-conflicts.md) — Apple upload needs one auth method; cloud submission needs cloud-accessible credentials, not a local key file.
 - [Android Expo FCM setup](android-expo-fcm.md) — expo-notifications needs both Firebase app config and an Expo FCM V1 credential before Android can register or receive remote pushes
-- [EAS monorepo build root](eas-monorepo-build-root.md) — Git-triggered builds may silently use repo root; for reliable releases run EAS CLI from the mobile app directory and pin pnpm
+- [EAS monorepo build root](eas-monorepo-build-root.md) — Git builds may ignore the mobile directory; isolated root-app release branches work, and temporary lockfile prep must not bootstrap pnpm.
 - [GitHub connector HTML upload filter](github-connector-html-upload.md) — connector API may Cloudflare-block HTML payloads; generate the page shell from an uploaded server module
 - [Publish dependency scan coverage](publish-dependency-scan.md) — Publish scans build/dev transitives; no-fix build-tool advisories need a compatible safe replacement
 - [Store payment exemptions](store-payment-exemptions.md) — exempt stores stay public and skip automatic billing; explicit admin hiding wins and manual payment remains optional

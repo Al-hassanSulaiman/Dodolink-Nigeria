@@ -13,6 +13,13 @@ const originalResolveRequest = config.resolver?.resolveRequest;
 config.resolver = {
   ...config.resolver,
   resolveRequest(context, moduleName, platform) {
+    // Shared libraries and hoisted packages must use the app's React instance.
+    if (moduleName === "react" || moduleName.startsWith("react/")) {
+      return {
+        filePath: require.resolve(moduleName, { paths: [__dirname] }),
+        type: "sourceFile",
+      };
+    }
     if (
       platform === "android" &&
       context.originModulePath?.includes("@clerk/expo") &&

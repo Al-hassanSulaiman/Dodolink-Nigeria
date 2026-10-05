@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, RefreshControl, Pressable, Image } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, RefreshControl, Pressable } from 'react-native';
 import { showAlert } from '@/utils/alerts';
 import { isStoreNameAlreadyExistsError } from '@/utils/storeErrors';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
@@ -19,9 +19,7 @@ import {
 import { useColors } from '@/hooks/useColors';
 import { useUserIdentity } from '@/hooks/useUserIdentity';
 import { LoadingScreen } from '@/components/Loading';
-import { ImagePlaceholder } from '@/components/ImagePlaceholder';
 import { StoreAvatar } from '@/components/StoreAvatar';
-import { getImageUrl } from '@/utils/storage';
 import { ProductCard } from '@/components/ProductCard';
 import { StarRating } from '@/components/StarRating';
 import { EmptyState } from '@/components/EmptyState';
@@ -41,7 +39,6 @@ export default function StoreScreen() {
   const [chatError, setChatError] = useState('');
 
   const [isEditing, setIsEditing] = useState(false);
-  const [storeImgError, setStoreImgError] = useState(false);
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editLocation, setEditLocation] = useState('');
@@ -215,13 +212,7 @@ export default function StoreScreen() {
 
         <View style={styles.header}>
           <View style={[styles.avatarContainer, { borderColor: colors.background }]}>
-            {isOwner ? (
-              <StoreAvatar store={store} size={80} editable />
-            ) : store.imageUrl && !storeImgError ? (
-              <Image source={{ uri: getImageUrl(store.imageUrl) }} style={styles.avatar} resizeMode="cover" onError={() => setStoreImgError(true)} />
-            ) : (
-              <ImagePlaceholder name={store.name} size={80} borderRadius={40} />
-            )}
+            <StoreAvatar store={store} size={80} editable={isOwner} />
           </View>
 
           <View style={styles.headerInfo}>

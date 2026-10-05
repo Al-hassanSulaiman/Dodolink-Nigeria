@@ -3,8 +3,8 @@ name: EAS Submit credential conflicts
 description: Resolve an Expo MCP iOS submission conflict between Apple authentication mechanisms.
 ---
 
-When the Expo MCP submission action reports an exclusive-peer conflict between an Apple app-specific password and an App Store Connect API key, use the EAS CLI submission route with one configured authentication method instead.
+When the Expo submission action reports an exclusive-peer conflict between Apple authentication fields, the build may be valid while the upload is blocked. Apple submission must use exactly one authentication mechanism.
 
-**Why:** The MCP submission route can combine credentials persisted for the Expo project with credentials declared in the submission profile, even though Apple submission accepts only one mechanism. The CLI accepts a specific EAS build ID and uses the selected profile directly.
+**Why:** The direct submission action combined incompatible Apple credential fields. A separate cloud submission workflow reached credential preparation but could not resolve its Apple authentication configuration. Neither attempt uploaded the completed build.
 
-**How to apply:** In this pnpm monorepo, run `eas submit --platform ios --profile production --id <build-id> --non-interactive --wait` from the mobile artifact directory—not the repository root—so EAS resolves that artifact's `eas.json`. Supply credentials through the secrets mechanism without printing or retaining them.
+**How to apply:** Follow the current Expo skill's supported publishing path; do not reuse older CLI submission advice. Cloud submission profiles need configured cloud-accessible Apple credentials and cannot rely on a private-key file in the workspace's temporary directory. Reuse the finished build once credential setup is corrected. Report upload success only after the submission actually succeeds, never merely because compilation finished.

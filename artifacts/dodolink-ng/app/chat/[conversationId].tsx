@@ -23,6 +23,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { getImageUrl, uploadMediaToStorage } from '@/utils/storage';
 import { showAlert } from '@/utils/alerts';
 import { useActiveScreen } from '@/hooks/useActiveScreen';
+import { PhotoPreview } from '@/components/PhotoPreview';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const MEDIA_WIDTH = SCREEN_WIDTH * 0.65;
@@ -73,6 +74,7 @@ export default function ChatThreadScreen() {
     : (userEmail ?? userName);
   const [message, setMessage] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [previewUri, setPreviewUri] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const inputRef = useRef<TextInput>(null);
   const active = useActiveScreen();
@@ -203,11 +205,13 @@ export default function ChatThreadScreen() {
             isVideo ? (
               <VideoBubble uri={item.mediaUrl} isMe={isMe} colors={colors} />
             ) : (
-              <Image
-                source={{ uri: item.mediaUrl }}
-                style={{ width: MEDIA_WIDTH, aspectRatio: 1, borderRadius: 8 }}
-                contentFit="cover"
-              />
+              <Pressable accessibilityRole="button" accessibilityLabel="View full photo" onPress={() => setPreviewUri(getImageUrl(item.mediaUrl!))}>
+                <Image
+                  source={{ uri: getImageUrl(item.mediaUrl) }}
+                  style={{ width: MEDIA_WIDTH, aspectRatio: 1, borderRadius: 8 }}
+                  contentFit="cover"
+                />
+              </Pressable>
             )
           ) : null}
           {item.body ? (
@@ -275,6 +279,7 @@ export default function ChatThreadScreen() {
         </Pressable>
       </View>
     </KeyboardControllerView>
+    <PhotoPreview uri={previewUri} onClose={() => setPreviewUri(null)} />
     </SafeAreaView>
   );
 }

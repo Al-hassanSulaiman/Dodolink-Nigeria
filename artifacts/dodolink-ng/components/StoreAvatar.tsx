@@ -15,6 +15,7 @@ import { useColors } from "@/hooks/useColors";
 import { useUpdateStore, getListStoresQueryKey, getGetStoreQueryKey, type Store } from "@workspace/api-client-react";
 import { uploadImageToStorage, getImageUrl } from "@/utils/storage";
 import { useQueryClient } from "@tanstack/react-query";
+import { PhotoPreview } from "@/components/PhotoPreview";
 
 interface StoreAvatarProps {
   store: Store;
@@ -27,6 +28,7 @@ export function StoreAvatar({ store, size = 64, editable = false }: StoreAvatarP
   const queryClient = useQueryClient();
   const [uploading, setUploading] = useState(false);
   const [localUri, setLocalUri] = useState<string | null>(null);
+  const [previewVisible, setPreviewVisible] = useState(false);
 
   const updateStore = useUpdateStore({
     mutation: {
@@ -65,6 +67,7 @@ export function StoreAvatar({ store, size = 64, editable = false }: StoreAvatarP
     if (result.canceled || !result.assets[0]) return;
 
     const asset = result.assets[0];
+    setImgError(false);
     setLocalUri(asset.uri);
     setUploading(true);
     try {
@@ -113,7 +116,10 @@ export function StoreAvatar({ store, size = 64, editable = false }: StoreAvatarP
         )}
 
         {editable && !uploading && (
-          <View
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Change store photo"
+            onPress={(event) => { event.stopPropagation(); void handlePress(); }}
             style={[
               styles.badge,
               {
@@ -127,7 +133,7 @@ export function StoreAvatar({ store, size = 64, editable = false }: StoreAvatarP
             ]}
           >
             <Feather name="camera" size={cameraSize} color="#fff" />
-          </View>
+          </Pressable>
         )}
       </View>
 
@@ -140,16 +146,23 @@ export function StoreAvatar({ store, size = 64, editable = false }: StoreAvatarP
     </View>
   );
 
-  if (!editable) return avatar;
-
   return (
+    <>
     <Pressable
-      onPress={handlePress}
-      disabled={uploading}
+      accessibilityRole="button"
+      accessibilityLabel={photoUri && !imgError ? "View store photo" : "Add store photo"}
+      onPress={(event) => {
+        event.stopPropagation();
+        if (photoUri && !imgError) setPreviewVisible(true);
+        else if (editable) void handlePress();
+      }}
+      disabled={uploading || (!editable && (!photoUri || imgError))}
       style={({ pressed }) => [pressed && { opacity: 0.8 }]}
     >
       {avatar}
     </Pressable>
+    <PhotoPreview uri={previewVisible ? photoUri : null} onClose={() => setPreviewVisible(false)} />
+    </>
   );
 }
 
