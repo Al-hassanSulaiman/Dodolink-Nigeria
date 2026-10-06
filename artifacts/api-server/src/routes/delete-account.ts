@@ -1,10 +1,19 @@
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
 import nodemailer from "nodemailer";
 import { z } from "zod";
 import { requireUser } from "../lib/auth";
 import { requestAccountDeletion } from "../lib/accountDeletion";
 
 const router = Router();
+
+const deletionRequestLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 3,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { error: "Too many deletion requests. Please try again in an hour." },
+});
 
 router.delete("/account", async (req, res) => {
   const userId = requireUser(req, res);
@@ -46,7 +55,7 @@ function escapeHtml(str: string): string {
     .replace(/'/g, "&#039;");
 }
 
-router.post("/delete-account-request", async (req, res) => {
+router.post("/delete-account-request", deletionRequestLimiter, async (req, res) => {
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Please provide a valid email address." });
