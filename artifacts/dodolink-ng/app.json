@@ -17,7 +17,7 @@
       "supportsTablet": false,
       "usesAppleSignIn": true,
       "bundleIdentifier": "com.dodolink.ng",
-      "buildNumber": "18",
+      "buildNumber": "19",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Dodolink uses your photo library so you can upload product images for your store.",
         "NSPhotoLibraryAddUsageDescription": "Dodolink needs permission to save images to your photo library.",
@@ -90,6 +90,12 @@
               ]
             }
           }
+        }
+      ],
+      [
+        "./plugins/withIosBuildNumberFloor",
+        {
+          "minimumBuildNumber": 19
         }
       ]
     ],
