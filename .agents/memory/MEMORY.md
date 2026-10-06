@@ -9,7 +9,7 @@
 - [API security model](api-security-model.md) — public reads / authed writes, never trust bodies; Paystack verify hardening; presigned uploads enforced at serve/attach time, not request-url
 - [Subscription charge serialization](subscription-charge-serialization.md) — every manual and automatic Paystack renewal must share one per-store lock and reconcile pending references first
 - [EAS native env baking](eas-native-env-baking.md) — native releases need production API and Clerk variables baked in; development keys use a separate user store.
-- [Expo Launch version floors](expo-launch-version-floors.md) — Launch's build counter can lag Apple's existing releases; verify native metadata, not just app settings.
+- [Expo Launch version floors](expo-launch-version-floors.md) — local prebuild checks did not prevent lower cloud upload versions; verify the final build, not just app settings.
 - [ASC review build swap](asc-review-build-swap.md) — can't swap build while WAITING_FOR_REVIEW; cancel submission, wait ~30s, attach, resubmit (metadata kept)
 - [Clerk + RN spm.rb nil crash](clerk-spm-nil-crash.md) — @clerk/expo causes pod install crash; fix is a config plugin nil-guard, NOT a RN version bump
 - [React Native upload timeouts](react-native-upload-timeouts.md) — production Android/iOS lacks AbortSignal.timeout; use AbortController plus a cleared timer

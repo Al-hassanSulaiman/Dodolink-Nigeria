@@ -1,4 +1,5 @@
 const { withInfoPlist, withXcodeProject } = require("expo/config-plugins");
+const { addBuildNumberPhase } = require("./iosBuildNumberPhase");
 
 function integerBuildNumber(value) {
   const number = Number(String(value ?? "").replace(/^"(.*)"$/, "$1"));
@@ -14,7 +15,7 @@ function resolveBuildNumber(minimumBuildNumber, ...versions) {
 
 /**
  * Expo Launch can supply a build number below one previously uploaded outside
- * Launch. Enforce the release's minimum in native metadata, not just app.json.
+ * Launch. Enforce the release's minimum in native metadata and at compile time.
  * Raise the minimum when preparing a new release after Apple accepts this one.
  */
 function withIosBuildNumberFloor(config, { minimumBuildNumber } = {}) {
@@ -41,6 +42,7 @@ function withIosBuildNumberFloor(config, { minimumBuildNumber } = {}) {
         settings.CURRENT_PROJECT_VERSION,
       );
     }
+    addBuildNumberPhase(modConfig.modResults, minimumBuildNumber);
     return modConfig;
   });
 }
