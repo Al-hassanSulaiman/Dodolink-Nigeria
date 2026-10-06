@@ -10,3 +10,4 @@ export * from "./admins";
 export * from "./contact_leads";
 export * from "./account_deletions";
 export * from "./media_uploads";
+export * from "./portfolio_analytics";

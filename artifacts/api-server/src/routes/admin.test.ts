@@ -202,6 +202,24 @@ describe("requireAdmin middleware", () => {
     expect(res.status).toBe(401);
   });
 
+  it.each(["get", "post", "delete"] as const)("protects portfolio analytics %s endpoints from anonymous requests", async method => {
+    authedAs(null);
+    const app = await buildApp();
+    const path = method === "get" ? "/admin/portfolio-analytics" :
+      method === "post" ? "/admin/portfolio-analytics/links" :
+        "/admin/portfolio-analytics/links/2bb35504-5338-4d51-b853-9cddc5747451";
+    const res = await request(app)[method](path).send({ label: "Private client" });
+    expect(res.status).toBe(401);
+  });
+
+  it("protects portfolio analytics from signed-in non-admins", async () => {
+    authedAs("user_not_admin", ["stranger@example.com"]);
+    const { db } = await import("@workspace/db");
+    setupSelectMock(db as any, [BOOTSTRAP_COUNT, [{ email: ADMIN_EMAIL }]]);
+    const app = await buildApp();
+    expect((await request(app).get("/admin/portfolio-analytics")).status).toBe(403);
+  });
+
   it("returns 403 when the user's email is not in the admins table", async () => {
     authedAs("user_not_admin", ["stranger@example.com"]);
     const { db } = await import("@workspace/db");

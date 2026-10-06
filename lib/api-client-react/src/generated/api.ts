@@ -53,6 +53,10 @@ import type {
   MarkSupportRead200,
   Message,
   PaymentExemptionInput,
+  PortfolioAnalytics,
+  PortfolioClientLink,
+  PortfolioClientLinkInput,
+  PortfolioVisitInput,
   Product,
   PushRegistrationDiagnosticBody,
   RegisterPushTokenBody,
@@ -4590,4 +4594,294 @@ export function useGetStorageObject<TData = Awaited<ReturnType<typeof getStorage
 
 
 
+
+export const getRecordPortfolioVisitUrl = () => {
+
+
+
+
+  return `/api/portfolio-analytics/visit`
+}
+
+export const recordPortfolioVisit = async (portfolioVisitInput: PortfolioVisitInput, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getRecordPortfolioVisitUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(portfolioVisitInput)
+  }
+);}
+
+
+
+
+
+export const getRecordPortfolioVisitMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordPortfolioVisit>>, TError,{data: BodyType<PortfolioVisitInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof recordPortfolioVisit>>, TError,{data: BodyType<PortfolioVisitInput>}, TContext> => {
+
+const mutationKey = ['recordPortfolioVisit'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recordPortfolioVisit>>, {data: BodyType<PortfolioVisitInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  recordPortfolioVisit(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RecordPortfolioVisitMutationResult = NonNullable<Awaited<ReturnType<typeof recordPortfolioVisit>>>
+    export type RecordPortfolioVisitMutationBody = BodyType<PortfolioVisitInput>
+    export type RecordPortfolioVisitMutationError = ErrorType<void>
+
+    export const useRecordPortfolioVisit = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordPortfolioVisit>>, TError,{data: BodyType<PortfolioVisitInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof recordPortfolioVisit>>,
+        TError,
+        {data: BodyType<PortfolioVisitInput>},
+        TContext
+      > => {
+      return useMutation(getRecordPortfolioVisitMutationOptions(options), queryClient);
+    }
+
+export const getGetPortfolioAnalyticsUrl = () => {
+
+
+
+
+  return `/api/admin/portfolio-analytics`
+}
+
+export const getPortfolioAnalytics = async ( options?: RequestInit): Promise<PortfolioAnalytics> => {
+
+  return customFetch<PortfolioAnalytics>(getGetPortfolioAnalyticsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPortfolioAnalyticsQueryKey = () => {
+    return [
+    `/api/admin/portfolio-analytics`
+    ] as const;
+    }
+
+
+export const getGetPortfolioAnalyticsQueryOptions = <TData = Awaited<ReturnType<typeof getPortfolioAnalytics>>, TError = ErrorType<void>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPortfolioAnalytics>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPortfolioAnalyticsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPortfolioAnalytics>>> = ({ signal }) => getPortfolioAnalytics({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPortfolioAnalytics>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetPortfolioAnalyticsQueryResult = NonNullable<Awaited<ReturnType<typeof getPortfolioAnalytics>>>
+export type GetPortfolioAnalyticsQueryError = ErrorType<void>
+
+
+export function useGetPortfolioAnalytics<TData = Awaited<ReturnType<typeof getPortfolioAnalytics>>, TError = ErrorType<void>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPortfolioAnalytics>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPortfolioAnalytics>>,
+          TError,
+          Awaited<ReturnType<typeof getPortfolioAnalytics>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetPortfolioAnalytics<TData = Awaited<ReturnType<typeof getPortfolioAnalytics>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPortfolioAnalytics>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPortfolioAnalytics>>,
+          TError,
+          Awaited<ReturnType<typeof getPortfolioAnalytics>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetPortfolioAnalytics<TData = Awaited<ReturnType<typeof getPortfolioAnalytics>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPortfolioAnalytics>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetPortfolioAnalytics<TData = Awaited<ReturnType<typeof getPortfolioAnalytics>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPortfolioAnalytics>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetPortfolioAnalyticsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreatePortfolioClientLinkUrl = () => {
+
+
+
+
+  return `/api/admin/portfolio-analytics/links`
+}
+
+export const createPortfolioClientLink = async (portfolioClientLinkInput: PortfolioClientLinkInput, options?: RequestInit): Promise<PortfolioClientLink> => {
+
+  return customFetch<PortfolioClientLink>(getCreatePortfolioClientLinkUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(portfolioClientLinkInput)
+  }
+);}
+
+
+
+
+
+export const getCreatePortfolioClientLinkMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPortfolioClientLink>>, TError,{data: BodyType<PortfolioClientLinkInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPortfolioClientLink>>, TError,{data: BodyType<PortfolioClientLinkInput>}, TContext> => {
+
+const mutationKey = ['createPortfolioClientLink'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPortfolioClientLink>>, {data: BodyType<PortfolioClientLinkInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createPortfolioClientLink(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePortfolioClientLinkMutationResult = NonNullable<Awaited<ReturnType<typeof createPortfolioClientLink>>>
+    export type CreatePortfolioClientLinkMutationBody = BodyType<PortfolioClientLinkInput>
+    export type CreatePortfolioClientLinkMutationError = ErrorType<void>
+
+    export const useCreatePortfolioClientLink = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPortfolioClientLink>>, TError,{data: BodyType<PortfolioClientLinkInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createPortfolioClientLink>>,
+        TError,
+        {data: BodyType<PortfolioClientLinkInput>},
+        TContext
+      > => {
+      return useMutation(getCreatePortfolioClientLinkMutationOptions(options), queryClient);
+    }
+
+export const getDeletePortfolioClientLinkUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/portfolio-analytics/links/${id}`
+}
+
+export const deletePortfolioClientLink = async (id: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeletePortfolioClientLinkUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeletePortfolioClientLinkMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePortfolioClientLink>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deletePortfolioClientLink>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['deletePortfolioClientLink'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deletePortfolioClientLink>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deletePortfolioClientLink(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeletePortfolioClientLinkMutationResult = NonNullable<Awaited<ReturnType<typeof deletePortfolioClientLink>>>
+
+    export type DeletePortfolioClientLinkMutationError = ErrorType<void>
+
+    export const useDeletePortfolioClientLink = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePortfolioClientLink>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deletePortfolioClientLink>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getDeletePortfolioClientLinkMutationOptions(options), queryClient);
+    }
 

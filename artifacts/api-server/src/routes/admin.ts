@@ -11,6 +11,7 @@ import {
   STORE_NAME_ALREADY_EXISTS,
 } from "../lib/storeName";
 import adminReviewAccessRouter from "./adminReviewAccess";
+import { portfolioAdminRouter } from "./portfolioAnalytics";
 
 /**
  * Bootstrap seed only: if the admins table is empty (first run after the
@@ -101,6 +102,7 @@ function toSafeStore<T extends Record<string, unknown>>(store: T) {
 const router: IRouter = Router();
 
 router.use("/admin", requireAdmin);
+router.use(portfolioAdminRouter);
 router.use(adminReviewAccessRouter);
 
 router.get("/admin/stores", async (req, res): Promise<void> => {

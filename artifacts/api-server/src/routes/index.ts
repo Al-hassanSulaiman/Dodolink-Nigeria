@@ -12,12 +12,14 @@ import adminRouter from "./admin";
 import subscriptionsRouter from "./subscriptions";
 import webhooksRouter from "./webhooks";
 import contactRouter from "./contact";
+import portfolioAnalyticsRouter from "./portfolioAnalytics";
 import deleteAccountRouter from "./delete-account";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(contactRouter);
+router.use(portfolioAnalyticsRouter);
 router.use(deleteAccountRouter);
 router.use(adminRouter);
 router.use(storesRouter);

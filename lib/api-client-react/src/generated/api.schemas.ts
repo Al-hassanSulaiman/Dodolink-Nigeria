@@ -5,6 +5,76 @@
  * Dodolink NG API - Nigerian marketplace connecting retailers and customers
  * OpenAPI spec version: 0.1.0
  */
+export interface PortfolioSectionTimes {
+  /**
+     * @minimum 0
+     * @maximum 14400
+     */
+  hero?: number;
+  /**
+     * @minimum 0
+     * @maximum 14400
+     */
+  about?: number;
+  /**
+     * @minimum 0
+     * @maximum 14400
+     */
+  work?: number;
+  /**
+     * @minimum 0
+     * @maximum 14400
+     */
+  skills?: number;
+  /**
+     * @minimum 0
+     * @maximum 14400
+     */
+  contact?: number;
+}
+
+export interface PortfolioVisitInput {
+  id: string;
+  clientCode?: string;
+  /**
+     * @minimum 0
+     * @maximum 14400
+     */
+  seconds: number;
+  sections: PortfolioSectionTimes;
+}
+
+export interface PortfolioVisit {
+  id: string;
+  /** @nullable */
+  clientId: string | null;
+  startedAt: string;
+  updatedAt: string;
+  seconds: number;
+  sections: PortfolioSectionTimes;
+}
+
+export interface PortfolioClientLinkInput {
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  label: string;
+}
+
+export interface PortfolioClientLink {
+  id: string;
+  label: string;
+  createdAt: string;
+}
+
+export interface PortfolioAnalytics {
+  totalVisits: number;
+  totalSeconds: number;
+  visits: PortfolioVisit[];
+  links: PortfolioClientLink[];
+}
+
 export interface ContactLead {
   id: number;
   name: string;

@@ -1380,3 +1380,103 @@ export const GetStorageObjectParams = zod.object({
 })
 
 export const GetStorageObjectResponse = zod.unknown()
+
+
+export const recordPortfolioVisitBodySecondsMin = 0;
+export const recordPortfolioVisitBodySecondsMax = 14400;
+
+export const recordPortfolioVisitBodySectionsHeroMin = 0;
+export const recordPortfolioVisitBodySectionsHeroMax = 14400;
+
+export const recordPortfolioVisitBodySectionsAboutMin = 0;
+export const recordPortfolioVisitBodySectionsAboutMax = 14400;
+
+export const recordPortfolioVisitBodySectionsWorkMin = 0;
+export const recordPortfolioVisitBodySectionsWorkMax = 14400;
+
+export const recordPortfolioVisitBodySectionsSkillsMin = 0;
+export const recordPortfolioVisitBodySectionsSkillsMax = 14400;
+
+export const recordPortfolioVisitBodySectionsContactMin = 0;
+export const recordPortfolioVisitBodySectionsContactMax = 14400;
+
+
+
+export const RecordPortfolioVisitBody = zod.object({
+  "id": zod.uuid(),
+  "clientCode": zod.uuid().optional(),
+  "seconds": zod.number().min(recordPortfolioVisitBodySecondsMin).max(recordPortfolioVisitBodySecondsMax),
+  "sections": zod.object({
+  "hero": zod.number().min(recordPortfolioVisitBodySectionsHeroMin).max(recordPortfolioVisitBodySectionsHeroMax).optional(),
+  "about": zod.number().min(recordPortfolioVisitBodySectionsAboutMin).max(recordPortfolioVisitBodySectionsAboutMax).optional(),
+  "work": zod.number().min(recordPortfolioVisitBodySectionsWorkMin).max(recordPortfolioVisitBodySectionsWorkMax).optional(),
+  "skills": zod.number().min(recordPortfolioVisitBodySectionsSkillsMin).max(recordPortfolioVisitBodySectionsSkillsMax).optional(),
+  "contact": zod.number().min(recordPortfolioVisitBodySectionsContactMin).max(recordPortfolioVisitBodySectionsContactMax).optional()
+})
+})
+
+export const RecordPortfolioVisitResponse = zod.void()
+
+
+export const getPortfolioAnalyticsResponseVisitsItemSectionsHeroMin = 0;
+export const getPortfolioAnalyticsResponseVisitsItemSectionsHeroMax = 14400;
+
+export const getPortfolioAnalyticsResponseVisitsItemSectionsAboutMin = 0;
+export const getPortfolioAnalyticsResponseVisitsItemSectionsAboutMax = 14400;
+
+export const getPortfolioAnalyticsResponseVisitsItemSectionsWorkMin = 0;
+export const getPortfolioAnalyticsResponseVisitsItemSectionsWorkMax = 14400;
+
+export const getPortfolioAnalyticsResponseVisitsItemSectionsSkillsMin = 0;
+export const getPortfolioAnalyticsResponseVisitsItemSectionsSkillsMax = 14400;
+
+export const getPortfolioAnalyticsResponseVisitsItemSectionsContactMin = 0;
+export const getPortfolioAnalyticsResponseVisitsItemSectionsContactMax = 14400;
+
+
+
+export const GetPortfolioAnalyticsResponse = zod.object({
+  "totalVisits": zod.number(),
+  "totalSeconds": zod.number(),
+  "visits": zod.array(zod.object({
+  "id": zod.uuid(),
+  "clientId": zod.string().nullable(),
+  "startedAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "seconds": zod.number(),
+  "sections": zod.object({
+  "hero": zod.number().min(getPortfolioAnalyticsResponseVisitsItemSectionsHeroMin).max(getPortfolioAnalyticsResponseVisitsItemSectionsHeroMax).optional(),
+  "about": zod.number().min(getPortfolioAnalyticsResponseVisitsItemSectionsAboutMin).max(getPortfolioAnalyticsResponseVisitsItemSectionsAboutMax).optional(),
+  "work": zod.number().min(getPortfolioAnalyticsResponseVisitsItemSectionsWorkMin).max(getPortfolioAnalyticsResponseVisitsItemSectionsWorkMax).optional(),
+  "skills": zod.number().min(getPortfolioAnalyticsResponseVisitsItemSectionsSkillsMin).max(getPortfolioAnalyticsResponseVisitsItemSectionsSkillsMax).optional(),
+  "contact": zod.number().min(getPortfolioAnalyticsResponseVisitsItemSectionsContactMin).max(getPortfolioAnalyticsResponseVisitsItemSectionsContactMax).optional()
+})
+})),
+  "links": zod.array(zod.object({
+  "id": zod.uuid(),
+  "label": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+export const createPortfolioClientLinkBodyLabelMax = 80;
+
+
+
+export const CreatePortfolioClientLinkBody = zod.object({
+  "label": zod.string().min(1).max(createPortfolioClientLinkBodyLabelMax)
+})
+
+export const CreatePortfolioClientLinkResponse = zod.object({
+  "id": zod.uuid(),
+  "label": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+
+
+export const DeletePortfolioClientLinkParams = zod.object({
+  "id": zod.uuid()
+})
+
+export const DeletePortfolioClientLinkResponse = zod.void()

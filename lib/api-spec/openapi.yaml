@@ -1347,8 +1347,137 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /portfolio-analytics/visit:
+    post:
+      operationId: recordPortfolioVisit
+      tags: [PortfolioAnalytics]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PortfolioVisitInput"
+      responses:
+        "204":
+          description: Recorded or privacy opt-out respected
+        "400":
+          description: Invalid snapshot
+        "429":
+          description: Too many requests
+  /admin/portfolio-analytics:
+    get:
+      operationId: getPortfolioAnalytics
+      tags: [PortfolioAnalytics]
+      responses:
+        "200":
+          description: Last 90 days, with up to 500 recent page visits
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioAnalytics"
+        "401":
+          description: Sign in required
+        "403":
+          description: Admin access required
+  /admin/portfolio-analytics/links:
+    post:
+      operationId: createPortfolioClientLink
+      tags: [PortfolioAnalytics]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PortfolioClientLinkInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioClientLink"
+        "400":
+          description: Invalid label
+        "401":
+          description: Sign in required
+        "403":
+          description: Admin access required
+  /admin/portfolio-analytics/links/{id}:
+    delete:
+      operationId: deletePortfolioClientLink
+      tags: [PortfolioAnalytics]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Link and associated visits deleted
+        "400":
+          description: Invalid link ID
+        "401":
+          description: Sign in required
+        "403":
+          description: Admin access required
 components:
   schemas:
+    PortfolioSectionTimes:
+      type: object
+      properties:
+        hero: { type: integer, minimum: 0, maximum: 14400 }
+        about: { type: integer, minimum: 0, maximum: 14400 }
+        work: { type: integer, minimum: 0, maximum: 14400 }
+        skills: { type: integer, minimum: 0, maximum: 14400 }
+        contact: { type: integer, minimum: 0, maximum: 14400 }
+    PortfolioVisitInput:
+      type: object
+      required: [id, seconds, sections]
+      properties:
+        id: { type: string, format: uuid }
+        clientCode: { type: string, format: uuid }
+        seconds: { type: integer, minimum: 0, maximum: 14400 }
+        sections:
+          $ref: "#/components/schemas/PortfolioSectionTimes"
+    PortfolioVisit:
+      type: object
+      required: [id, clientId, startedAt, updatedAt, seconds, sections]
+      properties:
+        id: { type: string, format: uuid }
+        clientId: { type: [string, "null"] }
+        startedAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        seconds: { type: integer }
+        sections:
+          $ref: "#/components/schemas/PortfolioSectionTimes"
+    PortfolioClientLinkInput:
+      type: object
+      required: [label]
+      properties:
+        label: { type: string, minLength: 1, maxLength: 80 }
+    PortfolioClientLink:
+      type: object
+      required: [id, label, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        label: { type: string }
+        createdAt: { type: string, format: date-time }
+    PortfolioAnalytics:
+      type: object
+      required: [visits, links, totalVisits, totalSeconds]
+      properties:
+        totalVisits: { type: integer }
+        totalSeconds: { type: integer }
+        visits:
+          type: array
+          items:
+            $ref: "#/components/schemas/PortfolioVisit"
+        links:
+          type: array
+          items:
+            $ref: "#/components/schemas/PortfolioClientLink"
     ContactLead:
       type: object
       properties:

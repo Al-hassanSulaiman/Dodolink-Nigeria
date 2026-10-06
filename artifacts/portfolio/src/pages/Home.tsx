@@ -653,6 +653,10 @@ export default function Home() {
             alhassansulaiman1369@gmail.com
           </div>
         </div>
+        <p className="container mx-auto px-6 mt-5 text-xs text-muted-foreground text-center">
+          Cookie-free analytics measure page and section viewing time for 90 days, without stored IP addresses or fingerprinting.
+          Client-specific links identify the shared link, not the person visiting. Do Not Track and Global Privacy Control are respected.
+        </p>
       </footer>
 
       {/* Lightbox Modal */}
