@@ -221,3 +221,17 @@ mtime_ms = 1791508876998
 storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:80797e59-98ac-4e0d-9650-858724a9c14d/f1a9f63b-9ddb-44e2-b56a-d07719484106/f9086acd-f3dd-48c4-b344-c0cf6dc088a6"
 storage_version_token = "1791508889170306"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "Fi4hmthWg98mxMk4YBqMc"
+uri = "file://exports/dodolink-ng-submit-ready.zip"
+type = "unspecified"
+title = "DodoLink NG — standalone Expo project"
+description = "Portable Expo source project with 46 runtime dependencies, 8 development dependencies, a pnpm lockfile, the shared API client, app assets/config, and 11 verified config plugins. No IPA or private Apple key is included."
+logical_id = "ff7db0bd-dcf5-4f85-b088-9df0ec001884"
+content_hash = "sha256:ae344aedc9490af4a6a5408c5227e6d15088c6454b2d173ea36f742b53e38853"
+size = 3850092
+mtime_ms = 1791530683341
+storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:80797e59-98ac-4e0d-9650-858724a9c14d/ff7db0bd-dcf5-4f85-b088-9df0ec001884/ca7b1844-4af8-4fe9-846b-d880c0b13376"
+storage_version_token = "1791530690676312"
+content_type = "application/octet-stream"
