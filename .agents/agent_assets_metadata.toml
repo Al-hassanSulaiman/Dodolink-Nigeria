@@ -207,3 +207,17 @@ mtime_ms = 1791138965084
 storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:80797e59-98ac-4e0d-9650-858724a9c14d/d51d3cef-6738-417b-9bf4-9d03f5cf0972/7e1fabe0-e48f-4155-b261-abad55f8a4f7"
 storage_version_token = "1791139025807880"
 content_type = "video/mp4"
+
+[[outputs]]
+id = "iMUhNqD18fYI0scTvpZcA"
+uri = "file://exports/dodolink-ng-source-backup.zip"
+type = "unspecified"
+title = "DodoLink NG Expo source backup"
+description = "Source snapshot with package.json, app.json, eas.json, app code, assets, plugins, and the required workspace API client. Excludes credentials, dependencies, generated native folders, and built app binaries."
+logical_id = "f1a9f63b-9ddb-44e2-b56a-d07719484106"
+content_hash = "sha256:535a17ec13dc7491c83c253655c046d218d97b024eb73699c390dbfd5ba699d2"
+size = 3910288
+mtime_ms = 1791508876998
+storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:80797e59-98ac-4e0d-9650-858724a9c14d/f1a9f63b-9ddb-44e2-b56a-d07719484106/f9086acd-f3dd-48c4-b344-c0cf6dc088a6"
+storage_version_token = "1791508889170306"
+content_type = "application/octet-stream"
