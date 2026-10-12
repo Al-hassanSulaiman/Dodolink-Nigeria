@@ -43,34 +43,8 @@ onlyBuiltDependencies:
   - unrs-resolver
 
 overrides:
-  '@esbuild-kit/esm-loader': npm:tsx@^4.21.0
   '@babel/core': 7.29.6
-  '@expo/plist>@xmldom/xmldom': 0.8.15
-  '@xmldom/xmldom@^0.8': 0.8.15
-  '@xmldom/xmldom@^0.9': 0.9.12
-  baseline-browser-mapping: 2.11.0
-  body-parser: 2.3.0
-  brace-expansion@^1: 1.1.18
-  brace-expansion@^2: 2.1.4
-  brace-expansion@>=3: 5.0.9
-  browserslist: 4.28.7
-  decode-uri-component: 0.5.0
-  fast-uri: 3.1.6
-  fast-xml-parser: 5.10.1
-  image-size: link:./lib/safe-image-size
-  js-yaml@^3: 3.15.2
-  js-yaml@^4: 4.3.2
-  linkify-it: 5.0.2
-  markdown-it: 14.2.0
-  proxy-addr: 2.0.8
-  nanoid@^3: 3.3.18
-  postcss: 8.5.23
-  qs: 6.16.0
-  shell-quote: 1.9.0
-  tar: 7.5.21
-  undici@^6: 6.28.0
-  uuid: 11.1.1
-  vite: 7.3.5
+  '@esbuild-kit/esm-loader': npm:tsx@^4.21.0
   '@expo/ngrok-bin>@expo/ngrok-bin-darwin-arm64': '-'
   '@expo/ngrok-bin>@expo/ngrok-bin-darwin-x64': '-'
   '@expo/ngrok-bin>@expo/ngrok-bin-freebsd-ia32': '-'
@@ -81,6 +55,7 @@ overrides:
   '@expo/ngrok-bin>@expo/ngrok-bin-sunos-x64': '-'
   '@expo/ngrok-bin>@expo/ngrok-bin-win32-ia32': '-'
   '@expo/ngrok-bin>@expo/ngrok-bin-win32-x64': '-'
+  '@expo/plist>@xmldom/xmldom': 0.8.15
   '@tailwindcss/oxide>@tailwindcss/oxide-android-arm64': '-'
   '@tailwindcss/oxide>@tailwindcss/oxide-darwin-arm64': '-'
   '@tailwindcss/oxide>@tailwindcss/oxide-darwin-x64': '-'
@@ -91,6 +66,25 @@ overrides:
   '@tailwindcss/oxide>@tailwindcss/oxide-linux-x64-musl': '-'
   '@tailwindcss/oxide>@tailwindcss/oxide-win32-arm64-msvc': '-'
   '@tailwindcss/oxide>@tailwindcss/oxide-win32-x64-msvc': '-'
+  '@xmldom/xmldom@^0.8': 0.8.15
+  '@xmldom/xmldom@^0.9': 0.9.12
+  baseline-browser-mapping: 2.11.0
+  body-parser: 2.3.0
+  brace-expansion@<1.1.19: '>=1.1.19'
+  brace-expansion@<1.1.20: '>=1.1.20'
+  brace-expansion@<1.1.21: '>=1.1.21'
+  brace-expansion@>=2.0.0 <2.1.5: '>=2.1.5'
+  brace-expansion@>=2.0.0 <2.1.6: '>=2.1.6'
+  brace-expansion@>=2.0.0 <2.1.7: '>=2.1.7'
+  brace-expansion@>=3: 5.0.12
+  brace-expansion@>=4.0.0 <5.0.10: '>=5.0.10'
+  brace-expansion@>=4.0.0 <5.0.11: '>=5.0.11'
+  brace-expansion@>=4.0.0 <5.0.12: '>=5.0.12'
+  brace-expansion@^1: 1.1.21
+  brace-expansion@^2: 2.1.7
+  browserslist: 4.28.7
+  compression@<1.8.2: '>=1.8.2'
+  decode-uri-component: 0.5.0
   esbuild: 0.28.1
   esbuild>@esbuild/aix-ppc64: '-'
   esbuild>@esbuild/android-arm: '-'
@@ -117,6 +111,18 @@ overrides:
   esbuild>@esbuild/win32-arm64: '-'
   esbuild>@esbuild/win32-ia32: '-'
   esbuild>@esbuild/win32-x64: '-'
+  fast-copy@>=4.0.0 <4.1.0: '>=4.1.0'
+  fast-uri: 3.1.8
+  fast-uri@=3.1.6: '>=3.1.7'
+  fast-uri@>=3.0.0 <3.1.7: '>=3.1.7'
+  fast-uri@>=3.0.0 <3.1.8: '>=3.1.8'
+  fast-xml-parser: 5.10.1
+  image-size: link:./lib/safe-image-size
+  ip-address@<=10.5.0: '>=10.5.1'
+  ip-address@<=10.7.0: '>=10.7.1'
+  ip-address@>=10.2.0 <=10.5.0: '>=10.5.1'
+  js-yaml@^3: 3.15.2
+  js-yaml@^4: 4.3.2
   lightningcss>lightningcss-android-arm64: '-'
   lightningcss>lightningcss-darwin-arm64: '-'
   lightningcss>lightningcss-darwin-x64: '-'
@@ -127,6 +133,20 @@ overrides:
   lightningcss>lightningcss-linux-x64-musl: '-'
   lightningcss>lightningcss-win32-arm64-msvc: '-'
   lightningcss>lightningcss-win32-x64-msvc: '-'
+  linkify-it: 5.0.2
+  markdown-it: 14.3.2
+  markdown-it@<14.3.1: '>=14.3.1'
+  nanoid@^3: 3.3.18
+  nodemailer@<10.0.2: '>=10.0.2'
+  nodemailer@<=10.0.5: '>=10.0.6'
+  nodemailer@>=5.0.0 <10.0.2: '>=10.0.2'
+  nodemailer@>=9.1.0 <10.0.9: '>=10.0.9'
+  nodemailer@>=9.1.0 <=10.0.4: '>=10.0.5'
+  postcss: 8.5.23
+  postcss-selector-parser: 7.1.6
+  postcss-selector-parser@<7.1.6: '>=7.1.6'
+  proxy-addr: 2.0.8
+  qs: 6.16.0
   rollup>@rollup/rollup-android-arm-eabi: '-'
   rollup>@rollup/rollup-android-arm64: '-'
   rollup>@rollup/rollup-darwin-arm64: '-'
@@ -151,3 +171,14 @@ overrides:
   rollup>@rollup/rollup-win32-ia32-msvc: '-'
   rollup>@rollup/rollup-win32-x64-gnu: '-'
   rollup>@rollup/rollup-win32-x64-msvc: '-'
+  shell-quote: 1.12.0
+  shell-quote@>=1.8.4 <1.11.0: '>=1.11.0'
+  source-map-js@>=1.0.0 <1.2.2: '>=1.2.2'
+  tar: 7.5.21
+  undici@<6.28.1: '>=6.28.1'
+  undici@>=6.25.0 <6.28.1: '>=6.28.1'
+  undici@>=6.7.0 <6.28.1: '>=6.28.1'
+  undici@^6: 6.29.0
+  http-cache-semantics: 4.3.0
+  uuid: 11.1.1
+  vite: 7.3.5
