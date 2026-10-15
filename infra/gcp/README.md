@@ -14,7 +14,7 @@
 
 | Resource | Target |
 | --- | --- |
-| Cloud Run service | Existing `dodolink`; still running Google's placeholder |
+| Cloud Run service | `dodolink`; actual backend deployed as private read-only staging |
 | Cloud SQL instance | Existing `wordpress-db`, PostgreSQL 18 |
 | New application database | `dodolink` |
 | Backend identity | Existing `cloudrun-for-dodolink` service account |
@@ -183,9 +183,57 @@ needs permission to impersonate the application service account for this local
 probe; Cloud Run's attached identity does not need a permanent operator grant.
 Remove any temporary impersonation permission after checking.
 
-The local probe has **not passed**: token issuance remained blocked during the
-bounded check. The temporary operator permission was removed afterward. Do not
-mark the runtime IAM connection or rolled-back write test verified yet.
+The local impersonation probe has **not passed**; the temporary operator grant
+was removed. However, the deployed Cloud Run backend has now independently
+verified its attached IAM identity can connect to the restored database,
+check required tables, enforce read-only sessions, and read copied media bytes.
+The rolled-back write test remains outstanding.
+
+### Actual backend deployment
+
+The real API image is deployed to `dodolink` in Johannesburg, replacing the
+Google placeholder. The service URL is
+`https://dodolink-q4s65fjn7q-bq.a.run.app`. This is an IAM-private staging
+backend, not the migrated website or a production cutover.
+
+`MIGRATION_AUTH_PENDING=true` is permitted only with `MIGRATION_STAGING=true`.
+It allows infrastructure health checks but returns `503 STAGING_AUTH_PENDING`
+for every business API route before Clerk or business handlers. No Clerk test
+keys, managed production keys, payment keys, source database credentials, or
+service-account key files are present in the generated image.
+
+Verified against the deployed service:
+
+- Authorized `/api/healthz`: HTTP 200.
+- Authorized `/api/stores`: HTTP 503 with the pending-authentication code.
+- Unauthenticated `/api/healthz`: HTTP 403 at Cloud Run.
+- Startup confirms Cloud SQL read-only enforcement and bucket media readability.
+- Startup confirms billing, deletion, retention, and notification jobs disabled.
+
+Cloud Run's invoker IAM check must be enabled explicitly. Removing `allUsers`
+or passing `--no-allow-unauthenticated` is insufficient if the existing service
+has `run.googleapis.com/invoker-iam-disabled=true`.
+
+Build the API and generate its credential-free build context:
+
+```sh
+pnpm --filter @workspace/api-server run build
+node artifacts/api-server/scripts/gcp-prepare-runtime.mjs
+```
+
+The context under ignored `generated-artifacts/gcp-runtime` includes only the
+compiled backend, an exact-version runtime package manifest and lockfile, and
+`infra/gcp/runtime.Dockerfile`. Public npm tarball URLs replace Replit-internal
+registry URLs while preserving versions and integrity hashes. Cloud Build uses
+`infra/gcp/cloudbuild-api.yaml` and the separate `dodolink-builder` identity;
+its permissions are scoped to the build source/log bucket and image repository.
+Use an immutable image digest when deploying a verified build.
+
+The runtime identity has bucket-scoped object access plus bucket metadata/list
+access for startup validation. No bucket is public. Web/admin frontend builds,
+personal Clerk setup, write-journey tests, and final data synchronization remain
+separate pending migration work. Do not enable production jobs to bypass the
+staging restrictions.
 
 ## Production authentication gate
 
@@ -204,14 +252,14 @@ Clerk skill instead of assuming the builder can open that dashboard.
 ## Still required before cutover
 
 - Refresh the confirmed production snapshot and reconcile any final changes.
-- Validate an actual runtime IAM connection and rolled-back read/write test;
-  the SQL grants and restored snapshot alone do not prove application behavior.
+- Complete the rolled-back write test; the deployed runtime IAM read connection
+  and read-only enforcement are verified, but write behavior is not yet tested.
 - Configure the user's own Clerk application and validate a safe migration of
   existing account identities and access.
 - Securely populate and bind production runtime secrets.
-- Prepare the actual API image and prevent staging from running production
-  billing, deletion, retention, or notification jobs. The runtime safeguards are
-  implemented; the staged image and runtime behavior still require validation.
+- Validate authenticated application behavior after binding the user's own Clerk
+  setup. The actual backend image is deployed privately with jobs disabled and
+  business API access locked pending authentication.
 - Copy and validate production media, including the final delta and deletions.
 - Stage the web application and admin paths alongside the API.
 - Validate sign-in, admin access, uploads, chat, notifications, and payments.

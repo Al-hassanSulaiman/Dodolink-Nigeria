@@ -46,3 +46,17 @@ The user wants the backend on Cloud Run, the database in Cloud SQL, and media in
 **Why:** The user explicitly requested this order. Unresolved personal Clerk setup must not block independent, restricted backend staging.
 
 **How to apply:** Deploy and validate the backend with the Google Cloud database and bucket in read-only staging, with production background jobs disabled. Leave live authentication, DNS, and the Replit deployment unchanged; do not describe staging as a production cutover.
+
+The migration scope includes the DodoLink customer web app and admin dashboard, not just its API, database, and media.
+
+**Why:** The user explicitly asked that both "my app and the admin" be on Google Cloud.
+
+**How to apply:** Track frontend and admin deployment as part of the existing migration, not optional follow-up features. Native apps remain distributed through mobile stores and need backend/auth continuity checks.
+
+## Existing Cloud Run access settings
+
+Do not infer a service is private merely because it has no `allUsers` IAM binding or deployment used `--no-allow-unauthenticated`. Existing services can independently disable the invoker IAM check.
+
+**Why:** An existing placeholder service retained its disabled invoker check during backend deployment; an unauthenticated request still returned 200 despite an empty invocation policy.
+
+**How to apply:** Explicitly enable the invoker IAM check for private staging and verify the unauthenticated response separately from authenticated health. Keep the application-level staging lock as defense in depth.

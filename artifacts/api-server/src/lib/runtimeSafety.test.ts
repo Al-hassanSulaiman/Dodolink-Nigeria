@@ -2,7 +2,7 @@ import express from "express";
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 import { isMigrationStaging, readDatabaseSettings } from "@workspace/db/connection-config";
-import { readRuntimeSafety, stagingWriteGuard } from "./runtimeSafety";
+import { readRuntimeSafety, stagingWriteGuard, stagingAuthenticationGuard } from "./runtimeSafety";
 
 const fixtureUrl = "postgresql://fixture:fixture@localhost/fixture";
 const iamEnvironment = {
@@ -122,5 +122,35 @@ describe("migration staging HTTP write gate", () => {
     const response = await request(server(false)).post("/api/stores");
     expect(response.status).toBe(200);
     expect(response.body.handlerReached).toBe(true);
+  });
+});
+
+describe("authentication-pending staging", () => {
+  function server() {
+    const app = express();
+    app.use("/api", stagingAuthenticationGuard({
+      MIGRATION_STAGING: "true", MIGRATION_AUTH_PENDING: "true",
+    }));
+    app.use((_req, res) => { res.json({ handlerReached: true }); });
+    return app;
+  }
+  it("allows infrastructure health without Clerk credentials", async () => {
+    expect((await request(server()).get("/api/healthz")).body).toEqual({ status: "ok" });
+  });
+  it.each(["get", "post", "delete"] as const)("locks %s business access", async (method) => {
+    const response = await request(server())[method]("/api/stores");
+    expect(response.status).toBe(503);
+    expect(response.body.code).toBe("STAGING_AUTH_PENDING");
+    expect(response.body.handlerReached).toBeUndefined();
+  });
+  it("cannot disable authentication in production", () => {
+    expect(() => stagingAuthenticationGuard({
+      MIGRATION_STAGING: "false", MIGRATION_AUTH_PENDING: "true",
+    })).toThrow("only in migration staging");
+  });
+  it("rejects an ambiguous pending-auth flag", () => {
+    expect(() => stagingAuthenticationGuard({
+      MIGRATION_STAGING: "true", MIGRATION_AUTH_PENDING: "yes",
+    })).toThrow("must be true or false");
   });
 });

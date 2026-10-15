@@ -7,6 +7,7 @@ import { initializePortfolioAnalytics, purgeOldPortfolioVisits } from "./lib/por
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { runtimeSafety } from "./lib/runtimeSafety";
+import { objectStorageClient } from "./lib/objectStorage";
 
 // Refuse to start a production deployment with a missing or test-mode
 // Paystack key — real checkouts would silently be fake otherwise.
@@ -42,6 +43,24 @@ if (runtimeSafety.initializeSchema) {
   if (requiredSchema.rows.length > 0) {
     throw new Error("Database startup schema is incomplete; apply controlled migrations before starting.");
   }
+}
+if (runtimeSafety.staging && process.env.DATABASE_CONNECTION_MODE === "cloud-sql-iam") {
+  const readOnly = await db.execute(sql`SHOW default_transaction_read_only`);
+  if (readOnly.rows[0]?.default_transaction_read_only !== "on") {
+    throw new Error("Cloud SQL staging must enforce read-only sessions.");
+  }
+  const bucketName = process.env.GCP_STORAGE_BUCKET;
+  if (!bucketName) throw new Error("GCP_STORAGE_BUCKET is required for Cloud SQL staging.");
+  const bucket = objectStorageClient.bucket(bucketName);
+  await bucket.getMetadata();
+  const [files] = await bucket.getFiles({ prefix: "private/", maxResults: 1, autoPaginate: false });
+  if (files.length === 0) throw new Error("Staging media copy is missing.");
+  // Prove the attached runtime identity can read media bytes, not just list names.
+  for await (const _chunk of files[0].createReadStream({ start: 0, end: 0, validation: false })) {
+    // Do not log media names or contents.
+  }
+  logger.info({ databaseReadOnly: true, mediaReadable: true },
+    "Google Cloud staging dependencies verified");
 }
 app.listen(port, (err) => {
   if (err) {

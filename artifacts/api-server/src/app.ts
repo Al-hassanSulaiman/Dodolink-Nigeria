@@ -11,7 +11,7 @@ import {
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { preventDeletedAccountWrites } from "./lib/accountDeletion";
-import { runtimeSafety, stagingWriteGuard } from "./lib/runtimeSafety";
+import { runtimeSafety, stagingWriteGuard, stagingAuthenticationGuard } from "./lib/runtimeSafety";
 
 const app: Express = express();
 
@@ -19,6 +19,8 @@ const app: Express = express();
 // req.ip reflects the real visitor address from X-Forwarded-For rather than
 // the proxy's internal socket address. express-rate-limit relies on req.ip.
 app.set("trust proxy", 1);
+
+app.use("/api", stagingAuthenticationGuard(process.env));
 
 // Before the auth proxy and every API handler: staging cannot trigger external
 // effects or modify the production snapshot through a public mutation route.
