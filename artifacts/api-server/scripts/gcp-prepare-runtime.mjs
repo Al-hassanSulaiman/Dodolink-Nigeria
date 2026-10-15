@@ -1,6 +1,6 @@
 // Generate a credential-free Cloud Build context from the compiled API only.
 import { createRequire } from "node:module";
-import { cp, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, readdir, writeFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
@@ -31,6 +31,17 @@ await writeFile(path.join(context, "package.json"), JSON.stringify({
   type: "module", dependencies,
 }, null, 2) + "\n");
 await cp(path.join(apiRoot, "dist"), path.join(context, "dist"), { recursive: true });
+await rm(path.join(context, "web"), { recursive: true, force: true });
+await mkdir(path.join(context, "web"), { recursive: true });
+if (process.argv.includes("--with-frontends")) {
+  for (const [folder, source] of [
+    ["app", path.join(workspace, "generated-artifacts/gcp-web/app")],
+    ["admin", path.join(workspace, "artifacts/admin-dashboard/dist/public")],
+  ]) {
+    await readFile(path.join(source, "index.html")); // Fail before uploading incomplete builds.
+    await cp(source, path.join(context, "web", folder), { recursive: true });
+  }
+}
 await cp(path.join(workspace, "infra/gcp/runtime.Dockerfile"), path.join(context, "Dockerfile"));
 // Run npm outside the workspace package, solely to lock the generated image's
 // three external dependencies. Never import .env files or workspace secrets.
@@ -55,7 +66,7 @@ for (const entry of Object.values(lock.packages)) {
 }
 await writeFile(lockPath, JSON.stringify(lock, null, 2) + "\n");
 const entries = await readdir(context);
-const allowed = new Set(["package.json", "package-lock.json", "Dockerfile", "dist"]);
+const allowed = new Set(["package.json", "package-lock.json", "Dockerfile", "dist", "web"]);
 if (entries.some(entry => !allowed.has(entry))) {
   throw new Error("Unexpected build-context entry; refusing upload.");
 }

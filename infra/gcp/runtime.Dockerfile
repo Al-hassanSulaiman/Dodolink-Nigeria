@@ -5,5 +5,6 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 COPY --chown=node:node dist ./dist
+COPY --chown=node:node web ./web
 USER node
 CMD ["node", "--enable-source-maps", "dist/index.mjs"]

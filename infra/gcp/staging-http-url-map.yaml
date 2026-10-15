@@ -1,0 +1,7 @@
+name: dodolink-staging-http-redirect
+description: Redirect staging HTTP to the canonical staging HTTPS hostname.
+defaultUrlRedirect:
+  hostRedirect: staging.dodolink.com.ng
+  httpsRedirect: true
+  redirectResponseCode: MOVED_PERMANENTLY_DEFAULT
+  stripQuery: false

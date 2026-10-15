@@ -193,19 +193,35 @@ The rolled-back write test remains outstanding.
 
 The real API image is deployed to `dodolink` in Johannesburg, replacing the
 Google placeholder. The service URL is
-`https://dodolink-q4s65fjn7q-bq.a.run.app`. This is an IAM-private staging
-backend, not the migrated website or a production cutover.
+`https://dodolink-q4s65fjn7q-bq.a.run.app`. This is IAM-private staging,
+not a production cutover. The customer web build is now served at `/` and the
+admin build at `/admin/`, alongside the API.
 
 `MIGRATION_AUTH_PENDING=true` is permitted only with `MIGRATION_STAGING=true`.
 It allows infrastructure health checks but returns `503 STAGING_AUTH_PENDING`
-for every business API route before Clerk or business handlers. No Clerk test
-keys, managed production keys, payment keys, source database credentials, or
-service-account key files are present in the generated image.
+for every business API route before Clerk or business handlers. The current
+deployment sets it to `false` because the personal Clerk production keys have
+been verified and bound through Secret Manager. `MIGRATION_STAGING=true`
+remains in effect: all API writes and background jobs are disabled.
+
+The user's personal keys are stored in the Johannesburg-replicated secrets
+`dodolink-clerk-production-publishable-key` and
+`dodolink-clerk-production-secret-key`, with secret-level accessor grants for
+the application identity. Cloud Run binds these to `CLERK_PUBLISHABLE_KEY`
+and `CLERK_SECRET_KEY`; the backend uses `CLERK_AUTH_MODE=external`.
+No secret values are in source, CLI arguments, frontend assets, or the image.
+The public frontend key is intentionally compiled into frontend assets.
+No Clerk test keys, managed production secret keys, payment keys, source
+database credentials, or service-account key files are included.
 
 Verified against the deployed service:
 
 - Authorized `/api/healthz`: HTTP 200.
-- Authorized `/api/stores`: HTTP 503 with the pending-authentication code.
+- Authorized `/api/stores`: HTTP 200 using the restored Cloud SQL dataset.
+- Authorized `/` and `/admin/`: HTTP 200 with their respective JS/CSS assets;
+  direct admin client-route navigation also serves the admin build.
+- A request to `/api/admin/analytics` without a Clerk session: HTTP 401.
+- A POST to `/api/stores`: HTTP 503 from the staging write guard.
 - Unauthenticated `/api/healthz`: HTTP 403 at Cloud Run.
 - Startup confirms Cloud SQL read-only enforcement and bucket media readability.
 - Startup confirms billing, deletion, retention, and notification jobs disabled.
@@ -221,6 +237,15 @@ pnpm --filter @workspace/api-server run build
 node artifacts/api-server/scripts/gcp-prepare-runtime.mjs
 ```
 
+For the combined web/admin image, run the `gcp-web-build` validation command,
+which invokes `gcp-build-frontends.mjs` using the personal production publishable
+key without printing it. Then build the API and invoke
+`gcp-prepare-runtime.mjs --with-frontends`. The image uses
+`WEB_FRONTEND_DIR=/app/web`. The customer app uses same-origin API calls;
+the admin bundle is built with `/admin/` as its base and
+`VITE_CLERK_AUTH_MODE=external` to prevent host-derived instance selection.
+Replit's existing development artifact routing and credentials are unchanged.
+
 The context under ignored `generated-artifacts/gcp-runtime` includes only the
 compiled backend, an exact-version runtime package manifest and lockfile, and
 `infra/gcp/runtime.Dockerfile`. Public npm tarball URLs replace Replit-internal
@@ -230,10 +255,85 @@ its permissions are scoped to the build source/log bucket and image repository.
 Use an immutable image digest when deploying a verified build.
 
 The runtime identity has bucket-scoped object access plus bucket metadata/list
-access for startup validation. No bucket is public. Web/admin frontend builds,
-personal Clerk setup, write-journey tests, and final data synchronization remain
-separate pending migration work. Do not enable production jobs to bypass the
-staging restrictions.
+access for startup validation. No bucket is public.
+
+### Browser authentication and existing accounts
+
+The personal Clerk backend API authenticated successfully as a production
+instance, and its JWKS matched `clerk.dodolink.com.ng`. Its user count was zero
+when checked; the user explicitly accepted a fresh user directory and asked
+not to recover the old Replit Clerk users. Old-user migration/recovery is
+therefore out of scope. Do not claim that restored SQL/media includes Clerk
+users or passwords, relink ownership automatically using email alone, or treat
+the fresh-start instruction as permission to delete copied database records.
+
+Clerk's frontend environment endpoint accepts origins on `dodolink.com.ng`,
+`www.dodolink.com.ng`, and `staging.dodolink.com.ng`, but rejects the temporary
+Cloud Run hostname with `origin_invalid`. Thus HTML/assets and read-only API
+checks are verified, but browser sign-in and signed-in admin UI are not.
+A staging HTTPS hostname under the owned root domain is needed without moving
+the live root domain. Google Cloud's direct Cloud Run domain-mapping preview
+does not support Johannesburg; choose and approve the HTTPS front door before
+creating chargeable infrastructure or requesting DNS edits.
+
+### Approved staging HTTPS front door
+
+The user approved public staging HTTPS with the disclosed recurring Google
+Cloud load-balancer charges. A global external managed Application Load
+Balancer has been provisioned for **only** `staging.dodolink.com.ng`:
+
+| Resource | Name |
+| --- | --- |
+| Reserved global IPv4 | `dodolink-staging-ip` — `8.232.160.236` |
+| Johannesburg serverless NEG | `dodolink-staging-neg` → Cloud Run `dodolink` |
+| Global backend service | `dodolink-staging-backend` |
+| HTTPS host routing | `dodolink-staging-https-map` |
+| HTTP-to-HTTPS redirect | `dodolink-staging-http-redirect` |
+| Google-managed certificate | `dodolink-staging-cert` |
+| TLS policy | `dodolink-staging-tls` — MODERN, minimum TLS 1.2 |
+| HTTPS/HTTP frontend proxies | `dodolink-staging-https-proxy`, `dodolink-staging-http-proxy` |
+| Global forwarding rules | `dodolink-staging-https` (443), `dodolink-staging-http` (80) |
+
+The URL-map sources are `staging-https-url-map.yaml` and
+`staging-http-url-map.yaml`. Only the staging host routes to the application;
+other hosts redirect to the canonical staging HTTPS hostname.
+
+**Waiting on external DNS:** authoritative nameservers are outside Google
+Cloud. The staging name currently returns NXDOMAIN and its managed certificate
+is PROVISIONING. There was no conflicting staging A, AAAA, or CNAME record and
+no root CAA restriction at the setup check. Add this record in the existing DNS
+provider without changing root, `www`, Clerk, email, or nameserver records:
+
+| Type | Name | Value | TTL |
+| --- | --- | --- | --- |
+| A | `staging` | `8.232.160.236` | 300 seconds or provider default |
+
+The Google resource graph is verified, but the initial live HTTP edge probe
+returned an empty reply while the new frontend was provisioning. Do not claim
+HTTP redirect, certificate readiness, browser sign-in, or the staging site
+verified before the DNS/certificate and edge checks succeed.
+
+Cloud Run deliberately remains IAM-private while DNS and certificate activation
+are pending. After the staging DNS points to the reserved IP and the certificate
+is ACTIVE, complete the approved public-staging access configuration atomically:
+
+```sh
+gcloud run services update dodolink \
+  --project project-3a919f28-1462-4a1d-a2c --region africa-south1 \
+  --ingress=internal-and-cloud-load-balancing --no-invoker-iam-check --quiet
+```
+
+The ingress restriction must accompany disabling the invoker IAM check: expose
+the application through the load balancer, not by opening the raw Cloud Run URL.
+Keep `MIGRATION_STAGING=true`. Then verify real HTTP-to-HTTPS redirection, trusted
+TLS, customer/admin assets, API health/read access, anonymous admin rejection,
+POST rejection, and direct Cloud Run URL blocking. Perform the focused browser
+sign-in pass only after staging is reachable. This approval does not authorize
+production-domain cutover, account ownership reassignment, or background jobs.
+
+Write-journey tests, new-account authorization, staging-domain verification,
+and final data synchronization remain pending. Do not enable production jobs
+to bypass the staging restrictions.
 
 ## Production authentication gate
 
@@ -254,14 +354,15 @@ Clerk skill instead of assuming the builder can open that dashboard.
 - Refresh the confirmed production snapshot and reconcile any final changes.
 - Complete the rolled-back write test; the deployed runtime IAM read connection
   and read-only enforcement are verified, but write behavior is not yet tested.
-- Configure the user's own Clerk application and validate a safe migration of
-  existing account identities and access.
+- Verify new-account ownership and admin authorization with the personal Clerk
+  instance. The user accepted starting with zero users; old-user migration is
+  no longer required, and legacy records must not confer privileges on new users.
 - Securely populate and bind production runtime secrets.
-- Validate authenticated application behavior after binding the user's own Clerk
-  setup. The actual backend image is deployed privately with jobs disabled and
-  business API access locked pending authentication.
+- Validate authenticated application behavior through an approved staging
+  hostname. The combined web/admin/API image is deployed privately with jobs
+  and writes disabled.
 - Copy and validate production media, including the final delta and deletions.
-- Stage the web application and admin paths alongside the API.
+- Complete browser verification of the deployed web and admin paths.
 - Validate sign-in, admin access, uploads, chat, notifications, and payments.
 - Check native clients' baked domain and Clerk proxy URLs.
 - Approve DNS/webhook cutover only after validation; retain Replit for rollback.

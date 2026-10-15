@@ -2,7 +2,8 @@ import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import { clerkMiddleware } from "@clerk/express";
-import { publishableKeyFromHost } from "@clerk/shared/keys";
+import { resolveClerkPublishableKey } from "./lib/clerkConfiguration";
+import { mountWebFrontends } from "./lib/webFrontends";
 import {
   CLERK_PROXY_PATH,
   clerkProxyMiddleware,
@@ -19,6 +20,11 @@ const app: Express = express();
 // req.ip reflects the real visitor address from X-Forwarded-For rather than
 // the proxy's internal socket address. express-rate-limit relies on req.ip.
 app.set("trust proxy", 1);
+
+// Cloud-only static hosting. Never change Replit's existing artifact routing.
+if (process.env.WEB_FRONTEND_DIR) {
+  mountWebFrontends(app, process.env.WEB_FRONTEND_DIR);
+}
 
 app.use("/api", stagingAuthenticationGuard(process.env));
 
@@ -90,9 +96,9 @@ app.use(express.urlencoded({ extended: true }));
 // doesn't map to a custom domain.
 app.use(
   clerkMiddleware((req) => ({
-    publishableKey: publishableKeyFromHost(
+    publishableKey: resolveClerkPublishableKey(
       getClerkProxyHost(req) ?? "",
-      process.env.CLERK_PUBLISHABLE_KEY,
+      process.env,
     ),
   })),
 );

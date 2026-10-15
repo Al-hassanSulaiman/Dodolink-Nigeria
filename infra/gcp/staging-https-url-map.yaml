@@ -1,0 +1,14 @@
+name: dodolink-staging-https-map
+description: DodoLink staging only; live root and www domains are not routed here.
+defaultUrlRedirect:
+  hostRedirect: staging.dodolink.com.ng
+  httpsRedirect: true
+  redirectResponseCode: MOVED_PERMANENTLY_DEFAULT
+  stripQuery: false
+hostRules:
+  - hosts:
+      - staging.dodolink.com.ng
+    pathMatcher: staging
+pathMatchers:
+  - name: staging
+    defaultService: https://www.googleapis.com/compute/v1/projects/project-3a919f28-1462-4a1d-a2c/global/backendServices/dodolink-staging-backend

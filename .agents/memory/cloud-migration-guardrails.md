@@ -25,13 +25,19 @@ The user explicitly requested: "I want to use my own personal clerk pls." The ta
 
 **Why:** The user chose personal ownership of Clerk. Different Clerk applications and environments have separate users; an unplanned replacement would disconnect existing account IDs from store ownership, conversations, and native clients.
 
-**How to apply:** Prepare the user's own Clerk application in staging while retaining current live authentication. Do not assume users, IDs, passwords, or sessions transfer automatically. Validate account migration and ownership/admin/chat access before switching live authentication; the request does not authorize deleting existing account data. Normal workspace test keys are not a bug in the published app.
+**How to apply:** Prepare the user's own Clerk application in staging while preserving deployment continuity. Do not assume users, IDs, passwords, or sessions transfer automatically. Verify that new accounts cannot inherit old ownership or admin access. The later fresh-start instruction below supersedes the original account-migration requirement; it does not authorize deleting existing database records. Normal workspace test keys are not a bug in the published app.
 
 The user reports deleting the original Replit-managed Clerk application and obtaining their own production setup for the existing DodoLink domain.
 
 **Why:** The user explicitly confirmed deletion, not just disconnecting the integration. SQL and media backups cannot restore the old Clerk directory or password credentials.
 
-**How to apply:** Do not assume the old tenant is still accessible or that managed-status metadata proves it exists. Use the user's personal production credentials for the target. Investigate recovery/export availability and verified identity relinking before claiming existing users retain store, chat, or admin access; never assign ownership merely from a matching email.
+**How to apply:** Do not assume the old tenant is still accessible or that managed-status metadata proves it exists. Use the user's personal production credentials for the target. Never claim that existing users retain store, chat, or admin access, and never assign ownership merely from a matching email.
+
+The user explicitly said: "Let the users be zero, forget about the users in replit clerk." Start with the new personal Clerk user directory; do not pursue migration or recovery of old Clerk users.
+
+**Why:** The user changed the account-migration scope and accepted starting from zero users.
+
+**How to apply:** Treat old-user recovery/relinking as out of scope unless requested again. This is an authentication-directory fresh start, not permission to erase the copied SQL records, stores, chats, or media. New registrations must not automatically inherit legacy ownership or privileges.
 
 Treat live authentication-domain reassignment or deletion of the managed Clerk tenant as a separate, explicitly approved cutover—not a personal-account setup step.
 
@@ -66,3 +72,17 @@ Do not infer a service is private merely because it has no `allUsers` IAM bindin
 **Why:** An existing placeholder service retained its disabled invoker check during backend deployment; an unauthenticated request still returned 200 despite an empty invocation policy.
 
 **How to apply:** Explicitly enable the invoker IAM check for private staging and verify the unauthenticated response separately from authenticated health. Keep the application-level staging lock as defense in depth.
+
+## Personal Clerk staging hostname
+
+Use a staging hostname under the owned DodoLink domain for browser validation of personal production Clerk, rather than substituting development credentials.
+
+**Why:** The personal production instance rejected the temporary Cloud Run origin with `origin_invalid`, while accepting the existing root, `www`, and `staging` subdomains. Successful backend-key and JWKS checks alone do not prove browser sign-in.
+
+**How to apply:** Preserve the live root-domain routing while preparing staging HTTPS/DNS. Obtain approval before creating a chargeable HTTPS front door. Do not claim signed-in customer or admin verification until the browser can use an accepted origin.
+
+The user approved setting up public staging HTTPS for `staging.dodolink.com.ng`, with recurring Google Cloud load-balancer charges disclosed.
+
+**Why:** The user selected “Set up staging HTTPS” after those consequences were explained.
+
+**How to apply:** The approval covers the staging HTTPS front door and its public access, while writes and background jobs remain disabled. It does not authorize moving the live root/www domains, transferring account ownership, or enabling production jobs. Restrict Cloud Run ingress to internal/load-balancer traffic when enabling public staging invocation, so the raw service URL cannot bypass the intended front door.
