@@ -298,20 +298,26 @@ The URL-map sources are `staging-https-url-map.yaml` and
 `staging-http-url-map.yaml`. Only the staging host routes to the application;
 other hosts redirect to the canonical staging HTTPS hostname.
 
-**Waiting on external DNS:** authoritative nameservers are outside Google
-Cloud. The staging name currently returns NXDOMAIN and its managed certificate
-is PROVISIONING. There was no conflicting staging A, AAAA, or CNAME record and
-no root CAA restriction at the setup check. Add this record in the existing DNS
-provider without changing root, `www`, Clerk, email, or nameserver records:
+**Staging DNS added:** the user successfully added the record at the external
+DNS provider. Public DNS now resolves the staging name to the reserved IP, with
+no staging AAAA record. Keep root, `www`, Clerk, email, and nameserver records
+unchanged until cutover validation is complete:
 
 | Type | Name | Value | TTL |
 | --- | --- | --- | --- |
 | A | `staging` | `8.232.160.236` | 300 seconds or provider default |
 
-The Google resource graph is verified, but the initial live HTTP edge probe
-returned an empty reply while the new frontend was provisioning. Do not claim
-HTTP redirect, certificate readiness, browser sign-in, or the staging site
-verified before the DNS/certificate and edge checks succeed.
+The Google resource graph was verified at creation. The HTTP edge now returns
+301 to the staging HTTPS host, preserving `/admin/`. The HTTPS handshake still
+failed at the latest check; certificate activation and application access are
+not yet verified. Do not claim browser sign-in or the staging site complete.
+
+The current workspace CLI no longer has an authenticated Google Cloud account
+(`gcloud auth list` returned no accounts). The operator must sign in again in
+the project Shell with `gcloud auth login --no-launch-browser` before checking
+certificate status or updating Cloud Run. Complete any verification-code entry
+in the Shell, never in chat. Missing CLI authorization is not evidence that the
+previously created cloud resources have disappeared.
 
 Cloud Run deliberately remains IAM-private while DNS and certificate activation
 are pending. After the staging DNS points to the reserved IP and the certificate

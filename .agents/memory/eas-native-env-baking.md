@@ -12,3 +12,9 @@ EAS cloud builds do NOT get env vars from the workspace, `.env`, or the web depl
 Also: native builds must bake the **pk_live** key + `EXPO_PUBLIC_CLERK_PROXY_URL` (https://dodolink.com.ng/api/__clerk), not the workspace pk_test key — pk_test signs users into the dev user store and shows Clerk's "sandboxed preview / one-time setup" screen on TestFlight. The live key is public and recoverable from the deployed admin-dashboard JS bundle. Apple allows max 2 iOS distribution certs; private keys aren't kept, so revoke old certs via the ASC API before creating a new one (safe for already-uploaded builds).
 
 **How to apply:** before native publishing, check the release build configuration supplies the production API domain, Clerk publishable key, and Clerk proxy URL. Follow the current Expo skill's supported publishing flow, not historical EAS CLI instructions. See [Expo Launch version floors](expo-launch-version-floors.md) for the separate problem of Launch's build counter lagging App Store Connect.
+
+Do not assume a hosting migration or Clerk application replacement automatically requires new mobile binaries when the public hostnames are preserved.
+
+**Why:** A Clerk publishable key encodes the Frontend API hostname. Reusing the same custom Frontend API hostname can preserve the publishable key even when the backend Clerk secret and application change.
+
+**How to apply:** Compare the actual distributed build's API origin, Clerk publishable key/Frontend API hostname, and proxy path with the target. Current source build settings alone do not prove what shipped. Native Apple code, plugins, or entitlement changes still require a native build if absent from the installed binary; a server-only migration with compatible unchanged endpoints does not by itself.

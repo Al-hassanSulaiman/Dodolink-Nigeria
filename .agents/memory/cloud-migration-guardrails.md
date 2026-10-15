@@ -86,3 +86,11 @@ The user approved setting up public staging HTTPS for `staging.dodolink.com.ng`,
 **Why:** The user selected “Set up staging HTTPS” after those consequences were explained.
 
 **How to apply:** The approval covers the staging HTTPS front door and its public access, while writes and background jobs remain disabled. It does not authorize moving the live root/www domains, transferring account ownership, or enabling production jobs. Restrict Cloud Run ingress to internal/load-balancer traffic when enabling public staging invocation, so the raw service URL cannot bypass the intended front door.
+
+## Operator cloud credentials
+
+Do not assume the authenticated gcloud operator session persists between workspace sessions.
+
+**Why:** Infrastructure creation succeeded with an active account, but a later session had no credentialed accounts while the public DNS and load-balancer redirect still proved those resources existed.
+
+**How to apply:** Check `gcloud auth list` before interpreting resource-discovery errors. Reauthenticate through the operator's Shell when needed; do not recreate infrastructure or treat unauthenticated CLI failures as missing cloud resources. Never request verification codes in chat.
