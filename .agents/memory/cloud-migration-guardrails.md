@@ -38,3 +38,11 @@ The user rescinded the earlier wait instruction and explicitly said to continue 
 **Why:** The user said, "sorry I said you should wait, continue your migration."
 
 **How to apply:** Do not treat the old pause as current. This does not authorize deleting the original app, detaching a domain on which existing clients depend, switching live authentication, or substituting development credentials for the requested production authentication setup.
+
+## Backend before Clerk corrections
+
+The user wants the backend on Cloud Run, the database in Cloud SQL, and media in the agreed Cloud Storage bucket before making the Clerk corrections.
+
+**Why:** The user explicitly requested this order. Unresolved personal Clerk setup must not block independent, restricted backend staging.
+
+**How to apply:** Deploy and validate the backend with the Google Cloud database and bucket in read-only staging, with production background jobs disabled. Leave live authentication, DNS, and the Replit deployment unchanged; do not describe staging as a production cutover.
