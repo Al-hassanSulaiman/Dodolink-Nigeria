@@ -141,18 +141,22 @@ This is a snapshot, not a final synchronization or an application deployment.
 Workspace Clerk development keys are normal in Replit; they are not evidence
 that published sign-in is misconfigured. However, an external Google Cloud
 deployment does not receive Replit's automatic production-key substitution.
-The existing production Clerk configuration must be obtained through a supported
-access path before authenticated staging can be validated. Do not copy workspace
-test keys, provision a replacement tenant, or change existing user identities as
-a workaround. Dashboard access is account-dependent; check it using the Clerk
-skill instead of assuming the builder can open the dashboard.
+The user has explicitly chosen their own personal Clerk account for the target.
+Treat this as an authentication migration, not a key replacement: users, IDs,
+passwords, and sessions must not be assumed to transfer between applications.
+Preserve existing account data and verify store ownership, chat participation,
+and admin access against the new authentication configuration before cutover.
+Do not copy workspace test keys or reset existing accounts as a workaround.
+Access to the source managed tenant is account-dependent; check it using the
+Clerk skill instead of assuming the builder can open that dashboard.
 
 ## Still required before cutover
 
 - Refresh the confirmed production snapshot and reconcile any final changes.
 - Validate an actual runtime IAM connection and rolled-back read/write test;
   the SQL grants and restored snapshot alone do not prove application behavior.
-- Resolve supported access to the existing production Clerk configuration.
+- Configure the user's own Clerk application and validate a safe migration of
+  existing account identities and access.
 - Securely populate and bind production runtime secrets.
 - Prepare the actual API image and prevent staging from running production
   billing, deletion, retention, or notification jobs.

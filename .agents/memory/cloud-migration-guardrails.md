@@ -21,8 +21,8 @@ A staged API using a production database snapshot must not automatically run liv
 
 ## Authentication continuity
 
-Do not work around production Clerk access restrictions by deploying workspace test keys or provisioning a new Clerk tenant.
+The user explicitly requested: "I want to use my own personal clerk pls." The target is user-owned Clerk rather than Replit-managed Clerk. Do not deploy workspace test keys or switch live authentication as a shortcut.
 
-**Why:** Production and development Clerk users are isolated. A replacement identity system would disconnect existing account IDs from store ownership, conversations, and native clients.
+**Why:** The user chose personal ownership of Clerk. Different Clerk applications and environments have separate users; an unplanned replacement would disconnect existing account IDs from store ownership, conversations, and native clients.
 
-**How to apply:** Obtain the existing production tenant configuration through a supported access path before authenticated staging or cutover. Keep live authentication unchanged while access is unresolved; do not mistake normal workspace test keys for a bug in the published app.
+**How to apply:** Prepare the user's own Clerk application in staging while retaining current live authentication. Do not assume users, IDs, passwords, or sessions transfer automatically. Validate account migration and ownership/admin/chat access before switching live authentication; the request does not authorize deleting existing account data. Normal workspace test keys are not a bug in the published app.
