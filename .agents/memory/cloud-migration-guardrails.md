@@ -27,6 +27,12 @@ The user explicitly requested: "I want to use my own personal clerk pls." The ta
 
 **How to apply:** Prepare the user's own Clerk application in staging while retaining current live authentication. Do not assume users, IDs, passwords, or sessions transfer automatically. Validate account migration and ownership/admin/chat access before switching live authentication; the request does not authorize deleting existing account data. Normal workspace test keys are not a bug in the published app.
 
+The user reports deleting the original Replit-managed Clerk application and obtaining their own production setup for the existing DodoLink domain.
+
+**Why:** The user explicitly confirmed deletion, not just disconnecting the integration. SQL and media backups cannot restore the old Clerk directory or password credentials.
+
+**How to apply:** Do not assume the old tenant is still accessible or that managed-status metadata proves it exists. Use the user's personal production credentials for the target. Investigate recovery/export availability and verified identity relinking before claiming existing users retain store, chat, or admin access; never assign ownership merely from a matching email.
+
 Treat live authentication-domain reassignment or deletion of the managed Clerk tenant as a separate, explicitly approved cutover—not a personal-account setup step.
 
 **Why:** The SQL and media snapshots do not back up Clerk's user directory or password credentials and cannot restore a deleted authentication tenant.
