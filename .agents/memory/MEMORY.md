@@ -27,3 +27,4 @@
 - [Account-deletion media safety](account-deletion-media-safety.md) — legacy attachment URLs do not prove upload ownership; active signed upload links can recreate deleted files.
 - [Retailer contactability](retailer-contactability.md) — a store must be contactable from its profile even when it has no products.
 - [Portfolio analytics privacy](portfolio-analytics-privacy.md) — shared-link attribution is not verified client identity; keep anonymous visits cookie-free and unjoined.
+- [Cloud migration guardrails](cloud-migration-guardrails.md) — stage in Johannesburg; retain Replit through validation and cutover, preserving domains and API paths where possible.
