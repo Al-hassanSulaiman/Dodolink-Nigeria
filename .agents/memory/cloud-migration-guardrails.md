@@ -26,3 +26,9 @@ The user explicitly requested: "I want to use my own personal clerk pls." The ta
 **Why:** The user chose personal ownership of Clerk. Different Clerk applications and environments have separate users; an unplanned replacement would disconnect existing account IDs from store ownership, conversations, and native clients.
 
 **How to apply:** Prepare the user's own Clerk application in staging while retaining current live authentication. Do not assume users, IDs, passwords, or sessions transfer automatically. Validate account migration and ownership/admin/chat access before switching live authentication; the request does not authorize deleting existing account data. Normal workspace test keys are not a bug in the published app.
+
+Treat live authentication-domain reassignment or deletion of the managed Clerk tenant as a separate, explicitly approved cutover—not a personal-account setup step.
+
+**Why:** The SQL and media snapshots do not back up Clerk's user directory or password credentials and cannot restore a deleted authentication tenant.
+
+**How to apply:** Inspect the exact deletion/domain-conflict warning before proceeding. Prepare the new setup without claiming the live hostname; do not confirm tenant deletion merely to free its domain.
