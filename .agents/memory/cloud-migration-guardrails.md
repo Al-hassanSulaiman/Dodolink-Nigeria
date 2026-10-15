@@ -18,3 +18,11 @@ A staged API using a production database snapshot must not automatically run liv
 **Why:** A production snapshot contains real customer identities and payment authorizations. An additional API instance can cause real external effects even when DNS and customer traffic still point at Replit.
 
 **How to apply:** Explicitly disable background jobs before booting a staging API with copied production data and verify that startup respects this setting. Only enable the intended production jobs as part of a controlled cutover.
+
+## Authentication continuity
+
+Do not work around production Clerk access restrictions by deploying workspace test keys or provisioning a new Clerk tenant.
+
+**Why:** Production and development Clerk users are isolated. A replacement identity system would disconnect existing account IDs from store ownership, conversations, and native clients.
+
+**How to apply:** Obtain the existing production tenant configuration through a supported access path before authenticated staging or cutover. Keep live authentication unchanged while access is unresolved; do not mistake normal workspace test keys for a bug in the published app.

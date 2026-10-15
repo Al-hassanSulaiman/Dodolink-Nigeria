@@ -96,11 +96,63 @@ After restoring, verify schema, row counts, sequences, foreign keys, media
 metadata, and application read/write behavior. Do not update source rows during
 the migration.
 
+### Isolated Cloud SQL restore
+
+```sh
+# Check the export checksum and manifest without any cloud writes.
+python artifacts/api-server/scripts/gcp-restore-production.py \
+  --dump generated-artifacts/gcp-migration/production-EXAMPLE.dump
+
+# Restore a verified snapshot only into an empty dodolink public schema.
+python artifacts/api-server/scripts/gcp-restore-production.py \
+  --dump generated-artifacts/gcp-migration/production-EXAMPLE.dump --apply
+
+# Offline safety tests: no real database or cloud calls.
+python artifacts/api-server/scripts/test_gcp_restore_production.py
+```
+
+The restore uses a uniquely named private temporary Johannesburg bucket with
+public access prevention, uniform access, soft delete disabled, and a one-day
+fallback lifecycle. Only the Cloud SQL instance's service identity receives
+bucket-scoped transfer access. It never uses the application media bucket.
+The SQL transaction refuses a different database or an existing public table,
+does not recreate the default public schema, and does not import source roles.
+
+The application identity receives CONNECT, schema USAGE, table CRUD, and
+sequence USAGE/SELECT permissions, not cloudsqlsuperuser or schema CREATE.
+Restored tables remain owned by the import identity; application startup must
+not run owner-only schema initialization against this database. Handle schema
+changes separately from the runtime identity.
+
+Verification compares all table record hashes/counts, sequence states, foreign
+keys, and application privileges before removing the temporary transfer bucket.
+Private local run state records the phase and transfer bucket for recovery. If
+verification fails, inspect that state; do not overwrite or rerun an import into
+the now-nonempty database. The application, sign-in, and mutation flows still
+require staging validation before cutover.
+
+The initial production snapshot has been restored and verified: 14 table
+fingerprints, 10 sequence states, five validated foreign keys, and the runtime
+identity's data privileges match. Its temporary transfer bucket was removed.
+This is a snapshot, not a final synchronization or an application deployment.
+
+## Production authentication gate
+
+Workspace Clerk development keys are normal in Replit; they are not evidence
+that published sign-in is misconfigured. However, an external Google Cloud
+deployment does not receive Replit's automatic production-key substitution.
+The existing production Clerk configuration must be obtained through a supported
+access path before authenticated staging can be validated. Do not copy workspace
+test keys, provision a replacement tenant, or change existing user identities as
+a workaround. Dashboard access is account-dependent; check it using the Clerk
+skill instead of assuming the builder can open the dashboard.
+
 ## Still required before cutover
 
-- Export and restore the confirmed production database.
-- Grant the backend IAM database identity only the required database/schema
-  privileges.
+- Refresh the confirmed production snapshot and reconcile any final changes.
+- Validate an actual runtime IAM connection and rolled-back read/write test;
+  the SQL grants and restored snapshot alone do not prove application behavior.
+- Resolve supported access to the existing production Clerk configuration.
 - Securely populate and bind production runtime secrets.
 - Prepare the actual API image and prevent staging from running production
   billing, deletion, retention, or notification jobs.
