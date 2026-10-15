@@ -136,6 +136,57 @@ fingerprints, 10 sequence states, five validated foreign keys, and the runtime
 identity's data privileges match. Its temporary transfer bucket was removed.
 This is a snapshot, not a final synchronization or an application deployment.
 
+## Cloud SQL runtime and read-only staging
+
+The API supports opt-in Cloud SQL automatic IAM authentication using the attached
+Cloud Run service account. It does not need a database password, a service-account
+key file, or the source production connection string.
+
+Configure these non-secret runtime settings explicitly:
+
+| Setting | Staging value |
+| --- | --- |
+| `DATABASE_CONNECTION_MODE` | `cloud-sql-iam` |
+| `CLOUD_SQL_INSTANCE_CONNECTION_NAME` | `project-3a919f28-1462-4a1d-a2c:africa-south1:wordpress-db` |
+| `CLOUD_SQL_IAM_USER` | `cloudrun-for-dodolink@project-3a919f28-1462-4a1d-a2c.iam` |
+| `CLOUD_SQL_DATABASE` | `dodolink` |
+| `MIGRATION_STAGING` | `true` |
+
+IAM mode refuses incomplete configuration rather than falling back to an
+inherited workspace `DATABASE_URL`. It requires an explicit staging flag.
+Staging pins PostgreSQL sessions to read-only, blocks API mutations before the
+Clerk proxy and route handlers, and never starts billing, deletion retries,
+retention cleanup, or notification jobs. It skips startup schema changes and
+checks that required restored tables exist. Normal Replit behavior is unchanged
+when using the default URL connection mode without staging.
+
+This is an initial **read-only** validation mode, not full sign-in/payment/upload
+journey validation. Do not set `MIGRATION_STAGING=false` just to test writes
+against a production snapshot: that also enables production background jobs.
+Writable journey tests require a separately reviewed test-data/payment setup.
+
+The API keeps the connector as a direct runtime dependency as well as a database
+library dependency: esbuild externalizes Google SDK imports into the API bundle,
+so the final API package must resolve that SDK itself.
+
+```sh
+# Uses the logged-in gcloud identity to impersonate only the application account.
+# Does not read DATABASE_URL or access the source database.
+pnpm exec tsx artifacts/api-server/scripts/gcp-verify-runtime.mjs
+```
+
+The probe verifies the actual database identity, performs a UUID-only test write
+that is always rolled back, checks no probe row persisted, and verifies that the
+shared staging pool configuration rejects writes. It never commits or consumes a
+sequence value. CLI tokens and raw SDK errors are never logged. The operator
+needs permission to impersonate the application service account for this local
+probe; Cloud Run's attached identity does not need a permanent operator grant.
+Remove any temporary impersonation permission after checking.
+
+The local probe has **not passed**: token issuance remained blocked during the
+bounded check. The temporary operator permission was removed afterward. Do not
+mark the runtime IAM connection or rolled-back write test verified yet.
+
 ## Production authentication gate
 
 Workspace Clerk development keys are normal in Replit; they are not evidence
@@ -159,7 +210,8 @@ Clerk skill instead of assuming the builder can open that dashboard.
   existing account identities and access.
 - Securely populate and bind production runtime secrets.
 - Prepare the actual API image and prevent staging from running production
-  billing, deletion, retention, or notification jobs.
+  billing, deletion, retention, or notification jobs. The runtime safeguards are
+  implemented; the staged image and runtime behavior still require validation.
 - Copy and validate production media, including the final delta and deletions.
 - Stage the web application and admin paths alongside the API.
 - Validate sign-in, admin access, uploads, chat, notifications, and payments.

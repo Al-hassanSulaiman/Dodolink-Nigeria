@@ -11,6 +11,7 @@ import {
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { preventDeletedAccountWrites } from "./lib/accountDeletion";
+import { runtimeSafety, stagingWriteGuard } from "./lib/runtimeSafety";
 
 const app: Express = express();
 
@@ -19,6 +20,9 @@ const app: Express = express();
 // the proxy's internal socket address. express-rate-limit relies on req.ip.
 app.set("trust proxy", 1);
 
+// Before the auth proxy and every API handler: staging cannot trigger external
+// effects or modify the production snapshot through a public mutation route.
+app.use("/api", stagingWriteGuard(runtimeSafety.staging));
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 
 app.use(

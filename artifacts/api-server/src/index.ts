@@ -4,10 +4,13 @@ import { startScheduler } from "./lib/scheduler";
 import { validatePaystackKey } from "./lib/paystack";
 import { initializeAccountDeletion, retryAccountDeletions } from "./lib/accountDeletion";
 import { initializePortfolioAnalytics, purgeOldPortfolioVisits } from "./lib/portfolioAnalytics";
+import { db } from "@workspace/db";
+import { sql } from "drizzle-orm";
+import { runtimeSafety } from "./lib/runtimeSafety";
 
 // Refuse to start a production deployment with a missing or test-mode
 // Paystack key — real checkouts would silently be fake otherwise.
-validatePaystackKey();
+if (!runtimeSafety.staging) validatePaystackKey();
 
 const rawPort = process.env["PORT"];
 
@@ -23,8 +26,23 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-await initializeAccountDeletion();
-await initializePortfolioAnalytics();
+if (runtimeSafety.initializeSchema) {
+  await initializeAccountDeletion();
+  await initializePortfolioAnalytics();
+} else {
+  // Cloud SQL's runtime identity intentionally does not own the tables.
+  // Read-only checks replace owner-only startup DDL; schema changes belong to
+  // a controlled migration identity, not the web server.
+  const requiredSchema = await db.execute(sql`
+    SELECT name FROM unnest(ARRAY[
+      'account_deletions', 'media_uploads', 'portfolio_client_links', 'portfolio_visits'
+    ]) AS required(name)
+    WHERE to_regclass('public.' || name) IS NULL
+  `);
+  if (requiredSchema.rows.length > 0) {
+    throw new Error("Database startup schema is incomplete; apply controlled migrations before starting.");
+  }
+}
 app.listen(port, (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
@@ -32,6 +50,10 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+  if (!runtimeSafety.backgroundJobsEnabled) {
+    logger.info("Read-only migration staging: billing, deletion, retention, and notification jobs are disabled");
+    return;
+  }
   startScheduler();
   setInterval(() => {
     void purgeOldPortfolioVisits().catch(err => logger.error({ err }, "Portfolio retention cleanup failed"));
