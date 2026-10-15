@@ -52,3 +52,6 @@ Thumbs.db
 *.p8
 *.p12
 *.mobileprovision
+
+# Private migration exports and generated verification output.
+/generated-artifacts/
