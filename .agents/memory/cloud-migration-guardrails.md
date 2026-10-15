@@ -32,3 +32,9 @@ Treat live authentication-domain reassignment or deletion of the managed Clerk t
 **Why:** The SQL and media snapshots do not back up Clerk's user directory or password credentials and cannot restore a deleted authentication tenant.
 
 **How to apply:** Inspect the exact deletion/domain-conflict warning before proceeding. Prepare the new setup without claiming the live hostname; do not confirm tenant deletion merely to free its domain. Clerk's production-instance screen can report a Replit reservation of the root domain, so do not assume another subdomain under the same root or a publishing/DNS change will clear it. Obtain the supported release process before changing the existing association. Development-instance preparation is test-only and does not transfer existing production users.
+
+The user chose to resolve the production domain issue before proceeding with personal Clerk authentication, instead of continuing with a personal Clerk Development instance.
+
+**Why:** The user explicitly selected waiting for the production domain issue over test-account staging.
+
+**How to apply:** Do not substitute personal Clerk development credentials as a workaround. Resolve the supported production-domain release process before proceeding with that authentication integration.
