@@ -87,6 +87,12 @@ The user approved setting up public staging HTTPS for `staging.dodolink.com.ng`,
 
 **How to apply:** The approval covers the staging HTTPS front door and its public access, while writes and background jobs remain disabled. It does not authorize moving the live root/www domains, transferring account ownership, or enabling production jobs. Restrict Cloud Run ingress to internal/load-balancer traffic when enabling public staging invocation, so the raw service URL cannot bypass the intended front door.
 
+Check both managed-certificate domain status and actual trusted TLS serving, not only the overall certificate status.
+
+**Why:** Overall PROVISIONING concealed FAILED_NOT_VISIBLE for the domain; later ACTIVE preceded successful TLS at the load-balancer edge. Correct authoritative DNS alone did not mean the edge certificate was immediately usable.
+
+**How to apply:** Verify authoritative A/AAAA consistency, certificate/proxy attachment, and port 443. After issuance, wait for a real trusted HTTPS request to succeed before opening staging invocation with load-balancer-only ingress. Do not repeatedly recreate certificates or load balancers to bypass propagation.
+
 ## Operator cloud credentials
 
 Do not assume the authenticated gcloud operator session persists between workspace sessions.
@@ -94,3 +100,9 @@ Do not assume the authenticated gcloud operator session persists between workspa
 **Why:** Infrastructure creation succeeded with an active account, but a later session had no credentialed accounts while the public DNS and load-balancer redirect still proved those resources existed.
 
 **How to apply:** Check `gcloud auth list` before interpreting resource-discovery errors. Reauthenticate through the operator's Shell when needed; do not recreate infrastructure or treat unauthenticated CLI failures as missing cloud resources. Never request verification codes in chat.
+
+Treat workload database access and operator service-account impersonation as separate checks. Do not keep adding temporary impersonation grants or broaden roles to bypass a failed local probe.
+
+**Why:** The deployed workload successfully used its attached identity, but operator token minting remained denied even after a temporary token-creator binding and a bounded propagation wait. The temporary bindings were removed.
+
+**How to apply:** Prefer an isolated check running under the attached workload identity for further database write/rollback validation. Do not declare the write check passed based on successful read-only startup, and do not create service-account key files as a shortcut.

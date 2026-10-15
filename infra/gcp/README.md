@@ -14,7 +14,7 @@
 
 | Resource | Target |
 | --- | --- |
-| Cloud Run service | `dodolink`; actual backend deployed as private read-only staging |
+| Cloud Run service | `dodolink`; public read-only staging through the HTTPS load balancer only |
 | Cloud SQL instance | Existing `wordpress-db`, PostgreSQL 18 |
 | New application database | `dodolink` |
 | Backend identity | Existing `cloudrun-for-dodolink` service account |
@@ -136,6 +136,11 @@ fingerprints, 10 sequence states, five validated foreign keys, and the runtime
 identity's data privileges match. Its temporary transfer bucket was removed.
 This is a snapshot, not a final synchronization or an application deployment.
 
+A later read-only source fingerprint check found changes in `push_tokens`;
+the other 13 table fingerprints still matched the restored baseline. Refresh
+the source comparison again at cutover and synchronize the delta safely. Do
+not treat the initial dump as a current production snapshot.
+
 ## Cloud SQL runtime and read-only staging
 
 The API supports opt-in Cloud SQL automatic IAM authentication using the attached
@@ -213,6 +218,41 @@ No secret values are in source, CLI arguments, frontend assets, or the image.
 The public frontend key is intentionally compiled into frontend assets.
 No Clerk test keys, managed production secret keys, payment keys, source
 database credentials, or service-account key files are included.
+
+### Additional runtime credentials
+
+The existing live `PAYSTACK_SECRET_KEY` and `GMAIL_APP_PASSWORD` have been copied
+securely to Johannesburg-replicated Secret Manager secrets
+`dodolink-paystack-secret-key` and `dodolink-gmail-app-password`. The runtime
+identity has secret-specific accessor grants; Cloud Run uses pinned versions.
+The credential-only revision `dodolink-00006-zrr` is ready, with
+`MIGRATION_STAGING=true`. Subsequent staging activation changed service-level
+ingress/invocation settings, not these credentials or the write lock.
+
+```sh
+# Offline safety checks. No cloud requests, charges, or emails.
+python -m unittest discover -s artifacts/api-server/scripts \
+  -p 'test_gcp_stage_runtime_secrets.py' -v
+
+# Read-only validation; does not create secrets or change the service.
+python artifacts/api-server/scripts/gcp-stage-runtime-secrets.py
+
+# Idempotent credential staging; refuses conflicting existing credentials.
+python artifacts/api-server/scripts/gcp-stage-runtime-secrets.py --apply
+```
+
+The helper verifies the existing live payment credential with a read-only
+balance request without logging balances, headers, or credentials. It does
+not initiate payments or send email. Credentials travel to Secret Manager on
+stdin, never in CLI arguments. Source payment authorizations must not be used
+for staging charges.
+
+The deployed credential revision passed health and store reads (200),
+anonymous admin rejection (401), and business-write rejection (503).
+Staging also rejects POSTs to the Clerk proxy (503); signed-in browser journeys
+cannot be claimed verified through that proxy while this initial blanket
+write lock remains enabled. Plan isolated authentication/write testing without
+enabling production billing, deletion, or notification jobs on the snapshot.
 
 Verified against the deployed service:
 
@@ -307,21 +347,32 @@ unchanged until cutover validation is complete:
 | --- | --- | --- | --- |
 | A | `staging` | `8.232.160.236` | 300 seconds or provider default |
 
-The Google resource graph was verified at creation. The HTTP edge now returns
-301 to the staging HTTPS host, preserving `/admin/`. The HTTPS handshake still
-failed at the latest check; certificate activation and application access are
-not yet verified. Do not claim browser sign-in or the staging site complete.
+The Google resource graph was verified at creation. The HTTP edge returns
+301 to the staging HTTPS host, preserving `/admin/`. The original certificate
+`dodolink-staging-cert` is ACTIVE, and real trusted HTTPS now works.
+Certificate issuance and serving at the edge were separate stages; the TLS
+handshake initially failed after ACTIVE and subsequently succeeded.
 
-The current workspace CLI no longer has an authenticated Google Cloud account
-(`gcloud auth list` returned no accounts). The operator must sign in again in
-the project Shell with `gcloud auth login --no-launch-browser` before checking
-certificate status or updating Cloud Run. Complete any verification-code entry
-in the Shell, never in chat. Missing CLI authorization is not evidence that the
-previously created cloud resources have disappeared.
+Before activation, Google reported the domain as FAILED_NOT_VISIBLE. Both
+authoritative nameservers, Google DNS, and Cloudflare DNS returned only the
+reserved staging IP, with no conflicting IPv6 or CAA restriction. The target
+proxy and port-443 forwarding configuration were correct. Following Google's
+documented validation-refresh procedure, `dodolink-staging-cert-recheck` was
+created and attached alongside the original certificate. The original is now
+ACTIVE; the recheck certificate remains PROVISIONING. Do not create further
+replacement certificates or load balancers while edge serving propagates.
+Once HTTPS works, retain a working active certificate and remove an unnecessary
+duplicate only after confirming proxy attachment and traffic.
 
-Cloud Run deliberately remains IAM-private while DNS and certificate activation
-are pending. After the staging DNS points to the reserved IP and the certificate
-is ACTIVE, complete the approved public-staging access configuration atomically:
+The operator reauthenticated successfully after the workspace CLI lost its
+account session. For later sessions, check `gcloud auth list` before cloud
+operations; if necessary, sign in again in the project Shell with
+`gcloud auth login --no-launch-browser`. Complete any verification-code entry
+in the Shell, never in chat. Missing CLI authorization is not evidence that
+the previously created cloud resources have disappeared.
+
+After DNS, certificate activation, and a real trusted TLS request succeeded,
+the approved public-staging access configuration was applied atomically:
 
 ```sh
 gcloud run services update dodolink \
@@ -336,6 +387,43 @@ TLS, customer/admin assets, API health/read access, anonymous admin rejection,
 POST rejection, and direct Cloud Run URL blocking. Perform the focused browser
 sign-in pass only after staging is reachable. This approval does not authorize
 production-domain cutover, account ownership reassignment, or background jobs.
+
+Verified publicly at `https://staging.dodolink.com.ng` after activation:
+
+- Customer `/`, admin `/admin/`, and admin deep route `/admin/leads`: 200.
+- `/api/healthz` and `/api/stores`: 200 over trusted HTTPS.
+- Anonymous `/api/admin/analytics`: 401.
+- POST `/api/stores`: 503, preserving the migration write guard.
+- Direct external Cloud Run service `/api/healthz`: 404 (ingress restricted).
+- `MIGRATION_STAGING=true` still disables writes and all background jobs.
+
+This is public **read-only staging**, not the live root/www cutover. Authentication
+journeys, isolated write testing, the final data/media synchronization, and
+single-active-host background-job handoff remain gates before production.
+
+### Read-only iPhone build audit
+
+Apple's API confirms the selected version `1.0` is WAITING_FOR_REVIEW with
+build `19`, uploaded on 2026-10-12 (Apple's returned -07:00 timezone), with
+processing state VALID. Expo Launch independently reports a successful iOS
+session. No build or submission was started during this audit.
+
+The personal Expo connector lists a different latest archive: build `18`.
+Its downloaded IPA was inspected under ignored
+`generated-artifacts/ios-verification/`: the signed executable and provisioning
+profile both have `com.apple.developer.applesignin = ["Default"]`; the Hermes
+bundle contains the native Apple-flow symbols and the screen's native-flow
+message. The matching release source calls `startAppleAuthenticationFlow()`,
+and that Apple handler exactly matches the current source.
+
+This directly verifies the native correction in archive 18, not archive 19.
+The personal Expo connector is not authorized to read the managed Launch
+workflow, and Apple's API key was forbidden from reading build-bundle metadata.
+The exact build-19 IPA is still needed for direct inspection of its JavaScript
+and signed entitlements. Do not infer that build 19 lacks the correction or
+recommend rebuilding merely because the personal connector does not list it.
+A native sign-in journey also remains unverified: the personal Clerk Native API
+is disabled and no Apple social connection is enabled.
 
 Write-journey tests, new-account authorization, staging-domain verification,
 and final data synchronization remain pending. Do not enable production jobs
