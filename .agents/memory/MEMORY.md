@@ -29,6 +29,9 @@
 - [Account-deletion media safety](account-deletion-media-safety.md) — legacy attachment URLs do not prove upload ownership; active signed upload links can recreate deleted files.
 - [Retailer contactability](retailer-contactability.md) — a store must be contactable from its profile even when it has no products.
 - [Chat identity and drafts](chat-identity-and-drafts.md) — unsent chats stay out of inboxes; store owners appear by store name even when contacting another seller.
+- [Chat media downloads](chat-media-downloads.md) — save chat attachments to phones; use real MIME metadata because storage URLs have no filename extensions.
+- [Chat reply context](chat-reply-context.md) — swipe own/received messages; product enquiries share photo-reply styling and preserve server-resolved historical context.
+- [Following-first Home](following-home.md) — prioritize followed stores/products, retain popular discovery, and avoid fixed catalogue caps.
 - [Portfolio analytics privacy](portfolio-analytics-privacy.md) — shared-link attribution is not verified client identity; keep anonymous visits cookie-free and unjoined.
 - [Cloud migration guardrails](cloud-migration-guardrails.md) — stage in Johannesburg; retain Replit through validation and cutover, preserving domains and API paths where possible.
 - [Cloud delivery](cloud-delivery.md) — user wants GitHub → Cloud Build → Cloud Run automatic delivery, without Replit in the build/deployment path.

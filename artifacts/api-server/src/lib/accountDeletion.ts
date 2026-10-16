@@ -1,5 +1,6 @@
 import { clerkClient, getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
+import { storeFollowsTable } from "@workspace/db";
 import { accountDeletionsTable, mediaUploadsTable, storesTable, productsTable, conversationsTable, messagesTable, reviewsTable, pushTokensTable, supportMessagesTable, subscriptionPaymentsTable } from "@workspace/db";
 import { eq, or, inArray, sql, isNull, lt } from "drizzle-orm";
 import type { RequestHandler } from "express";
@@ -81,6 +82,13 @@ export async function completeAccountDeletion(userId: string): Promise<boolean> 
       const expires = Math.max(job.uploadsExpireAt?.getTime() ?? 0, ...uploads.map(u => u.createdAt.getTime() + 16 * 60000));
       await tx.update(accountDeletionsTable).set({ mediaPaths: paths, uploadsExpireAt: expires ? new Date(expires) : null }).where(eq(accountDeletionsTable.userId, userId));
       await tx.delete(messagesTable).where(eq(messagesTable.senderId, userId));
+      await tx.delete(storeFollowsTable).where(eq(storeFollowsTable.userId, userId));
+      // Other people's replies can survive a legacy store-ownership transfer.
+      // Remove copied identity/body/media from their quote, not their own text.
+      // Do this after deleting originals: the reply FK prevents a concurrent
+      // insert from reintroducing a snapshot after the parent's deletion.
+      await tx.update(messagesTable).set({ replyToMessageId: null, replyPreview: null })
+        .where(sql`${messagesTable.replyPreview}->>'senderId' = ${userId}`);
       if (conversationIds.length) await tx.delete(conversationsTable).where(inArray(conversationsTable.id, conversationIds));
       // Recompute public ratings after removing the deleted user's reviews.
       const reviewed = await tx.select({ storeId: reviewsTable.storeId }).from(reviewsTable).where(eq(reviewsTable.reviewerId, userId));

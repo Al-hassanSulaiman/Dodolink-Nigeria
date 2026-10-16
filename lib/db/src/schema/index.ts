@@ -1,4 +1,5 @@
 export * from "./stores";
+export * from "./store_follows";
 export * from "./products";
 export * from "./conversations";
 export * from "./messages";

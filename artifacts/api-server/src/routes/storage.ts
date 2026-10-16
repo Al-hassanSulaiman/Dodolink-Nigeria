@@ -166,6 +166,16 @@ router.get("/storage/objects/*path", async (req: Request, res: Response) => {
     //   return;
     // }
 
+    // Detect opaque attachment types without streaming the whole video.
+    // Keep the same existence/media checks above for HEAD and GET.
+    if (req.method === "HEAD") {
+      const [metadata] = await objectFile.getMetadata();
+      res.setHeader("Content-Type", metadata.contentType ?? "application/octet-stream");
+      if (metadata.size !== undefined) res.setHeader("Content-Length", String(metadata.size));
+      res.status(200).end();
+      return;
+    }
+
     const response = await objectStorageService.downloadObject(objectFile);
 
     res.status(response.status);

@@ -1,5 +1,7 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
+import followsRouter from "./follows";
+import homeFeedRouter from "./home-feed";
 import storesRouter from "./stores";
 import productsRouter from "./products";
 import searchRouter from "./search";
@@ -18,6 +20,8 @@ import deleteAccountRouter from "./delete-account";
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(followsRouter);
+router.use(homeFeedRouter);
 router.use(contactRouter);
 router.use(portfolioAnalyticsRouter);
 router.use(deleteAccountRouter);

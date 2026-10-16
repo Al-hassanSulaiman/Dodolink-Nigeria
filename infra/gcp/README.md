@@ -1,5 +1,40 @@
 # DodoLink Google Cloud migration
 
+## Release prerequisite: following and personalized Home
+
+Apply `lib/db/migrations/20261016_store_follows.sql` to the approved production
+Cloud SQL target **before** releasing the new API, including its account-deletion
+cleanup. Development already has this table; production has not been changed.
+Use the established schema-owner identity and confirm the runtime role has
+SELECT/INSERT/DELETE privileges on `store_follows` (inherit the established grant
+policy; do not broaden its access). Verify the composite primary key, store index
+and cascading store foreign key. Follow counts are derived from unique rows,
+not a separately maintained counter. Cloud Build initializes disposable CI only.
+The migration is additive and older clients remain compatible.
+
+## Release prerequisite: chat replies and product previews
+
+Chat reply/product context adds nullable columns to `messages`. The development
+database has been updated; the external production Cloud SQL database has not.
+Before pushing the dependent API/frontend release to GitHub:
+
+1. Obtain approval for the live schema change and confirm the intended Cloud SQL
+   instance/database. Use the established schema-owner identity, not the
+   least-privileged application runtime identity.
+2. Apply the reviewed additive transaction in
+   `lib/db/migrations/20261016_chat_message_context.sql`. It preserves existing
+   messages and is compatible with older clients/API revisions.
+3. Verify all four columns exist (`reply_to_message_id`, `reply_preview`,
+   `product_id`, `product_preview`) and the reply-message foreign key uses
+   `ON DELETE SET NULL` before releasing the dependent source.
+4. After the authorized GitHub/Cloud Build deployment, check existing chats and
+   a new reply/product enquiry against the live API.
+
+Cloud Build prepares only its disposable CI database. A green build does not
+migrate production. Do not add startup-time DDL or assume Replit Publish updates
+the external Cloud SQL database. Phone clients also need an updated native build;
+the web/backend delivery pipeline does not publish phone releases.
+
 ## Current cutover status
 
 **Hosting cutover completed on 2026-10-16: DodoLink is live on Google Cloud.**

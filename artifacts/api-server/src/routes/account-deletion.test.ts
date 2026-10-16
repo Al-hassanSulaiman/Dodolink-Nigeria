@@ -3,6 +3,7 @@ import express from "express";
 import request from "supertest";
 import { beforeAll, afterAll, afterEach, describe, it, expect, vi } from "vitest";
 import { db, pool } from "@workspace/db";
+import { storeFollowsTable } from "@workspace/db";
 import { accountDeletionsTable, mediaUploadsTable, storesTable, productsTable, conversationsTable, messagesTable, reviewsTable, pushTokensTable, supportMessagesTable } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
 
@@ -78,6 +79,37 @@ afterEach(async () => {
 });
 
 describe("authenticated account deletion", () => {
+  it("removes the deleted person's copied quote from a surviving legacy thread without deleting another person's reply", async () => {
+    const deletedUser = identity();
+    const currentOwner = `deletion_fixture_owner_${randomUUID()}`;
+    const customer = `deletion_fixture_customer_${randomUUID()}`;
+    fixtureUsers.push(currentOwner, customer);
+    const currentStore = await store(currentOwner);
+    const [thread] = await db.insert(conversationsTable).values({
+      customerId: customer, customerName: "Customer", storeId: currentStore.id,
+    }).returning();
+    const [original] = await db.insert(messagesTable).values({
+      conversationId: thread.id, senderId: deletedUser, senderName: "Former owner",
+      senderType: "retailer", body: "Private original",
+    }).returning();
+    const [reply] = await db.insert(messagesTable).values({
+      conversationId: thread.id, senderId: customer, senderName: "Customer",
+      senderType: "customer", body: "Keep my own response",
+      replyToMessageId: original.id,
+      replyPreview: {
+        id: original.id, senderId: deletedUser, senderName: "Former owner",
+        body: "Private original", mediaUrl: null,
+      },
+    }).returning();
+    const response = await request(app).delete("/account").send({ confirmation: "DELETE" });
+    expect(response.status).toBe(200);
+    const [remaining] = await db.select().from(messagesTable).where(eq(messagesTable.id, reply.id));
+    expect(remaining).toMatchObject({
+      body: "Keep my own response", replyToMessageId: null, replyPreview: null,
+    });
+    expect(await db.select().from(messagesTable).where(eq(messagesTable.id, original.id))).toHaveLength(0);
+  });
+
   it("requires authentication and explicit confirmation", async () => {
     mocks.userId = null;
     expect((await request(app).delete("/account").send({ confirmation: "DELETE" })).status).toBe(401);
@@ -92,6 +124,11 @@ describe("authenticated account deletion", () => {
     fixtureUsers.push(otherUserId);
     const own = await store(userId);
     const other = await store(otherUserId);
+    const otherFollower = `follow_fixture_${randomUUID()}`;
+    await db.insert(storeFollowsTable).values([
+      { userId, storeId: other.id },
+      { userId: otherFollower, storeId: other.id },
+    ]);
     await db.insert(productsTable).values({ storeId: own.id, name: "Fixture product", description: "Fixture", price: 10, category: "Test" });
     const [chat] = await db.insert(conversationsTable).values({ customerId: userId, customerName: "Fixture", storeId: other.id }).returning();
     await db.insert(messagesTable).values({ conversationId: chat.id, senderId: userId, senderName: "Fixture", senderType: "customer", body: "Fixture" });
@@ -105,6 +142,8 @@ describe("authenticated account deletion", () => {
     expect(response.status).toBe(200);
     expect(response.body.status).toBe("deleted");
     expect(mocks.deleteUser).toHaveBeenCalledWith(userId);
+    expect(await db.select().from(storeFollowsTable).where(eq(storeFollowsTable.userId, userId))).toHaveLength(0);
+    expect(await db.select().from(storeFollowsTable).where(eq(storeFollowsTable.userId, otherFollower))).toHaveLength(1);
     expect(await db.select().from(storesTable).where(eq(storesTable.id, own.id))).toHaveLength(0);
     const [remaining] = await db.select().from(storesTable).where(eq(storesTable.id, other.id));
     expect(remaining.totalReviews).toBe(1);

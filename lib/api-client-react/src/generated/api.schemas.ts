@@ -5,6 +5,55 @@
  * Dodolink NG API - Nigerian marketplace connecting retailers and customers
  * OpenAPI spec version: 0.1.0
  */
+export interface StoreFollowStatus {
+  storeId: number;
+  followerCount: number;
+  isFollowing: boolean;
+}
+
+export interface HomeStore {
+  id: number;
+  name: string;
+  /** @nullable */
+  imageUrl: string | null;
+  followerCount: number;
+  isFollowing: boolean;
+}
+
+export interface Product {
+  id: number;
+  storeId: number;
+  storeName: string;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  imageUrl?: string | null;
+  /** Up to 5 product images. First image is the thumbnail. */
+  imageUrls: string[];
+  inStock: boolean;
+  createdAt: string;
+}
+
+export type HomeProduct = Product & ({
+  isFollowing: boolean;
+  followerCount: number;
+  /** @nullable */
+  storeImageUrl: string | null;
+});
+
+export interface HomeStoresPage {
+  items: HomeStore[];
+  /** @nullable */
+  nextOffset: number | null;
+}
+
+export interface HomeProductsPage {
+  items: HomeProduct[];
+  /** @nullable */
+  nextOffset: number | null;
+}
+
 export interface PortfolioSectionTimes {
   /**
      * @minimum 0
@@ -247,21 +296,6 @@ export interface Store {
   createdAt: string;
 }
 
-export interface Product {
-  id: number;
-  storeId: number;
-  storeName: string;
-  name: string;
-  description: string;
-  price: number;
-  category: string;
-  imageUrl?: string | null;
-  /** Up to 5 product images. First image is the thumbnail. */
-  imageUrls: string[];
-  inStock: boolean;
-  createdAt: string;
-}
-
 export type StoreDetail = Store & {
   products: Product[];
 };
@@ -387,6 +421,23 @@ export interface Conversation {
   createdAt: string;
 }
 
+export interface MessageReplyPreview {
+  id: number;
+  senderId: string;
+  senderName: string;
+  body: string;
+  /** @nullable */
+  mediaUrl: string | null;
+}
+
+export interface MessageProductPreview {
+  id: number;
+  name: string;
+  price: number;
+  /** @nullable */
+  imageUrl: string | null;
+}
+
 export type MessageSenderType = typeof MessageSenderType[keyof typeof MessageSenderType];
 
 
@@ -403,6 +454,12 @@ export interface Message {
   senderType: MessageSenderType;
   body: string;
   mediaUrl?: string | null;
+  /** @nullable */
+  replyToMessageId?: number | null;
+  replyPreview?: MessageReplyPreview | null;
+  /** @nullable */
+  productId?: number | null;
+  productPreview?: MessageProductPreview | null;
   createdAt: string;
 }
 
@@ -420,6 +477,18 @@ export interface SendMessageBody {
   senderType: SendMessageBodySenderType;
   body: string;
   mediaUrl?: string | null;
+  /**
+     * @minimum 1
+     * @maximum 2147483647
+     * @nullable
+     */
+  replyToMessageId?: number | null;
+  /**
+     * @minimum 1
+     * @maximum 2147483647
+     * @nullable
+     */
+  productId?: number | null;
 }
 
 export interface StartConversationBody {
@@ -562,6 +631,32 @@ export interface AdminUser {
   /** @nullable */
   storeName?: string | null;
 }
+
+export type GetHomeStoresParams = {
+seed?: string;
+/**
+ * @minimum 0
+ */
+offset?: number;
+/**
+ * @minimum 1
+ * @maximum 40
+ */
+limit?: number;
+};
+
+export type GetHomeProductsParams = {
+seed?: string;
+/**
+ * @minimum 0
+ */
+offset?: number;
+/**
+ * @minimum 1
+ * @maximum 40
+ */
+limit?: number;
+};
 
 export type DeleteMyAccountBodyConfirmation = typeof DeleteMyAccountBodyConfirmation[keyof typeof DeleteMyAccountBodyConfirmation];
 

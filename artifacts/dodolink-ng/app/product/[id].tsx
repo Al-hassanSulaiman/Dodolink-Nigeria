@@ -39,7 +39,9 @@ export default function ProductScreen() {
   const startConversation = useStartConversation({
     mutation: {
       onSuccess: (data) => {
-        router.push(`/chat/${data.id}`);
+        router.push({ pathname: '/chat/[conversationId]', params: {
+          conversationId: String(data.id), productId: String(productId),
+        } });
       },
       onError: () => {
         showAlert('Could not start chat', 'Something went wrong. Please try again.');

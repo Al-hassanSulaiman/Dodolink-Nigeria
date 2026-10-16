@@ -20,7 +20,7 @@
       "buildNumber": "19",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Dodolink uses your photo library so you can upload product images for your store.",
-        "NSPhotoLibraryAddUsageDescription": "Dodolink needs permission to save images to your photo library.",
+        "NSPhotoLibraryAddUsageDescription": "Dodolink needs permission to save chat photos and videos to your phone.",
         "NSCameraUsageDescription": "Dodolink uses your camera so you can take product photos directly.",
         "NSLocationWhenInUseUsageDescription": "Dodolink uses your location to show nearby stores and help customers find you.",
         "NSUserNotificationsUsageDescription": "Dodolink sends you notifications for new orders, messages, and store activity.",
@@ -58,6 +58,15 @@
       ],
       "expo-font",
       "expo-web-browser",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Dodolink uses your photo library to choose photos and videos for chats and products.",
+          "savePhotosPermission": "Dodolink needs permission to save chat photos and videos to your phone.",
+          "granularPermissions": [],
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
       [
         "expo-image-picker",
         {

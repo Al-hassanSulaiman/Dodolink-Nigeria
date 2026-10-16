@@ -103,7 +103,8 @@ export async function uploadImageToStorage(imageUri: string): Promise<string> {
   return objectPath;
 }
 
-const MAX_MEDIA_BYTES = 50 * 1024 * 1024; // 50 MB
+const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
 export async function uploadMediaToStorage(
   uri: string,
@@ -113,8 +114,9 @@ export async function uploadMediaToStorage(
   const blob = await readLocalFile(uri);
   const size = blob.size;
 
-  if (size > MAX_MEDIA_BYTES) {
-    throw new Error("File is too large. Maximum size is 50 MB.");
+  const maxBytes = mimeType.startsWith('video/') || prefix === 'chat-vid' ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+  if (size > maxBytes) {
+    throw new Error(`File is too large. Maximum size is ${maxBytes / (1024 * 1024)} MB.`);
   }
 
   const ext = mimeType.startsWith("video/") ? "mp4" : "jpg";

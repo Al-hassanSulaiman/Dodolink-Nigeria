@@ -12,6 +12,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { uploadImageToStorage, getImageUrl } from '@/utils/storage';
 import { parseProductPrice } from '@/utils/productPrice';
+import { upsertProduct } from '@/utils/productCache';
+import type { Product } from '@workspace/api-client-react';
 import { LoadingScreen } from '@/components/Loading';
 
 const MAX_IMAGES = 5;
@@ -45,12 +47,13 @@ export default function EditProductScreen() {
 
   const updateProduct = useUpdateProduct({
     mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getGetProductQueryKey(id) });
-        if (product?.storeId) {
-          queryClient.invalidateQueries({ queryKey: getListStoreProductsQueryKey(product.storeId) });
-        }
-        queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
+      onSuccess: async saved => {
+        const key = getListStoreProductsQueryKey(saved.storeId);
+        await queryClient.cancelQueries({ queryKey: key });
+        queryClient.setQueryData<Product[]>(key, current => upsertProduct(current, saved));
+        queryClient.setQueryData(getGetProductQueryKey(id), saved);
+        void queryClient.invalidateQueries({ queryKey: key });
+        void queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
         router.back();
       }
     }

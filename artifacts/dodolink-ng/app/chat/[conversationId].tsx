@@ -1,10 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { StyleSheet, View, Text, FlatList, TextInput, Pressable, ActivityIndicator, Dimensions } from 'react-native';
-import { Image } from 'expo-image';
-import { useLocalSearchParams, Stack } from 'expo-router';
+import { StyleSheet, View, Text, FlatList, TextInput, Pressable, ActivityIndicator } from 'react-native';
+import { useLocalSearchParams, Stack, router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as Clipboard from 'expo-clipboard';
-import { VideoView, useVideoPlayer } from 'expo-video';
 import {
   useListMessages,
   useListConversations,
@@ -12,6 +10,7 @@ import {
   getListMessagesQueryKey,
   getListConversationsQueryKey,
   markConversationRead,
+  useGetProduct,
 } from '@workspace/api-client-react';
 import type { Message } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
@@ -25,9 +24,9 @@ import { getImageUrl, uploadMediaToStorage } from '@/utils/storage';
 import { showAlert } from '@/utils/alerts';
 import { useActiveScreen } from '@/hooks/useActiveScreen';
 import { PhotoPreview } from '@/components/PhotoPreview';
-
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const MEDIA_WIDTH = SCREEN_WIDTH * 0.65;
+import { ChatMedia } from '@/components/ChatMedia';
+import { MessageQuote } from '@/components/MessageQuote';
+import { SwipeReply } from '@/components/SwipeReply';
 
 function CopyableMessage({ body, color }: { body: string; color: string }) {
   const [status, setStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
@@ -67,22 +66,8 @@ function mediaSendErrorMessage(error: unknown): string {
   return `${message} Tap + to try again.`;
 }
 
-// Small component so each video gets its own player instance
-function VideoBubble({ uri, isMe, colors }: { uri: string; isMe: boolean; colors: ReturnType<typeof useColors> }) {
-  const player = useVideoPlayer(uri, p => { p.loop = false; });
-  return (
-    <View style={{ borderRadius: 12, overflow: 'hidden', width: MEDIA_WIDTH, aspectRatio: 16 / 9 }}>
-      <VideoView
-        player={player}
-        style={{ width: '100%', height: '100%' }}
-        nativeControls
-      />
-    </View>
-  );
-}
-
 export default function ChatThreadScreen() {
-  const { conversationId } = useLocalSearchParams<{ conversationId: string }>();
+  const { conversationId, productId: productParam } = useLocalSearchParams<{ conversationId: string; productId?: string }>();
   const id = parseInt(conversationId, 10);
   const colors = useColors();
   const { userId, userName, userEmail } = useUserIdentity();
@@ -108,8 +93,34 @@ export default function ChatThreadScreen() {
   const [message, setMessage] = useState('');
   const [uploading, setUploading] = useState(false);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const [productContextId, setProductContextId] = useState<number | null>(null);
+  useEffect(() => {
+    const value = Number(productParam);
+    const valid = Number.isInteger(value) && value > 0 && value <= 2147483647;
+    setProductContextId(valid ? value : null);
+    if (valid) setReplyTo(null);
+  }, [productParam, id]);
+  useEffect(() => { setReplyTo(null); setMessage(''); }, [id]);
+  const { data: contextProduct, isError: productError, refetch: retryProduct } = useGetProduct(productContextId ?? 0, {
+    query: { enabled: !!productContextId && !!userId },
+  });
+  const productReady = !productContextId || (!!contextProduct && contextProduct.id === productContextId && contextProduct.storeId === conversation?.storeId);
+  const productWrongStore = !!(productContextId && contextProduct && conversation && contextProduct.storeId !== conversation.storeId);
+  const clearContext = () => {
+    setReplyTo(null);
+    setProductContextId(null);
+    if (productParam) router.setParams({ productId: undefined });
+  };
+  const selectReply = (item: Message) => {
+    setProductContextId(null);
+    if (productParam) router.setParams({ productId: undefined });
+    setReplyTo(item);
+    inputRef.current?.focus();
+  };
   const queryClient = useQueryClient();
   const inputRef = useRef<TextInput>(null);
+  const lastPhotoSwipe = useRef({ id: -1, until: 0 });
 
   const { data: messages, isLoading, isError: messagesError, refetch: refetchMessages } = useListMessages(id, {
     query: { enabled: !!id && !!userId, queryKey: getListMessagesQueryKey(id), refetchInterval: active ? 10000 : false, refetchIntervalInBackground: false }
@@ -126,7 +137,7 @@ export default function ChatThreadScreen() {
   const sendMessage = useSendMessage();
 
   const handleSend = () => {
-    if (!message.trim() || !userId || !userName) return;
+    if (!message.trim() || !userId || !userName || !productReady || uploading || sendMessage.isPending) return;
     const submittedMessage = message.trim();
     sendMessage.mutate(
       { conversationId: id, data: {
@@ -134,10 +145,13 @@ export default function ChatThreadScreen() {
         senderName: senderName,
         senderType: senderType,
         body: submittedMessage,
+        replyToMessageId: replyTo?.id,
+        productId: productContextId,
       }},
       {
         onSuccess: async (sent) => {
           setMessage(current => current.trim() === submittedMessage ? '' : current);
+          clearContext();
           await queryClient.cancelQueries({ queryKey: getListMessagesQueryKey(id) });
           queryClient.setQueryData<Message[]>(getListMessagesQueryKey(id), old =>
             old?.some(m => m.id === sent.id) ? old : [...(old ?? []), sent]);
@@ -152,6 +166,7 @@ export default function ChatThreadScreen() {
   };
 
   const handlePickMedia = async () => {
+    if (!productReady || uploading || sendMessage.isPending) return;
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       showAlert('Permission needed', 'Please allow access to your media library to send photos and videos.');
@@ -184,10 +199,15 @@ export default function ChatThreadScreen() {
       // Use per-call onError only (no global onError on the hook for media path)
       await new Promise<void>((resolve, reject) => {
         sendMessage.mutate(
-          { conversationId: id, data: { senderId: userId, senderName: senderName, senderType: senderType, body: '', mediaUrl } },
+          { conversationId: id, data: { senderId: userId, senderName: senderName, senderType: senderType,
+            body: '', mediaUrl, replyToMessageId: replyTo?.id, productId: productContextId } },
           {
-            onSuccess: () => {
-              queryClient.invalidateQueries({ queryKey: getListMessagesQueryKey(id) });
+            onSuccess: async (sent) => {
+              clearContext();
+              await queryClient.cancelQueries({ queryKey: getListMessagesQueryKey(id) });
+              queryClient.setQueryData<Message[]>(getListMessagesQueryKey(id), old =>
+                old?.some(m => m.id === sent.id) ? old : [...(old ?? []), sent]);
+              queryClient.invalidateQueries({ queryKey: getListConversationsQueryKey() });
               resolve();
             },
             onError: (err: any) => reject(err),
@@ -215,12 +235,12 @@ export default function ChatThreadScreen() {
 
   const renderItem = ({ item }: { item: Message }) => {
     const isMe = item.senderId === userId;
-    const isVideo = !!item.mediaUrl && (
-      item.mediaUrl.includes('chat-vid') ||
-      item.mediaUrl.match(/\.(mp4|mov|avi|mkv|webm)$/i) !== null
-    );
-
     return (
+      <SwipeReply onReply={() => selectReply(item)}
+        onGestureReply={() => {
+          lastPhotoSwipe.current = { id: item.id, until: Date.now() + 500 };
+          selectReply(item);
+        }} disabled={isBusy} messageId={item.id} isMe={isMe}>
       <View style={isMe ? styles.myRow : styles.theirRow}>
         {!isMe && (
           <Text style={[styles.senderLabel, { color: colors.mutedForeground }]}>
@@ -233,19 +253,13 @@ export default function ChatThreadScreen() {
             ? [styles.myMessage, { backgroundColor: colors.primary }]
             : [styles.theirMessage, { backgroundColor: colors.card, borderColor: colors.border }]
         ]}>
-          {item.mediaUrl ? (
-            isVideo ? (
-              <VideoBubble uri={item.mediaUrl} isMe={isMe} colors={colors} />
-            ) : (
-              <Pressable accessibilityRole="button" accessibilityLabel="View full photo" onPress={() => setPreviewUri(getImageUrl(item.mediaUrl!))}>
-                <Image
-                  source={{ uri: getImageUrl(item.mediaUrl) }}
-                  style={{ width: MEDIA_WIDTH, aspectRatio: 1, borderRadius: 8 }}
-                  contentFit="cover"
-                />
-              </Pressable>
-            )
-          ) : null}
+          {(item.replyPreview || item.productPreview) && <View style={{ marginBottom: 8 }}>
+            <MessageQuote reply={item.replyPreview} product={item.productPreview} userId={userId} />
+          </View>}
+          {item.mediaUrl && <ChatMedia mediaUrl={item.mediaUrl} messageId={item.id}
+            color={isMe ? colors.primaryForeground : colors.foreground} onViewPhoto={uri => {
+              if (lastPhotoSwipe.current.id !== item.id || Date.now() >= lastPhotoSwipe.current.until) setPreviewUri(uri);
+            }} />}
           {item.body ? (
             <View style={item.mediaUrl ? { marginTop: 6 } : undefined}>
               <CopyableMessage body={item.body} color={isMe ? colors.primaryForeground : colors.foreground} />
@@ -253,6 +267,7 @@ export default function ChatThreadScreen() {
           ) : null}
         </View>
       </View>
+      </SwipeReply>
     );
   };
 
@@ -273,12 +288,25 @@ export default function ChatThreadScreen() {
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
       />
+      {(replyTo || productContextId) && <View style={{ paddingHorizontal: 12, paddingTop: 8, backgroundColor: colors.card }}>
+        {replyTo
+          ? <MessageQuote reply={{ ...replyTo, mediaUrl: replyTo.mediaUrl ?? null }} userId={userId} onDismiss={clearContext} disabled={isBusy} />
+          : productReady && contextProduct
+            ? <MessageQuote product={{ id: contextProduct.id, name: contextProduct.name, price: contextProduct.price,
+                imageUrl: contextProduct.imageUrls?.[0] ?? contextProduct.imageUrl ?? null }}
+                userId={userId} onDismiss={clearContext} disabled={isBusy} />
+            : <View style={{ gap: 8, padding: 8 }}>
+              <Text style={{ color: colors.foreground }}>{productWrongStore ? 'This product belongs to another store. Remove it to continue.' : productError ? 'Could not load the product preview.' : 'Loading product preview…'}</Text>
+              {productError && <Pressable onPress={() => retryProduct()}><Text style={{ color: colors.primary }}>Retry product preview</Text></Pressable>}
+              <Pressable onPress={clearContext} accessibilityLabel="Cancel reply"><Text style={{ color: colors.primary }}>Remove product</Text></Pressable>
+            </View>}
+      </View>}
       <View style={[styles.inputContainer, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
         {/* + media button */}
         <Pressable
           style={[styles.mediaButton, { backgroundColor: colors.muted }]}
           onPress={handlePickMedia}
-          disabled={isBusy}
+          disabled={isBusy || !productReady}
           testID="chat-media-button"
         >
           {uploading
@@ -300,7 +328,7 @@ export default function ChatThreadScreen() {
         <Pressable
           style={[styles.sendButton, { backgroundColor: message.trim() ? colors.primary : colors.muted }]}
           onPress={handleSend}
-          disabled={!message.trim() || isBusy}
+          disabled={!message.trim() || isBusy || !productReady}
           testID="chat-send-button"
         >
           <Feather name="send" size={20} color={message.trim() ? colors.primaryForeground : colors.mutedForeground} />

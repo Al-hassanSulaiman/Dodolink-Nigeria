@@ -45,7 +45,11 @@ import type {
   DeleteMyAccount202,
   DeleteMyAccountBody,
   ErrorResponse,
+  GetHomeProductsParams,
+  GetHomeStoresParams,
   HealthStatus,
+  HomeProductsPage,
+  HomeStoresPage,
   ListConversationsParams,
   ListProductsParams,
   ListStoresParams,
@@ -71,6 +75,7 @@ import type {
   StartConversationBody,
   Store,
   StoreDetail,
+  StoreFollowStatus,
   StoreRejectInput,
   StoreStats,
   SubscriptionCheckout,
@@ -111,6 +116,435 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetStoreFollowUrl = (storeId: number,) => {
+
+
+
+
+  return `/api/stores/${storeId}/follow`
+}
+
+export const getStoreFollow = async (storeId: number, options?: RequestInit): Promise<StoreFollowStatus> => {
+
+  return customFetch<StoreFollowStatus>(getGetStoreFollowUrl(storeId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetStoreFollowQueryKey = (storeId: number,) => {
+    return [
+    `/api/stores/${storeId}/follow`
+    ] as const;
+    }
+
+
+export const getGetStoreFollowQueryOptions = <TData = Awaited<ReturnType<typeof getStoreFollow>>, TError = ErrorType<unknown>>(storeId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getStoreFollow>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetStoreFollowQueryKey(storeId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getStoreFollow>>> = ({ signal }) => getStoreFollow(storeId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: storeId !== null && storeId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getStoreFollow>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetStoreFollowQueryResult = NonNullable<Awaited<ReturnType<typeof getStoreFollow>>>
+export type GetStoreFollowQueryError = ErrorType<unknown>
+
+
+export function useGetStoreFollow<TData = Awaited<ReturnType<typeof getStoreFollow>>, TError = ErrorType<unknown>>(
+ storeId: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getStoreFollow>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getStoreFollow>>,
+          TError,
+          Awaited<ReturnType<typeof getStoreFollow>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetStoreFollow<TData = Awaited<ReturnType<typeof getStoreFollow>>, TError = ErrorType<unknown>>(
+ storeId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getStoreFollow>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getStoreFollow>>,
+          TError,
+          Awaited<ReturnType<typeof getStoreFollow>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetStoreFollow<TData = Awaited<ReturnType<typeof getStoreFollow>>, TError = ErrorType<unknown>>(
+ storeId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getStoreFollow>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetStoreFollow<TData = Awaited<ReturnType<typeof getStoreFollow>>, TError = ErrorType<unknown>>(
+ storeId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getStoreFollow>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetStoreFollowQueryOptions(storeId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getFollowStoreUrl = (storeId: number,) => {
+
+
+
+
+  return `/api/stores/${storeId}/follow`
+}
+
+export const followStore = async (storeId: number, options?: RequestInit): Promise<StoreFollowStatus> => {
+
+  return customFetch<StoreFollowStatus>(getFollowStoreUrl(storeId),
+  {
+    ...options,
+    method: 'PUT'
+
+
+  }
+);}
+
+
+
+
+
+export const getFollowStoreMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof followStore>>, TError,{storeId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof followStore>>, TError,{storeId: number}, TContext> => {
+
+const mutationKey = ['followStore'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof followStore>>, {storeId: number}> = (props) => {
+          const {storeId} = props ?? {};
+
+          return  followStore(storeId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type FollowStoreMutationResult = NonNullable<Awaited<ReturnType<typeof followStore>>>
+
+    export type FollowStoreMutationError = ErrorType<unknown>
+
+    export const useFollowStore = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof followStore>>, TError,{storeId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof followStore>>,
+        TError,
+        {storeId: number},
+        TContext
+      > => {
+      return useMutation(getFollowStoreMutationOptions(options), queryClient);
+    }
+
+export const getUnfollowStoreUrl = (storeId: number,) => {
+
+
+
+
+  return `/api/stores/${storeId}/follow`
+}
+
+export const unfollowStore = async (storeId: number, options?: RequestInit): Promise<StoreFollowStatus> => {
+
+  return customFetch<StoreFollowStatus>(getUnfollowStoreUrl(storeId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getUnfollowStoreMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unfollowStore>>, TError,{storeId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof unfollowStore>>, TError,{storeId: number}, TContext> => {
+
+const mutationKey = ['unfollowStore'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unfollowStore>>, {storeId: number}> = (props) => {
+          const {storeId} = props ?? {};
+
+          return  unfollowStore(storeId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnfollowStoreMutationResult = NonNullable<Awaited<ReturnType<typeof unfollowStore>>>
+
+    export type UnfollowStoreMutationError = ErrorType<unknown>
+
+    export const useUnfollowStore = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unfollowStore>>, TError,{storeId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof unfollowStore>>,
+        TError,
+        {storeId: number},
+        TContext
+      > => {
+      return useMutation(getUnfollowStoreMutationOptions(options), queryClient);
+    }
+
+export const getGetHomeStoresUrl = (params?: GetHomeStoresParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/home/stores?${stringifiedParams}` : `/api/home/stores`
+}
+
+export const getHomeStores = async (params?: GetHomeStoresParams, options?: RequestInit): Promise<HomeStoresPage> => {
+
+  return customFetch<HomeStoresPage>(getGetHomeStoresUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetHomeStoresQueryKey = (params?: GetHomeStoresParams,) => {
+    return [
+    `/api/home/stores`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetHomeStoresQueryOptions = <TData = Awaited<ReturnType<typeof getHomeStores>>, TError = ErrorType<unknown>>(params?: GetHomeStoresParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHomeStores>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHomeStoresQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHomeStores>>> = ({ signal }) => getHomeStores(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHomeStores>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetHomeStoresQueryResult = NonNullable<Awaited<ReturnType<typeof getHomeStores>>>
+export type GetHomeStoresQueryError = ErrorType<unknown>
+
+
+export function useGetHomeStores<TData = Awaited<ReturnType<typeof getHomeStores>>, TError = ErrorType<unknown>>(
+ params: undefined |  GetHomeStoresParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHomeStores>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getHomeStores>>,
+          TError,
+          Awaited<ReturnType<typeof getHomeStores>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetHomeStores<TData = Awaited<ReturnType<typeof getHomeStores>>, TError = ErrorType<unknown>>(
+ params?: GetHomeStoresParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHomeStores>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getHomeStores>>,
+          TError,
+          Awaited<ReturnType<typeof getHomeStores>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetHomeStores<TData = Awaited<ReturnType<typeof getHomeStores>>, TError = ErrorType<unknown>>(
+ params?: GetHomeStoresParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHomeStores>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetHomeStores<TData = Awaited<ReturnType<typeof getHomeStores>>, TError = ErrorType<unknown>>(
+ params?: GetHomeStoresParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHomeStores>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetHomeStoresQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetHomeProductsUrl = (params?: GetHomeProductsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/home/products?${stringifiedParams}` : `/api/home/products`
+}
+
+export const getHomeProducts = async (params?: GetHomeProductsParams, options?: RequestInit): Promise<HomeProductsPage> => {
+
+  return customFetch<HomeProductsPage>(getGetHomeProductsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetHomeProductsQueryKey = (params?: GetHomeProductsParams,) => {
+    return [
+    `/api/home/products`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetHomeProductsQueryOptions = <TData = Awaited<ReturnType<typeof getHomeProducts>>, TError = ErrorType<unknown>>(params?: GetHomeProductsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHomeProducts>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHomeProductsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHomeProducts>>> = ({ signal }) => getHomeProducts(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHomeProducts>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetHomeProductsQueryResult = NonNullable<Awaited<ReturnType<typeof getHomeProducts>>>
+export type GetHomeProductsQueryError = ErrorType<unknown>
+
+
+export function useGetHomeProducts<TData = Awaited<ReturnType<typeof getHomeProducts>>, TError = ErrorType<unknown>>(
+ params: undefined |  GetHomeProductsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHomeProducts>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getHomeProducts>>,
+          TError,
+          Awaited<ReturnType<typeof getHomeProducts>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetHomeProducts<TData = Awaited<ReturnType<typeof getHomeProducts>>, TError = ErrorType<unknown>>(
+ params?: GetHomeProductsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHomeProducts>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getHomeProducts>>,
+          TError,
+          Awaited<ReturnType<typeof getHomeProducts>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetHomeProducts<TData = Awaited<ReturnType<typeof getHomeProducts>>, TError = ErrorType<unknown>>(
+ params?: GetHomeProductsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHomeProducts>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetHomeProducts<TData = Awaited<ReturnType<typeof getHomeProducts>>, TError = ErrorType<unknown>>(
+ params?: GetHomeProductsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHomeProducts>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetHomeProductsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getDeleteMyAccountUrl = () => {
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet, View, Text, ScrollView, RefreshControl, Image, Pressable } from 'react-native';
 import { confirmAlert, showAlert } from '@/utils/alerts';
 import { useAuth } from '@clerk/expo';
@@ -15,7 +15,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { Button } from '@/components/ui';
 import { StoreAvatar } from '@/components/StoreAvatar';
 import { Feather } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { getImageUrl } from '@/utils/storage';
 import { useQueryClient } from '@tanstack/react-query';
 import { RequireAccount } from '@/components/RequireAccount';
@@ -48,10 +48,16 @@ export default function MyStoreScreen() {
 
   const myStore = stores?.find(s => s.ownerUserId === userId);
 
-  const { data: products, isLoading: productsLoading, refetch: refetchProducts } = useListStoreProducts(
+  const { data: products, isLoading: productsLoading, isError: productsError, refetch: refetchProducts } = useListStoreProducts(
     myStore?.id ?? 0,
     { query: { enabled: !!myStore?.id, queryKey: getListStoreProductsQueryKey(myStore?.id ?? 0) } }
   );
+
+  // Tabs stay mounted: returning from Add/Edit isn't a browser window-focus event.
+  useFocusEffect(useCallback(() => {
+    if (userId) void refetch({ cancelRefetch: false });
+    if (myStore?.id) void refetchProducts({ cancelRefetch: false });
+  }, [userId, myStore?.id, refetch, refetchProducts]));
 
   const deleteProduct = useDeleteProduct({
     mutation: {
@@ -209,6 +215,11 @@ export default function MyStoreScreen() {
 
           {productsLoading ? (
             <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>Loading products…</Text>
+          ) : productsError && !products ? (
+            <View style={{ padding: 16, gap: 12 }}>
+              <Text style={{ color: colors.foreground }}>Couldn't load your products. Please try again.</Text>
+              <Button title="Retry products" onPress={() => refetchProducts()} />
+            </View>
           ) : !products || products.length === 0 ? (
             <EmptyState
               icon="box"

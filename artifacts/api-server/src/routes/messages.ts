@@ -10,6 +10,7 @@ import { rateLimit } from "../lib/rateLimit";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 import { validateStoredMedia } from "../lib/mediaLimits";
 import { clerkClient } from "@clerk/express";
+import { resolveMessageContext } from "../lib/messageContext";
 
 const router: IRouter = Router();
 const objectStorage = new ObjectStorageService();
@@ -195,14 +196,20 @@ router.get("/conversations/:conversationId/messages", async (req, res): Promise<
   if (!conv) { res.status(404).json({ error: "Conversation not found" }); return; }
   if (!allowed) { res.status(403).json({ error: "You are not a participant in this conversation" }); return; }
 
-  const msgs = await db.select().from(messagesTable).where(eq(messagesTable.conversationId, conversationId));
+  const msgs = await db.select().from(messagesTable).where(eq(messagesTable.conversationId, conversationId))
+    .orderBy(messagesTable.createdAt, messagesTable.id);
   const names = await ownedStoreNames([conv.customerId]);
   const [store] = await db.select({ name: storesTable.name }).from(storesTable).where(eq(storesTable.id, conv.storeId));
+  const displayName = (senderId: string, fallback: string) => senderId === conv.customerId
+    ? names.get(conv.customerId) ?? fallback
+    : store?.name ?? fallback;
   res.json(msgs.map(message => ({
     ...message,
-    senderName: message.senderId === conv.customerId
-      ? names.get(conv.customerId) ?? message.senderName
-      : store?.name ?? message.senderName,
+    senderName: displayName(message.senderId, message.senderName),
+    replyPreview: message.replyPreview ? {
+      ...message.replyPreview,
+      senderName: displayName(message.replyPreview.senderId, message.replyPreview.senderName),
+    } : null,
   })));
 });
 
@@ -225,6 +232,9 @@ router.post("/conversations/:conversationId/messages", sendMessageLimit, async (
   const { conv: conversation, allowed } = await loadConversationIfParticipant(conversationId, authUserId);
   if (!conversation) { res.status(404).json({ error: "Conversation not found" }); return; }
   if (!allowed) { res.status(403).json({ error: "You are not a participant in this conversation" }); return; }
+
+  const context = await resolveMessageContext(conversationId, conversation.storeId, parsed.data);
+  if (!context.ok) { res.status(400).json({ error: context.error }); return; }
 
   // Verify attached media against the real uploaded object (type + size),
   // since presigned upload URLs can't enforce these constraints themselves.
@@ -275,12 +285,24 @@ router.post("/conversations/:conversationId/messages", sendMessageLimit, async (
     resolvedSenderName = store?.name ?? parsed.data.senderName;
   }
 
+  if (context.values.replyPreview) {
+    const reply = context.values.replyPreview;
+    if (reply.senderId === authUserId) reply.senderName = resolvedSenderName;
+    else if (reply.senderId === conversation.customerId) {
+      reply.senderName = (await ownedStoreNames([conversation.customerId])).get(conversation.customerId) ?? reply.senderName;
+    } else {
+      const [store] = await db.select({ name: storesTable.name }).from(storesTable).where(eq(storesTable.id, conversation.storeId));
+      reply.senderName = store?.name ?? reply.senderName;
+    }
+  }
+
   const [msg] = await db.insert(messagesTable).values({
     conversationId,
     senderId: authUserId,
     senderName: resolvedSenderName,
     senderType: senderIsCustomer ? "customer" : "retailer",
     body: parsed.data.body,
+    ...context.values,
     ...(parsed.data.mediaUrl ? { mediaUrl: parsed.data.mediaUrl } : {}),
   }).returning();
 

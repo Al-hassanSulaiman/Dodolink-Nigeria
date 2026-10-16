@@ -26,6 +26,67 @@ tags:
     description: Admin-only operations
 
 paths:
+  /stores/{storeId}/follow:
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema: { type: integer }
+    get:
+      operationId: getStoreFollow
+      tags: [stores]
+      responses:
+        '200':
+          description: Follower count and current user's status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StoreFollowStatus' }
+    put:
+      operationId: followStore
+      tags: [stores]
+      responses:
+        '200':
+          description: Followed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StoreFollowStatus' }
+    delete:
+      operationId: unfollowStore
+      tags: [stores]
+      responses:
+        '200':
+          description: Unfollowed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StoreFollowStatus' }
+  /home/stores:
+    get:
+      operationId: getHomeStores
+      tags: [stores]
+      parameters:
+        - { name: seed, in: query, schema: { type: string } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 40 } }
+      responses:
+        '200':
+          description: Paginated followed stores and discovery recommendations
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HomeStoresPage' }
+  /home/products:
+    get:
+      operationId: getHomeProducts
+      tags: [products]
+      parameters:
+        - { name: seed, in: query, schema: { type: string } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 40 } }
+      responses:
+        '200':
+          description: Paginated followed-store products with some discovery
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HomeProductsPage' }
   /account:
     delete:
       operationId: deleteMyAccount
@@ -1436,6 +1497,43 @@ paths:
           description: Admin access required
 components:
   schemas:
+    StoreFollowStatus:
+      type: object
+      required: [storeId, followerCount, isFollowing]
+      properties:
+        storeId: { type: integer }
+        followerCount: { type: integer }
+        isFollowing: { type: boolean }
+    HomeStore:
+      type: object
+      required: [id, name, imageUrl, followerCount, isFollowing]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        imageUrl: { type: [string, "null"] }
+        followerCount: { type: integer }
+        isFollowing: { type: boolean }
+    HomeProduct:
+      allOf:
+        - $ref: '#/components/schemas/Product'
+        - type: object
+          required: [isFollowing, followerCount, storeImageUrl]
+          properties:
+            isFollowing: { type: boolean }
+            followerCount: { type: integer }
+            storeImageUrl: { type: [string, "null"] }
+    HomeStoresPage:
+      type: object
+      required: [items, nextOffset]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/HomeStore' } }
+        nextOffset: { type: [integer, "null"] }
+    HomeProductsPage:
+      type: object
+      required: [items, nextOffset]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/HomeProduct' } }
+        nextOffset: { type: [integer, "null"] }
     PortfolioSectionTimes:
       type: object
       properties:
@@ -2015,6 +2113,34 @@ components:
           format: date-time
       required: [id, customerId, customerName, storeId, storeName, unreadCount, createdAt]
 
+    MessageReplyPreview:
+      type: object
+      properties:
+        id:
+          type: integer
+        senderId:
+          type: string
+        senderName:
+          type: string
+        body:
+          type: string
+        mediaUrl:
+          type: [string, "null"]
+      required: [id, senderId, senderName, body, mediaUrl]
+
+    MessageProductPreview:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        price:
+          type: number
+        imageUrl:
+          type: [string, "null"]
+      required: [id, name, price, imageUrl]
+
     Message:
       type: object
       properties:
@@ -2034,6 +2160,18 @@ components:
         mediaUrl:
           type: string
           nullable: true
+        replyToMessageId:
+          type: [integer, "null"]
+        replyPreview:
+          anyOf:
+            - $ref: '#/components/schemas/MessageReplyPreview'
+            - type: "null"
+        productId:
+          type: [integer, "null"]
+        productPreview:
+          anyOf:
+            - $ref: '#/components/schemas/MessageProductPreview'
+            - type: "null"
         createdAt:
           type: string
           format: date-time
@@ -2054,6 +2192,14 @@ components:
         mediaUrl:
           type: string
           nullable: true
+        replyToMessageId:
+          type: [integer, "null"]
+          minimum: 1
+          maximum: 2147483647
+        productId:
+          type: [integer, "null"]
+          minimum: 1
+          maximum: 2147483647
       required: [senderId, senderName, senderType, body]
 
     StartConversationBody:

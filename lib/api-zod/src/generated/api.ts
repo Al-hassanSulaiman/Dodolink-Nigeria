@@ -7,6 +7,97 @@
  */
 import * as zod from 'zod';
 
+export const GetStoreFollowParams = zod.object({
+  "storeId": zod.coerce.number()
+})
+
+export const GetStoreFollowResponse = zod.object({
+  "storeId": zod.number(),
+  "followerCount": zod.number(),
+  "isFollowing": zod.boolean()
+})
+
+
+export const FollowStoreParams = zod.object({
+  "storeId": zod.coerce.number()
+})
+
+export const FollowStoreResponse = zod.object({
+  "storeId": zod.number(),
+  "followerCount": zod.number(),
+  "isFollowing": zod.boolean()
+})
+
+
+export const UnfollowStoreParams = zod.object({
+  "storeId": zod.coerce.number()
+})
+
+export const UnfollowStoreResponse = zod.object({
+  "storeId": zod.number(),
+  "followerCount": zod.number(),
+  "isFollowing": zod.boolean()
+})
+
+
+export const getHomeStoresQueryOffsetMin = 0;
+
+export const getHomeStoresQueryLimitMax = 40;
+
+
+
+export const GetHomeStoresQueryParams = zod.object({
+  "seed": zod.coerce.string().optional(),
+  "offset": zod.coerce.number().min(getHomeStoresQueryOffsetMin).optional(),
+  "limit": zod.coerce.number().min(1).max(getHomeStoresQueryLimitMax).optional()
+})
+
+export const GetHomeStoresResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "imageUrl": zod.string().nullable(),
+  "followerCount": zod.number(),
+  "isFollowing": zod.boolean()
+})),
+  "nextOffset": zod.number().nullable()
+})
+
+
+export const getHomeProductsQueryOffsetMin = 0;
+
+export const getHomeProductsQueryLimitMax = 40;
+
+
+
+export const GetHomeProductsQueryParams = zod.object({
+  "seed": zod.coerce.string().optional(),
+  "offset": zod.coerce.number().min(getHomeProductsQueryOffsetMin).optional(),
+  "limit": zod.coerce.number().min(1).max(getHomeProductsQueryLimitMax).optional()
+})
+
+export const GetHomeProductsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "storeId": zod.number(),
+  "storeName": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "price": zod.number(),
+  "category": zod.string(),
+  "imageUrl": zod.string().nullish(),
+  "imageUrls": zod.array(zod.string()).describe('Up to 5 product images. First image is the thumbnail.'),
+  "inStock": zod.boolean(),
+  "createdAt": zod.coerce.date()
+}).and(zod.object({
+  "isFollowing": zod.boolean(),
+  "followerCount": zod.number(),
+  "storeImageUrl": zod.string().nullable()
+}))),
+  "nextOffset": zod.number().nullable()
+})
+
+
 /**
  * @summary Permanently delete the authenticated account and associated data
  */
@@ -525,6 +616,21 @@ export const ListMessagesResponseItem = zod.object({
   "senderType": zod.enum(['customer', 'retailer']),
   "body": zod.string(),
   "mediaUrl": zod.string().nullish(),
+  "replyToMessageId": zod.number().nullish(),
+  "replyPreview": zod.union([zod.object({
+  "id": zod.number(),
+  "senderId": zod.string(),
+  "senderName": zod.string(),
+  "body": zod.string(),
+  "mediaUrl": zod.string().nullable()
+}),zod.null()]).optional(),
+  "productId": zod.number().nullish(),
+  "productPreview": zod.union([zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "price": zod.number(),
+  "imageUrl": zod.string().nullable()
+}),zod.null()]).optional(),
   "createdAt": zod.coerce.date()
 })
 export const ListMessagesResponse = zod.array(ListMessagesResponseItem)
@@ -537,12 +643,20 @@ export const SendMessageParams = zod.object({
   "conversationId": zod.coerce.number()
 })
 
+export const sendMessageBodyReplyToMessageIdMax = 2147483647;
+
+export const sendMessageBodyProductIdMax = 2147483647;
+
+
+
 export const SendMessageBody = zod.object({
   "senderId": zod.string(),
   "senderName": zod.string(),
   "senderType": zod.enum(['customer', 'retailer']),
   "body": zod.string(),
-  "mediaUrl": zod.string().nullish()
+  "mediaUrl": zod.string().nullish(),
+  "replyToMessageId": zod.number().min(1).max(sendMessageBodyReplyToMessageIdMax).nullish(),
+  "productId": zod.number().min(1).max(sendMessageBodyProductIdMax).nullish()
 })
 
 export const SendMessageResponse = zod.object({
@@ -553,6 +667,21 @@ export const SendMessageResponse = zod.object({
   "senderType": zod.enum(['customer', 'retailer']),
   "body": zod.string(),
   "mediaUrl": zod.string().nullish(),
+  "replyToMessageId": zod.number().nullish(),
+  "replyPreview": zod.union([zod.object({
+  "id": zod.number(),
+  "senderId": zod.string(),
+  "senderName": zod.string(),
+  "body": zod.string(),
+  "mediaUrl": zod.string().nullable()
+}),zod.null()]).optional(),
+  "productId": zod.number().nullish(),
+  "productPreview": zod.union([zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "price": zod.number(),
+  "imageUrl": zod.string().nullable()
+}),zod.null()]).optional(),
   "createdAt": zod.coerce.date()
 })
 

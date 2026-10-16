@@ -25,6 +25,8 @@ import { StarRating } from '@/components/StarRating';
 import { EmptyState } from '@/components/EmptyState';
 import { Feather } from '@expo/vector-icons';
 import { Input, Button } from '@/components/ui';
+import { FollowButton } from '@/components/FollowButton';
+import { useStoreFollowStatus } from '@/hooks/useHomeFeed';
 import { useQueryClient } from '@tanstack/react-query';
 
 export default function StoreScreen() {
@@ -57,6 +59,8 @@ export default function StoreScreen() {
   const { data: reviews } = useListStoreReviews(storeId, {
     query: { enabled: !!storeId, queryKey: getListStoreReviewsQueryKey(storeId) }
   });
+
+  const followStatus = useStoreFollowStatus(storeId);
 
   const createReview = useCreateReview({
     mutation: {
@@ -160,7 +164,7 @@ export default function StoreScreen() {
     }});
   };
 
-  const onRefresh = () => { refetchStore(); };
+  const onRefresh = () => { refetchStore(); followStatus.refetch(); };
 
   if (storeLoading && !store) return <LoadingScreen message="Loading store..." />;
   if (storeError && !store) return (
@@ -262,6 +266,25 @@ export default function StoreScreen() {
             )}
           </View>
         </View>
+
+        {!isEditing && (
+          <View style={styles.section}>
+            {followStatus.data ? (
+              <FollowButton
+                storeId={storeId}
+                isFollowing={followStatus.data.isFollowing}
+                followerCount={followStatus.data.followerCount}
+                isOwner={isOwner}
+                returnTo={`/store/${storeId}`}
+                showCount
+              />
+            ) : followStatus.isError ? (
+              <Pressable onPress={() => followStatus.refetch()} accessibilityRole="button">
+                <Text style={{ color: colors.destructive, fontFamily: 'Inter_500Medium', fontSize: 13 }}>Couldn't load followers. Tap to retry.</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        )}
 
         {!isOwner && !isEditing && (
           <View style={styles.section}>
