@@ -18,6 +18,17 @@ JOBS = ("daily", "retention", "deletions")
 LABELS = ("dodolink-build-order", "dodolink-build-id", "dodolink-commit")
 TERMINAL = {"SUCCESS", "FAILURE", "INTERNAL_ERROR", "TIMEOUT", "CANCELLED", "EXPIRED"}
 
+def deployable_path(path):
+    """Keep aligned with the production trigger's include/ignore filters."""
+    if path.endswith((".md", ".pyc")) or "__pycache__" in path.split("/"):
+        return False
+    return (
+        path.startswith(("artifacts/api-server/", "artifacts/admin-dashboard/",
+                         "artifacts/dodolink-ng/", "lib/", "infra/gcp/"))
+        or path in {"package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".npmrc"}
+        or re.fullmatch(r"tsconfig[^/]*\.json", path) is not None
+    )
+
 
 class Cloud:
     def __init__(self, project, region):
@@ -58,7 +69,7 @@ class Cloud:
             "run", kind, "describe", name, "--region", self.region, "--format=json"
         ))
 
-    def main_head(self):
+    def source_is_current(self, commit):
         repository = (f"projects/{self.project}/locations/{self.region}/connections/"
                       "dodolink-github/repositories/dodolink-nigeria")
         credential = self.request(
@@ -66,14 +77,27 @@ class Cloud:
             "POST", {},
         )
         # Short-lived, read-only GitHub credential stays in worker memory.
-        request = urllib.request.Request(
-            "https://api.github.com/repos/Al-hassanSulaiman/Dodolink-Nigeria/git/ref/heads/main",
-            headers={"Authorization": "Bearer " + credential["token"],
-                     "Accept": "application/vnd.github+json",
-                     "User-Agent": "DodoLink-Cloud-Build"},
-        )
-        with urllib.request.urlopen(request, timeout=30) as response:
-            return json.load(response)["object"]["sha"]
+        base = "https://api.github.com/repos/Al-hassanSulaiman/Dodolink-Nigeria"
+        headers = {"Authorization": "Bearer " + credential["token"],
+                   "Accept": "application/vnd.github+json",
+                   "User-Agent": "DodoLink-Cloud-Build"}
+
+        def github(path):
+            request = urllib.request.Request(base + path, headers=headers)
+            with urllib.request.urlopen(request, timeout=30) as response:
+                return json.load(response)
+
+        head = github("/git/ref/heads/main")["object"]["sha"]
+        if head == commit:
+            return True
+        comparison = github("/compare/" + commit + "..." + head)
+        files = comparison.get("files", [])
+        # Documentation/unrelated-product pushes intentionally do not start a
+        # replacement build. They must not prevent this valid build shipping.
+        # GitHub caps comparison files at 300; fail closed at that boundary.
+        return (comparison.get("status") == "ahead" and len(files) < 300
+                and not any(deployable_path(file[key]) for file in files
+                            for key in ("filename", "previous_filename") if key in file))
 
     def update(self, kind, name, image, labels):
         args = ["run", kind, "update", name, "--region", self.region, "--image", image]
@@ -194,8 +218,8 @@ def deploy(cloud, lock, image, build_id, commit):
     labels = dict(zip(LABELS, (order, build_id, commit)))
     lock.acquire()
     try:
-        if cloud.main_head() != commit:
-            print("GitHub main has advanced; skipping this outdated source commit.")
+        if not cloud.source_is_current(commit):
+            print("Deployable source on main has advanced; skipping this outdated commit.")
             return
         service = cloud.describe("services", "dodolink")
         previous_labels = service["metadata"].get("labels", {})

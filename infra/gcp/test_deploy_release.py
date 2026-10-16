@@ -1,5 +1,6 @@
 """Offline release-safety checks; never invoke gcloud or public endpoints."""
 import importlib.util
+import json
 import pathlib
 import unittest
 import urllib.error
@@ -30,7 +31,7 @@ class ReleaseTests(unittest.TestCase):
     def setUp(self):
         self.cloud, self.lock = Mock(), Mock()
         self.cloud.build.return_value = {"createTime": "2026-10-16T04:00:00Z"}
-        self.cloud.main_head.return_value = COMMIT
+        self.cloud.source_is_current.return_value = True
         self.cloud.describe.side_effect = lambda kind, _: resource(kind)
 
     def run_release(self):
@@ -54,7 +55,7 @@ class ReleaseTests(unittest.TestCase):
         self.lock.release.assert_called_once()
 
     def test_delayed_push_for_an_old_commit_cannot_deploy(self):
-        self.cloud.main_head.return_value = "c" * 40
+        self.cloud.source_is_current.return_value = False
         self.run_release()
         self.cloud.describe.assert_not_called()
         self.cloud.update.assert_not_called()
@@ -140,6 +141,37 @@ class LockTests(unittest.TestCase):
             release.ReleaseLock(cloud, "bucket", BUILD).acquire()
         self.assertFalse(any(call.args[1:2] == ("DELETE",)
                              for call in cloud.request.call_args_list))
+
+class SourceTests(unittest.TestCase):
+    def compare(self, files, status="ahead"):
+        cloud = release.Cloud("project", "africa-south1")
+        with patch.object(cloud, "request", return_value={"token": "test"}), \
+                patch.object(release.urllib.request, "urlopen") as http:
+            http.return_value.__enter__.return_value.read.side_effect = [
+                json.dumps({"object": {"sha": "c" * 40}}).encode(),
+                json.dumps({"status": status, "files": files}).encode(),
+            ]
+            return cloud.source_is_current(COMMIT)
+
+    def test_ignored_push_does_not_strand_a_valid_pending_build(self):
+        self.assertTrue(self.compare([{"filename": "infra/gcp/README.md"},
+                                      {"filename": "artifacts/portfolio/src/App.tsx"}]))
+
+    def test_renaming_source_out_of_the_app_is_still_a_code_change(self):
+        self.assertFalse(self.compare([{"filename": "old-copy.js",
+                                        "previous_filename": "artifacts/api-server/src/app.ts"}]))
+
+    def test_truncated_or_diverged_comparison_fails_closed(self):
+        self.assertFalse(self.compare([{"filename": "README.md"}] * 300))
+        self.assertFalse(self.compare([], status="diverged"))
+
+    def test_deployment_filter(self):
+        for path in ("lib/db/src/index.ts", "infra/gcp/deploy-release.py",
+                     "pnpm-lock.yaml", "tsconfig.base.json"):
+            self.assertTrue(release.deployable_path(path), path)
+        for path in ("replit.md", "infra/gcp/__pycache__/example.pyc",
+                     "artifacts/dodolink-promo/src/App.tsx"):
+            self.assertFalse(release.deployable_path(path), path)
 
 
 if __name__ == "__main__":

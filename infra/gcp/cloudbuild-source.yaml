@@ -1,11 +1,30 @@
 # This file builds from a clean GitHub checkout. Never use cloudbuild-api.yaml
 # as a repository trigger: that older file expects a pre-generated context.
 steps:
+  - id: disposable-test-database
+    name: gcr.io/cloud-builders/docker
+    args:
+      - run
+      - --detach
+      - --network
+      - cloudbuild
+      - --name
+      - ci-postgres
+      - --env
+      - POSTGRES_USER=ci
+      - --env
+      - POSTGRES_PASSWORD=ci
+      - --env
+      - POSTGRES_DB=dodolink_ci
+      - postgres:18-bookworm
   - id: test-and-compile
     name: node:22-bookworm
     entrypoint: bash
     args: [infra/gcp/build-source.sh]
-    env: [CI=1, EXPO_NO_DOTENV=1]
+    env:
+      - CI=1
+      - EXPO_NO_DOTENV=1
+      - CI_DATABASE_URL=postgresql://ci:ci@ci-postgres:5432/dodolink_ci
     secretEnv: [DODOLINK_CLERK_PRODUCTION_PUBLISHABLE_KEY]
   - id: build-image
     name: gcr.io/cloud-builders/docker

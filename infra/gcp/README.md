@@ -213,11 +213,14 @@ The production push trigger uses `infra/gcp/cloudbuild-source.yaml`.
 must not be substituted for the source pipeline. The source pipeline:
 
 1. Installs pnpm 10.14.0 and frozen dependencies in a clean Node 22 worker.
-2. Runs offline release safety tests, API tests, and library/API/admin typechecks.
+2. Starts disposable worker-local PostgreSQL 18, sets up its test schema, and
+   runs offline release safety tests, all API tests, and library/API/admin
+   typechecks. This database has no production data or Cloud SQL connection.
 3. Builds the API, customer Expo web export, and admin frontend.
 4. Generates the allowlisted, credential-free runtime context and pushes an image.
 5. Resolves its immutable digest; locks production releases using conditional
-   Cloud Storage generations; skips outdated commits/builds.
+   Cloud Storage generations; skips outdated commits/builds. Ignored
+   documentation/unrelated-product pushes do not strand valid pending builds.
 6. Saves previous image references and labels in private release history.
 7. Creates a web revision without traffic, updates the three maintenance job
    definitions, promotes the ready web revision, and checks public endpoints.
