@@ -28,8 +28,10 @@ cloud baseline, with no delta to import. There were zero unconsumed subscription
 payment quotes. All 139 media objects verified unchanged, including content/ACL
 metadata; path reconciliation found zero missing/extra objects.
 
-Cloud Run revision `dodolink-00011-c46` is ready and receives 100% of traffic.
-It has `MIGRATION_STAGING=false`, `MIGRATION_ALLOW_AUTH=false`, and
+The hosting cutover completed with Cloud Run revision `dodolink-00011-c46`
+ready and receiving 100% of traffic. Subsequent releases are tracked by Cloud
+Build and the image-only release manifests described below.
+The cutover set `MIGRATION_STAGING=false`, `MIGRATION_ALLOW_AUTH=false`, and
 `BACKGROUND_JOBS_ENABLED=false`. Trusted root customer/admin/health checks pass.
 An unauthenticated store-create request returns 401, not the staging write block;
 no store was created. Startup confirms all web background jobs are disabled,
@@ -196,36 +198,83 @@ and per-store charge serialization protect the handoff and concurrent tasks.
 ## GitHub automatic delivery setup
 
 The user requested direct GitHub → Cloud Build → Cloud Run deployment, without
-Replit in the delivery path. The existing repository is
-`Al-hassanSulaiman/Dodolink-Nigeria`; its default branch is `main`. The remote
-branch does not yet contain the migration source and infrastructure files.
-Synchronize those changes safely before activating any production push trigger.
+Replit in the delivery path. Production source is
+`Al-hassanSulaiman/Dodolink-Nigeria`, branch `main`. This delivery setup includes
+the previously unpushed migration source so an old checkout cannot replace the
+live migrated application. Private data exports and incidental screenshots are
+not included in that synchronization.
 
-Cloud Build host connection `dodolink-github` was created in `africa-south1`.
-It has advanced to GitHub app installation (`PENDING_INSTALL_APP`). A denied
-OAuth callback was traced through audit logs to a browser Google account other
-than the project's existing owner. Use the already-authorized owner in Google's
-account chooser rather than granting new roles to the other account. GitHub
-account selection is separate. No repository link or automatic deployment
-trigger has been activated, and setup has not changed the production image.
+Only commits pushed to `main` start automatic delivery. Saving in an editor or
+creating a local Replit checkpoint does not push code to GitHub. Documentation,
+memory, screenshots, and unrelated portfolio/promo changes do not trigger a
+DodoLink release. Native-only branches do not match the production trigger.
 
-Creating this connection required the Google-managed Cloud Build service agent
-to provision its OAuth secret. Custom role `dodolinkGitHubBootstrap` grants only
-secret creation, metadata/IAM management, and version addition—not project-wide
-secret-value reads. Its project binding has a two-hour expiry. Remove that
-bootstrap binding once installation is complete; retain only scoped access to
-the connection's own OAuth secret.
+Cloud Build host connection `dodolink-github` is `COMPLETE`, with repository
+`dodolink-nigeria` linked in `africa-south1`. The Google-managed service agent's
+temporary project-level secret-provisioning role binding was removed after
+installation. Browser Google identity is separate from GitHub identity; use the
+existing project owner if reconnecting, not a new project-wide role grant.
 
-The existing `cloudbuild-api.yaml` builds an already-prepared, allowlisted image
-context; it is not a complete GitHub source-build pipeline. The new source
-pipeline must install locked dependencies, check/test/build the API and both
-frontends, prepare the credential-free runtime context, push an immutable image,
-and update the service and all three maintenance jobs. Preserve environment,
-identity, ingress, database, storage, and the single-host job controls. Prevent
-overlapping/out-of-order releases and retain a recoverable previous image.
-Never run automatic database pushes or native-store builds as part of a web
-push deployment. Build credentials should not include payment/mail/private
-Clerk secrets; only the frontend's public Clerk key is needed during export.
+The production push trigger uses `infra/gcp/cloudbuild-source.yaml`.
+`cloudbuild-api.yaml` remains the older, pre-generated-context builder and
+must not be substituted for the source pipeline. The source pipeline:
+
+1. Installs pnpm 10.14.0 and frozen dependencies in a clean Node 22 worker.
+2. Starts disposable worker-local PostgreSQL 18, sets up its test schema, and
+   runs offline release safety tests, all API tests, and library/API/admin
+   typechecks. This database has no production data or Cloud SQL connection.
+3. Builds the API, customer Expo web export, and admin frontend.
+4. Generates the allowlisted, credential-free runtime context and pushes an image.
+5. Resolves its immutable digest; locks production releases using conditional
+   Cloud Storage generations; skips outdated commits/builds. Ignored
+   documentation/unrelated-product pushes do not strand valid pending builds.
+6. Saves previous image references and labels in private release history.
+7. Creates a web revision without traffic, updates the three maintenance job
+   definitions, promotes the ready web revision, and checks public endpoints.
+8. Attempts restoration of previous images/labels/traffic if release fails.
+   A failed rollback is reported explicitly and requires operator attention.
+
+The dedicated `dodolink-cicd` identity has image-repository write access,
+source-connection read-token access, access to only the public frontend Clerk
+key, resource-scoped Cloud Run update grants, and permission to attach the
+existing runtime identity. It has no private Clerk/payment/mail secret grants,
+SQL roles, media-bucket grant, or service-account key file. Deployment authority
+can execute code as the runtime identity, so protect write access to `main`.
+
+Build workers and the private CI log/release-history bucket
+`dodolink-cicd-729481009477-afs1` use Johannesburg. The old image-only builder's
+log bucket is not reused by this pipeline. Existing runtime configuration and
+job schedules are preserved; jobs are updated but never manually executed.
+No automatic database push/migration or Android/iOS release is performed.
+Database schema changes require a separate reviewed operation before shipping
+dependent application code.
+
+For build-only validation, manually run the trigger with `_DEPLOY=false`.
+For recovery, inspect `gs://dodolink-cicd-729481009477-afs1/releases/BUILD_ID.json`
+and restore the service and three job images together. Never switch DNS back
+to the retained Replit database as an image rollback. A locked release can be
+reclaimed automatically only when its owner build is terminal, not merely old.
+
+Verified on 2026-10-16 with a real GitHub push:
+
+- Trigger `dodolink-production-main` completed build
+  `bec35b9f-e9a3-4de3-aef2-221dc402f3c1` successfully from source commit
+  `88fdf9652b88ee528c64dddf1840ccb70aa78bd2`.
+- All 22 API test files and 16 release-safety tests passed; library/API/admin
+  typechecks and both frontend exports completed in Google Cloud.
+- Revision `dodolink-00012-kwq` receives 100% of traffic. The service and three
+  job definitions use image digest
+  `sha256:007b104282dcf32101205d7d98e64a56d18dc39e3b9283402b3d0da21f283771`.
+- Independent pre/post template fingerprints confirm all four runtime pod
+  configurations are unchanged apart from their image references. Ingress
+  remains internal/load-balancer-only.
+- Trusted live checks passed for customer HTML, admin HTML, API health, and
+  public store reads. No production migration or manual billing/job execution
+  was used for this verification.
+
+The official CLI container uses its reported bundled interpreter and, when
+necessary, its trusted certifi roots; HTTPS verification is never disabled.
+Developer workspace interpreters and CA paths are not assumed to exist in CI.
 
 ## Foundation
 

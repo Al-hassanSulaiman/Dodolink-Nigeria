@@ -16,6 +16,7 @@ Nigerian marketplace: buyers browse local stores and products, chat with sellers
 - DodoLink customer web, `/admin/`, and API run on Google Cloud in Johannesburg (`africa-south1`), using the existing `dodolink.com.ng` domain. See `infra/gcp/README.md` for infrastructure, verification limits, and recovery instructions.
 - Replit remains the development workspace and retains the old source database/media. Its old published DodoLink runtime is unpublished. Do not republish it or restart its billing jobs as an ordinary release or DNS-only rollback; Google and Replit have separate data copies.
 - Google web containers keep background timers disabled. Separate Cloud Run maintenance jobs own billing, retention, and deletion schedules. Reconcile data/auth before any rollback.
+- Production delivery uses GitHub `Al-hassanSulaiman/Dodolink-Nigeria` → Cloud Build → Cloud Run, independent of Replit. Relevant pushes to `main` use `infra/gcp/cloudbuild-source.yaml`; API/customer/admin and maintenance jobs share one image. Native releases and database migrations are separate, reviewed operations.
 
 ## Stack
 

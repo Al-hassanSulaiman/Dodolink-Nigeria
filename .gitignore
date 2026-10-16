@@ -55,3 +55,5 @@ Thumbs.db
 
 # Private migration exports and generated verification output.
 /generated-artifacts/
+__pycache__/
+*.pyc

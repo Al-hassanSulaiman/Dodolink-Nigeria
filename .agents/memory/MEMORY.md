@@ -16,7 +16,7 @@
 - [EAS Submit credential conflicts](eas-submit-credential-conflicts.md) — Apple upload needs one auth method; cloud submission needs cloud-accessible credentials, not a local key file.
 - [Android Expo FCM setup](android-expo-fcm.md) — expo-notifications needs both Firebase app config and an Expo FCM V1 credential before Android can register or receive remote pushes
 - [EAS monorepo build root](eas-monorepo-build-root.md) — Git builds may ignore the mobile directory; isolated root-app release branches work, and temporary lockfile prep must not bootstrap pnpm.
-- [GitHub connector HTML upload filter](github-connector-html-upload.md) — connector API may Cloudflare-block HTML payloads; generate the page shell from an uploaded server module
+- [GitHub connector writes](github-connector-html-upload.md) — HTML may be filtered; bulk writes must respect the separate workspace gateway rate limit.
 - [Publish dependency scan coverage](publish-dependency-scan.md) — Publish scans build/dev transitives; no-fix build-tool advisories need a compatible safe replacement
 - [Store payment exemptions](store-payment-exemptions.md) — exempt stores stay public and skip automatic billing; explicit admin hiding wins and manual payment remains optional
 - [Subscription chat threshold](subscription-chat-threshold.md) — count distinct customers with chat activity in the rolling 30-day window; reviews and retailer replies never count
@@ -29,5 +29,6 @@
 - [Portfolio analytics privacy](portfolio-analytics-privacy.md) — shared-link attribution is not verified client identity; keep anonymous visits cookie-free and unjoined.
 - [Cloud migration guardrails](cloud-migration-guardrails.md) — stage in Johannesburg; retain Replit through validation and cutover, preserving domains and API paths where possible.
 - [Cloud delivery](cloud-delivery.md) — user wants GitHub → Cloud Build → Cloud Run automatic delivery, without Replit in the build/deployment path.
+- [Cloud Build workers](cloud-build-workers.md) — regional high-CPU quota may be zero; the CLI container's Python may not be on PATH.
 - [Secret environment refresh](secret-environment-refresh.md) — repeated format failures after secure edits can reflect stale shell environments; refresh before re-requesting credentials.
 - [Google SQL transfer validation](gcp-sql-transfers.md) — CSV queries must start with SELECT; controlled imports must select the established table owner.
