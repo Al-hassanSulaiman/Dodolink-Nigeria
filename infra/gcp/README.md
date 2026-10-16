@@ -2,7 +2,7 @@
 
 ## Current cutover status
 
-**Google Cloud staging is verified; the live domain has NOT been moved.**
+**Google is ready for live traffic; root/www DNS still needs to move.**
 The original `dodolink-domains` certificate is now ACTIVE with both root and
 wildcard authorized. Both entries in `dodolink-domains-map` already reference it.
 That map and `dodolink-production-https-map` are now attached to the existing
@@ -16,9 +16,23 @@ Health returns `{"status":"ok"}` and public store reads return valid JSON with
 Staging health remains 200. These checks used DNS overrides: public root/www
 DNS remains unchanged. Signed-in owner admin access is still not verified.
 
-The next gate is the user's shutdown of the published Replit DodoLink runtime,
-not the development workflows. Keep Google writes and maintenance disabled until
-shutdown is confirmed and the final source/payment/media checks pass.
+The user completed Unpublish in Replit. The deployment service confirms
+`isDeployed=false`, and the old replit.app health URL returns 404. Development
+workflows were not stopped. Project/database/media remain retained.
+
+After shutdown, all 14 source table fingerprints still matched the verified
+cloud baseline, with no delta to import. There were zero unconsumed subscription
+payment quotes. All 139 media objects verified unchanged, including content/ACL
+metadata; path reconciliation found zero missing/extra objects.
+
+Cloud Run revision `dodolink-00011-c46` is ready and receives 100% of traffic.
+It has `MIGRATION_STAGING=false`, `MIGRATION_ALLOW_AUTH=false`, and
+`BACKGROUND_JOBS_ENABLED=false`. Trusted root customer/admin/health checks pass.
+An unauthenticated store-create request returns 401, not the staging write block;
+no store was created. Startup confirms all web background jobs are disabled,
+with no startup errors observed. Maintenance jobs/timers remain disabled/paused.
+The user must now edit existing root/www A records to `8.232.160.236`, retaining
+TTL 3600 and all unrelated DNS records. Do not republish the old Replit runtime.
 
 The additional `dodolink-domains-fresh` request and the working staging
 certificates are retained. Do not create further replacements.
@@ -93,8 +107,9 @@ All target configuration belongs to the personal **production** instance, not
 Replit's development Auth tenant.
 
 The user completed CLI reauthentication; Google Cloud management access is restored.
-Runtime flags remain read-only staging with auth-only mutation allowance and web
-background jobs disabled. All three Scheduler timers were reverified PAUSED.
+Prior staging checks used read-only flags with auth-only mutation allowance and
+web background jobs disabled. The current post-shutdown writable state is above.
+All three Scheduler timers remain PAUSED.
 Fresh source comparison found no changed tables, and source media inventory is
 unchanged at 139 objects. No source records were modified by these checks.
 Root and www still resolve to the old `34.111.179.208` address.
@@ -139,12 +154,11 @@ and per-store charge serialization protect the handoff and concurrent tasks.
 3. Customer/admin page routing and public API reads on the new IP are verified.
    Verify the owner's signed-in admin access during the live smoke test; do not
    grant arbitrary accounts admin to substitute for that check.
-4. Confirm the old Replit runtime/jobs are stopped and no charge is in flight.
-   Refresh source fingerprints, run the guarded delta and media reconciliation
-   again, and stop if any table other than `push_tokens` changed.
-5. Enable target business writes with `MIGRATION_STAGING=false`,
-   `MIGRATION_ALLOW_AUTH=false`, and `BACKGROUND_JOBS_ENABLED=false`. Verify the
-   real root host against the new IP before changing live DNS/webhook routing.
+4. COMPLETE: Replit Unpublish confirmed by user and deployment service; old
+   health URL is 404. Post-shutdown fingerprint/media/payment checks passed.
+5. COMPLETE: Target business writes enabled with `MIGRATION_STAGING=false`,
+   `MIGRATION_ALLOW_AUTH=false`, and `BACKGROUND_JOBS_ENABLED=false`. Real root
+   host checks against the new IP pass; maintenance is still disabled.
 6. Move root/www DNS only after readiness; preserve Clerk/mail/nameservers.
    The reserved target IPv4 remains `8.232.160.236`.
 7. After confirming the single-active-host handoff, enable
