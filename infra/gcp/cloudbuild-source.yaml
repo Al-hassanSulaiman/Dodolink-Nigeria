@@ -45,5 +45,4 @@ images: ['${_IMAGE}:$BUILD_ID']
 logsBucket: gs://dodolink-cicd-729481009477-afs1
 options:
   logging: GCS_ONLY
-  machineType: E2_HIGHCPU_8
 timeout: 2400s
