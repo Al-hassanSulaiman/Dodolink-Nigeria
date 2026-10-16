@@ -34,9 +34,9 @@ steps:
     args: [push, '${_IMAGE}:$BUILD_ID']
   - id: release
     name: gcr.io/google.com/cloudsdktool/google-cloud-cli:stable
-    entrypoint: python3
+    entrypoint: sh
     args:
-      - infra/gcp/deploy-release.py
+      - infra/gcp/run-release.sh
       - --project
       - $PROJECT_ID
       - --region
