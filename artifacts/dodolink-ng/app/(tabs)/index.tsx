@@ -1,4 +1,4 @@
-import { useListProducts, useListStores } from "@workspace/api-client-react";
+import { useListProducts, useListStores, useListSupportMessages, getListSupportMessagesQueryKey } from "@workspace/api-client-react";
 import { StyleSheet, View, Text, ScrollView, RefreshControl, Pressable } from "react-native";
 import { useColors } from "@/hooks/useColors";
 import { ProductCard } from "@/components/ProductCard";
@@ -8,18 +8,32 @@ import { EmptyState } from "@/components/EmptyState";
 import { type Href, Link, useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@clerk/expo";
+import { useActiveScreen } from "@/hooks/useActiveScreen";
+import { getUnreadSupportMessageIds } from "@/utils/supportUnread";
 
 export default function HomeScreen() {
   const colors = useColors();
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, userId } = useAuth();
+  const active = useActiveScreen();
   const router = useRouter();
   const { data: products, isLoading: isLoadingProducts, isError: productsError, refetch: refetchProducts } = useListProducts({ limit: 6, featured: true });
   const { data: stores, isLoading: isLoadingStores, isError: storesError, refetch: refetchStores } = useListStores({ limit: 5, top: true });
+  const { data: supportMessages, refetch: refetchSupport } = useListSupportMessages({
+    query: {
+      queryKey: [...getListSupportMessagesQueryKey(), userId ?? null],
+      enabled: !!userId && active,
+      refetchInterval: active ? 15000 : false,
+      refetchIntervalInBackground: false,
+      staleTime: 0,
+    },
+  });
+  const supportUnread = userId ? getUnreadSupportMessageIds(supportMessages ?? []).length : 0;
 
   const refreshing = isLoadingProducts || isLoadingStores;
   const onRefresh = () => {
     refetchProducts();
     refetchStores();
+    if (userId) refetchSupport();
   };
 
   const handleSignOut = async () => {
@@ -51,8 +65,11 @@ export default function HomeScreen() {
           <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Connecting Nigerian businesses to customers</Text>
         </View>
         <View style={styles.headerActions}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Contact support" onPress={() => router.push("/support" as Href)} style={styles.signOutBtn}>
+          <Pressable accessibilityRole="button" accessibilityLabel={supportUnread > 0 ? `Contact support, ${supportUnread} unread ${supportUnread === 1 ? 'reply' : 'replies'}` : "Contact support"} onPress={() => router.push("/support" as Href)} style={styles.signOutBtn}>
             <Feather name="help-circle" size={20} color={colors.mutedForeground} />
+            {supportUnread > 0 && <View style={{ position: 'absolute', top: -3, right: -3, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.destructive }}>
+              <Text accessibilityLiveRegion="polite" style={{ color: colors.primaryForeground, fontSize: 11, fontWeight: '700' }}>{supportUnread > 99 ? '99+' : supportUnread}</Text>
+            </View>}
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel={isSignedIn ? "Account settings" : "Sign in"} onPress={handleSignOut} style={styles.signOutBtn}>
             <Feather name={isSignedIn ? "settings" : "log-in"} size={20} color={colors.mutedForeground} />

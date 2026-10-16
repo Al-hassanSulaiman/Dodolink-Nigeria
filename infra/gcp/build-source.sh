@@ -24,6 +24,7 @@ for (let attempt = 0; ; attempt++) {
 '
 DATABASE_URL="$CI_DATABASE_URL" pnpm --filter @workspace/db run push --force
 DATABASE_URL="$CI_DATABASE_URL" pnpm --filter @workspace/api-server run test
+pnpm --filter @workspace/dodolink-ng run test
 pnpm run typecheck:libs
 pnpm --filter @workspace/api-server run typecheck
 pnpm --filter @workspace/admin-dashboard run typecheck

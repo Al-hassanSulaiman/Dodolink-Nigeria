@@ -489,8 +489,11 @@ export const SearchResponse = zod.object({
 /**
  * @summary List conversations for a user/retailer
  */
+export const listConversationsQueryIncludeEmptyDefault = false;
+
 export const ListConversationsQueryParams = zod.object({
-  "userId": zod.coerce.string()
+  "userId": zod.coerce.string(),
+  "includeEmpty": zod.coerce.boolean().default(listConversationsQueryIncludeEmptyDefault).describe('Include empty drafts for opening a conversation; inboxes omit these by default.')
 })
 
 export const ListConversationsResponseItem = zod.object({
@@ -633,6 +636,16 @@ export const SendSupportMessageResponse = zod.object({
 /**
  * @summary Mark admin support replies as read for the authenticated user
  */
+export const markSupportReadBodyMessageIdsItemMax = 2147483647;
+
+export const markSupportReadBodyMessageIdsMax = 1000;
+
+
+
+export const MarkSupportReadBody = zod.object({
+  "messageIds": zod.array(zod.number().min(1).max(markSupportReadBodyMessageIdsItemMax)).max(markSupportReadBodyMessageIdsMax).optional().describe('Only mark replies loaded on screen. Omit for legacy clients that mark all replies.')
+})
+
 export const MarkSupportReadResponse = zod.object({
   "status": zod.string()
 })

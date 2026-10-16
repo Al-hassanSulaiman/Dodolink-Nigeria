@@ -2,8 +2,10 @@
 - [Clerk Expo SDK 54 setup](clerk-expo-sdk54.md) — Core v3 patterns; future hooks have NO isLoaded (only fetchStatus); "complete" screens need a finalize retry path
 - [Replit iframe sandbox blocks dialogs and fonts](replit-iframe-limits.md) — Alert.alert is a no-op on ALL react-native-web (use utils/alerts.ts); iframe also blocks window.confirm/open, FontFaceObserver
 - [Orval query keys are URL-based](orval-query-keys.md) — hand-written keys like ['listStores'] never match; always invalidate with generated get*QueryKey helpers
+- [Generated integer validation](generated-integer-validation.md) — OpenAPI integer declarations may generate number-only validation; enforce integrality and database ranges at boundaries.
 - [Clerk API auth needs explicit bearer token](clerk-api-auth.md) — session cookies never reach the API server; ALL clients (web too) must call setAuthTokenGetter(getToken)
 - [Expo web export in workspace](expo-web-export.md) — backgrounded builds get reaped; use the validation runner and free RAM first (needs ~2.5 GB+)
+- [Expo browser testing URLs](expo-browser-testing.md) — pass testers a verified preview URL; the test runtime may lack the Expo domain environment variable.
 - [Web API base URL dev vs prod](web-api-base.md) — window.location.origin is correct only in production web; dev web must use EXPO_PUBLIC_DOMAIN (getApiBase handles it)
 - [Clerk proxy URL in Expo prod builds](clerk-expo-prod-proxy.md) — every export bake site needs EXPO_PUBLIC_CLERK_PROXY_URL or prod blank-screens; rebase onto window origin for custom domains
 - [API security model](api-security-model.md) — public reads / authed writes, never trust bodies; Paystack verify hardening; presigned uploads enforced at serve/attach time, not request-url
@@ -26,6 +28,7 @@
 - [Approved promotional film](promo-approved-elements.md) — the user approved the visuals and music; targeted corrections must leave every other element unchanged.
 - [Account-deletion media safety](account-deletion-media-safety.md) — legacy attachment URLs do not prove upload ownership; active signed upload links can recreate deleted files.
 - [Retailer contactability](retailer-contactability.md) — a store must be contactable from its profile even when it has no products.
+- [Chat identity and drafts](chat-identity-and-drafts.md) — unsent chats stay out of inboxes; store owners appear by store name even when contacting another seller.
 - [Portfolio analytics privacy](portfolio-analytics-privacy.md) — shared-link attribution is not verified client identity; keep anonymous visits cookie-free and unjoined.
 - [Cloud migration guardrails](cloud-migration-guardrails.md) — stage in Johannesburg; retain Replit through validation and cutover, preserving domains and API paths where possible.
 - [Cloud delivery](cloud-delivery.md) — user wants GitHub → Cloud Build → Cloud Run automatic delivery, without Replit in the build/deployment path.

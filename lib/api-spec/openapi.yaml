@@ -440,6 +440,12 @@ paths:
           required: true
           schema:
             type: string
+        - name: includeEmpty
+          in: query
+          description: Include empty drafts for opening a conversation; inboxes omit these by default.
+          schema:
+            type: boolean
+            default: false
       responses:
         "200":
           description: List of conversations
@@ -580,6 +586,12 @@ paths:
       operationId: markSupportRead
       tags: [support]
       summary: Mark admin support replies as read for the authenticated user
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarkSupportReadBody"
       responses:
         "200":
           description: Marked as read
@@ -1495,6 +1507,18 @@ components:
           type: string
           format: date-time
       required: [id, name, email, description, budget, submittedAt]
+
+    MarkSupportReadBody:
+      type: object
+      properties:
+        messageIds:
+          type: array
+          maxItems: 1000
+          items:
+            type: integer
+            minimum: 1
+            maximum: 2147483647
+          description: Only mark replies loaded on screen. Omit for legacy clients that mark all replies.
 
     SupportMessage:
       type: object

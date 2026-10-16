@@ -16,6 +16,8 @@ import { KeyboardAvoidingView as KeyboardControllerView } from 'react-native-key
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RequireAccount } from '@/components/RequireAccount';
 import { useActiveScreen } from '@/hooks/useActiveScreen';
+import { useUserIdentity } from '@/hooks/useUserIdentity';
+import { getUnreadSupportMessageIds } from '@/utils/supportUnread';
 
 export default function SupportScreen() {
   return <RequireAccount><SupportContent /></RequireAccount>;
@@ -27,21 +29,33 @@ function SupportContent() {
   const queryClient = useQueryClient();
   const inputRef = useRef<TextInput>(null);
   const active = useActiveScreen();
+  const { userId } = useUserIdentity();
+  const supportQueryKey = [...getListSupportMessagesQueryKey(), userId ?? null];
 
-  const { data: messages, isLoading } = useListSupportMessages({
+  const { data: messages, isLoading, dataUpdatedAt } = useListSupportMessages({
     query: {
-      queryKey: getListSupportMessagesQueryKey(),
+      queryKey: supportQueryKey,
+      enabled: !!userId && active,
       refetchInterval: active ? 15000 : false,
       refetchIntervalInBackground: false,
     },
   });
 
-  // Mark admin replies as read when the screen is opened
+  // A background/mounted screen must not clear the badge. Only acknowledge
+  // replies actually loaded while this screen is visible, not later arrivals.
   useEffect(() => {
-    markSupportRead()
-      .then(() => queryClient.invalidateQueries({ queryKey: getListSupportMessagesQueryKey() }))
+    if (!active || !userId || !messages) return;
+    const ids = getUnreadSupportMessageIds(messages).slice(0, 1000);
+    if (!ids.length) return;
+    const readIds = new Set(ids);
+    markSupportRead({ messageIds: ids })
+      .then(() => {
+        queryClient.setQueryData<SupportMessage[]>([...getListSupportMessagesQueryKey(), userId], current =>
+          current?.map(item => readIds.has(item.id) ? { ...item, readByUser: true } : item));
+        queryClient.invalidateQueries({ queryKey: getListSupportMessagesQueryKey() });
+      })
       .catch(() => {});
-  }, []);
+  }, [active, userId, messages, dataUpdatedAt, queryClient]);
 
   const sendSupportMessage = useSendSupportMessage({
     mutation: {

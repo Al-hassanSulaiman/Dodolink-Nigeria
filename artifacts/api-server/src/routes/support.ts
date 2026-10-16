@@ -1,8 +1,8 @@
 import { Router, type IRouter } from "express";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { clerkClient } from "@clerk/express";
 import { db, supportMessagesTable } from "@workspace/db";
-import { SendSupportMessageBody } from "@workspace/api-zod";
+import { SendSupportMessageBody, MarkSupportReadBody } from "@workspace/api-zod";
 import { requireUser } from "../lib/auth";
 import { rateLimit } from "../lib/rateLimit";
 
@@ -63,11 +63,25 @@ router.post("/support/messages", supportMessageLimit, async (req, res): Promise<
 router.post("/support/read", async (req, res): Promise<void> => {
   const userId = requireUser(req, res);
   if (!userId) return;
+  const parsed = MarkSupportReadBody.safeParse(req.body ?? {});
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  const ids = parsed.data.messageIds;
+  // Generated number validation does not enforce OpenAPI's integer constraint.
+  if (ids?.some(id => !Number.isSafeInteger(id) || id > 2147483647)) {
+    res.status(400).json({ error: "Message IDs must be positive 32-bit integers" });
+    return;
+  }
+  if (ids && ids.length === 0) { res.json({ status: "ok" }); return; }
 
   await db
     .update(supportMessagesTable)
     .set({ readByUser: true })
-    .where(and(eq(supportMessagesTable.userId, userId), eq(supportMessagesTable.senderRole, "admin")));
+    .where(and(
+      eq(supportMessagesTable.userId, userId),
+      eq(supportMessagesTable.senderRole, "admin"),
+      eq(supportMessagesTable.readByUser, false),
+      ids ? inArray(supportMessagesTable.id, ids) : undefined,
+    ));
 
   res.json({ status: "ok" });
 });

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, or, sql } from "drizzle-orm";
 import { db, conversationsTable, messagesTable, storesTable, pushTokensTable } from "@workspace/db";
 import { SendMessageBody, StartConversationBody } from "@workspace/api-zod";
 import { notifyTokens } from "../lib/push";
@@ -20,6 +20,33 @@ const sendMessageLimit = rateLimit({ name: "msg-send", max: 30, windowMs: 60 * 1
 function notificationPreview(body: string, mediaUrl?: string | null): string {
   if (body.trim()) return body;
   return mediaUrl ? "Sent a photo or video" : "New message";
+}
+
+// One stable identity for owners contacting another seller. Replies on an
+// owner's own store still use that conversation's store, not another store.
+async function ownedStoreNames(userIds: string[]): Promise<Map<string, string>> {
+  if (!userIds.length) return new Map();
+  const stores = await db.select({
+    id: storesTable.id, ownerUserId: storesTable.ownerUserId, name: storesTable.name,
+  }).from(storesTable).where(inArray(storesTable.ownerUserId, [...new Set(userIds)]));
+  const names = new Map<string, string>();
+  for (const store of stores.sort((a, b) => a.id - b.id)) {
+    if (!names.has(store.ownerUserId)) names.set(store.ownerUserId, store.name);
+  }
+  return names;
+}
+
+async function customerDisplayName(userId: string): Promise<string> {
+  const storeName = (await ownedStoreNames([userId])).get(userId);
+  if (storeName) return storeName;
+  try {
+    const user = await clerkClient.users.getUser(userId);
+    return user.emailAddresses.find(email => email.id === user.primaryEmailAddressId)?.emailAddress
+      ?? user.emailAddresses[0]?.emailAddress
+      ?? userId;
+  } catch {
+    return userId;
+  }
 }
 
 async function loadConversationIfParticipant(conversationId: number, userId: string) {
@@ -45,8 +72,18 @@ router.get("/conversations", async (req, res): Promise<void> => {
   const storesByOwner = await db.select({ id: storesTable.id, name: storesTable.name }).from(storesTable).where(eq(storesTable.ownerUserId, userId));
   const storeIds = storesByOwner.map(s => s.id);
 
-  const allConvs = await db.select().from(conversationsTable);
+  // Preserve drafts so the composer can open, but don't put a visitor in
+  // either inbox before any actual text/media message has been sent.
+  const includeEmpty = req.query.includeEmpty === "true";
+  const allConvs = await db.select().from(conversationsTable).where(and(
+    or(eq(conversationsTable.customerId, userId), inArray(conversationsTable.storeId, storeIds)),
+    includeEmpty ? undefined : sql`exists (
+      select 1 from ${messagesTable}
+      where ${messagesTable.conversationId} = ${conversationsTable.id}
+    )`,
+  ));
   const relevant = allConvs.filter(c => c.customerId === userId || storeIds.includes(c.storeId));
+  const customerStores = await ownedStoreNames(relevant.map(c => c.customerId));
 
   const storeNames: Record<number, string> = {};
   for (const s of storesByOwner) storeNames[s.id] = s.name;
@@ -63,7 +100,7 @@ router.get("/conversations", async (req, res): Promise<void> => {
       // - store owner sees messages from customer (storeUnreadCount)
       const isStoreOwner = storeIds.includes(c.storeId) && c.customerId !== authUserId;
       const unreadCount = isStoreOwner ? c.storeUnreadCount : c.unreadCount;
-      return { ...c, storeName, unreadCount };
+      return { ...c, customerName: customerStores.get(c.customerId) ?? c.customerName, storeName, unreadCount };
     })
   );
 
@@ -84,24 +121,14 @@ router.post("/conversations/start", startConversationLimit, async (req, res): Pr
   const parsed = StartConversationBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-  const { customerId, storeId, initialMessage } = parsed.data;
+  const { customerId, storeId } = parsed.data;
+  const initialMessage = parsed.data.initialMessage?.trim();
   if (customerId !== authUserId) { res.status(403).json({ error: "customerId must match the authenticated user" }); return; }
 
   const [store] = await db.select({ name: storesTable.name }).from(storesTable).where(eq(storesTable.id, storeId));
   if (!store) { res.status(404).json({ error: "Store not found" }); return; }
 
-  // Look up the customer's email from Clerk — this is the name the retailer will see
-  let resolvedCustomerName: string;
-  try {
-    const clerkUser = await clerkClient.users.getUser(authUserId);
-    const primaryId = clerkUser.primaryEmailAddressId;
-    const primary = clerkUser.emailAddresses.find((e: { id: string }) => e.id === primaryId);
-    resolvedCustomerName = (primary as any)?.emailAddress
-      ?? clerkUser.emailAddresses[0]?.emailAddress
-      ?? authUserId;
-  } catch {
-    resolvedCustomerName = authUserId;
-  }
+  const resolvedCustomerName = await customerDisplayName(authUserId);
 
   const result = await db.transaction(async (tx) => {
     // Serialize starts for this exact customer/store pair. Concurrent requests
@@ -130,7 +157,7 @@ router.post("/conversations/start", startConversationLimit, async (req, res): Pr
         customerId,
         customerName: resolvedCustomerName,
         storeId,
-        ...(initialMessage ? { lastMessage: initialMessage, lastMessageAt: new Date() } : {}),
+        ...(initialMessage ? { lastMessage: initialMessage, lastMessageAt: new Date(), storeUnreadCount: 1 } : {}),
       })
       .returning();
 
@@ -147,7 +174,7 @@ router.post("/conversations/start", startConversationLimit, async (req, res): Pr
     return { conversation, created: true };
   });
 
-  if (result.created) {
+  if (result.created && initialMessage) {
     await checkAndSetQualifiedAt(storeId).catch(() => undefined);
   }
 
@@ -169,7 +196,14 @@ router.get("/conversations/:conversationId/messages", async (req, res): Promise<
   if (!allowed) { res.status(403).json({ error: "You are not a participant in this conversation" }); return; }
 
   const msgs = await db.select().from(messagesTable).where(eq(messagesTable.conversationId, conversationId));
-  res.json(msgs);
+  const names = await ownedStoreNames([conv.customerId]);
+  const [store] = await db.select({ name: storesTable.name }).from(storesTable).where(eq(storesTable.id, conv.storeId));
+  res.json(msgs.map(message => ({
+    ...message,
+    senderName: message.senderId === conv.customerId
+      ? names.get(conv.customerId) ?? message.senderName
+      : store?.name ?? message.senderName,
+  })));
 });
 
 router.post("/conversations/:conversationId/messages", sendMessageLimit, async (req, res): Promise<void> => {
@@ -183,6 +217,10 @@ router.post("/conversations/:conversationId/messages", sendMessageLimit, async (
   const parsed = SendMessageBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
   if (parsed.data.senderId !== authUserId) { res.status(403).json({ error: "senderId must match the authenticated user" }); return; }
+  if (!parsed.data.body.trim() && !parsed.data.mediaUrl) {
+    res.status(400).json({ error: "Enter a message or attach a photo or video" });
+    return;
+  }
 
   const { conv: conversation, allowed } = await loadConversationIfParticipant(conversationId, authUserId);
   if (!conversation) { res.status(404).json({ error: "Conversation not found" }); return; }
@@ -226,21 +264,12 @@ router.post("/conversations/:conversationId/messages", sendMessageLimit, async (
   }
 
   // Determine senderName server-side — never trust what the client sends.
-  // Customer  → their Clerk account email address
+  // Customer  → their owned store name, falling back to their account email
   // Retailer  → the store's name (from the DB, not the client)
   const senderIsCustomer = conversation.customerId === authUserId;
   let resolvedSenderName: string;
   if (senderIsCustomer) {
-    try {
-      const clerkUser = await clerkClient.users.getUser(authUserId);
-      const primaryId = clerkUser.primaryEmailAddressId;
-      const primary = clerkUser.emailAddresses.find((e: { id: string }) => e.id === primaryId);
-      resolvedSenderName = (primary as any)?.emailAddress
-        ?? clerkUser.emailAddresses[0]?.emailAddress
-        ?? parsed.data.senderName;
-    } catch {
-      resolvedSenderName = parsed.data.senderName;
-    }
+    resolvedSenderName = await customerDisplayName(authUserId);
   } else {
     const [store] = await db.select({ name: storesTable.name }).from(storesTable).where(eq(storesTable.id, conversation.storeId));
     resolvedSenderName = store?.name ?? parsed.data.senderName;

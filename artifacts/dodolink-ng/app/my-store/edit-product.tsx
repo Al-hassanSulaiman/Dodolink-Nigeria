@@ -11,6 +11,7 @@ import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollV
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { uploadImageToStorage, getImageUrl } from '@/utils/storage';
+import { parseProductPrice } from '@/utils/productPrice';
 import { LoadingScreen } from '@/components/Loading';
 
 const MAX_IMAGES = 5;
@@ -24,6 +25,8 @@ export default function EditProductScreen() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [priceStr, setPriceStr] = useState('');
+  const [priceError, setPriceError] = useState(false);
+  const parsedPrice = parseProductPrice(priceStr);
   const [category, setCategory] = useState('');
   const [inStock, setInStock] = useState(true);
 
@@ -115,6 +118,11 @@ export default function EditProductScreen() {
 
   const handleSubmit = async () => {
     if (!name || !priceStr || !category) return;
+    const price = parseProductPrice(priceStr);
+    if (price === null) {
+      setPriceError(true);
+      return;
+    }
 
     let uploadedUrls: string[] = [];
     if (newLocalImages.length > 0) {
@@ -136,7 +144,7 @@ export default function EditProductScreen() {
       data: {
         name,
         description,
-        price: parseFloat(priceStr),
+        price,
         category,
         inStock,
         imageUrls,
@@ -247,11 +255,14 @@ export default function EditProductScreen() {
 
         <Text style={[styles.label, { color: colors.foreground, marginTop: 16 }]}>Price (₦)</Text>
         <Input
-          placeholder="e.g. 500000"
+          placeholder="e.g. 70,000 or 70000"
           value={priceStr}
-          onChangeText={setPriceStr}
-          keyboardType="numeric"
+          onChangeText={text => { setPriceStr(text); setPriceError(false); }}
+          keyboardType="decimal-pad"
+          editable={!isPending}
         />
+        {priceError && <Text accessibilityRole="alert" style={{ color: colors.destructive }}>Enter a valid price, for example 70,000 or 70000.50.</Text>}
+        {parsedPrice !== null && <Text accessibilityLiveRegion="polite" style={{ color: colors.mutedForeground }}>Will save as ₦{parsedPrice.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>}
 
         <Text style={[styles.label, { color: colors.foreground, marginTop: 16 }]}>Category</Text>
         <Input placeholder="e.g. Smartphones" value={category} onChangeText={setCategory} />

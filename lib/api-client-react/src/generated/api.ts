@@ -51,6 +51,7 @@ import type {
   ListStoresParams,
   MarkConversationRead200,
   MarkSupportRead200,
+  MarkSupportReadBody,
   Message,
   PaymentExemptionInput,
   PortfolioAnalytics,
@@ -2117,14 +2118,14 @@ export const getMarkSupportReadUrl = () => {
 /**
  * @summary Mark admin support replies as read for the authenticated user
  */
-export const markSupportRead = async ( options?: RequestInit): Promise<MarkSupportRead200> => {
+export const markSupportRead = async (markSupportReadBody?: MarkSupportReadBody, options?: RequestInit): Promise<MarkSupportRead200> => {
 
   return customFetch<MarkSupportRead200>(getMarkSupportReadUrl(),
   {
     ...options,
-    method: 'POST'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(markSupportReadBody)
   }
 );}
 
@@ -2133,8 +2134,8 @@ export const markSupportRead = async ( options?: RequestInit): Promise<MarkSuppo
 
 
 export const getMarkSupportReadMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markSupportRead>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof markSupportRead>>, TError,void, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markSupportRead>>, TError,{data?: BodyType<MarkSupportReadBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof markSupportRead>>, TError,{data?: BodyType<MarkSupportReadBody>}, TContext> => {
 
 const mutationKey = ['markSupportRead'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -2146,10 +2147,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markSupportRead>>, void> = () => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markSupportRead>>, {data?: BodyType<MarkSupportReadBody>}> = (props) => {
+          const {data} = props ?? {};
 
-
-          return  markSupportRead(requestOptions)
+          return  markSupportRead(data,requestOptions)
         }
 
 
@@ -2160,18 +2161,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type MarkSupportReadMutationResult = NonNullable<Awaited<ReturnType<typeof markSupportRead>>>
-
+    export type MarkSupportReadMutationBody = BodyType<MarkSupportReadBody> | undefined
     export type MarkSupportReadMutationError = ErrorType<void>
 
     /**
  * @summary Mark admin support replies as read for the authenticated user
  */
 export const useMarkSupportRead = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markSupportRead>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markSupportRead>>, TError,{data?: BodyType<MarkSupportReadBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof markSupportRead>>,
         TError,
-        void,
+        {data?: BodyType<MarkSupportReadBody>},
         TContext
       > => {
       return useMutation(getMarkSupportReadMutationOptions(options), queryClient);

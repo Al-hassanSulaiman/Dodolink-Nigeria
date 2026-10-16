@@ -8,13 +8,20 @@ import { EmptyState } from '@/components/EmptyState';
 import { ImagePlaceholder } from '@/components/ImagePlaceholder';
 import { Feather } from '@expo/vector-icons';
 import { RequireAccount } from '@/components/RequireAccount';
+import { useActiveScreen } from '@/hooks/useActiveScreen';
 
 export default function ChatsScreen() {
   const colors = useColors();
   const { userId } = useUserIdentity();
+  const active = useActiveScreen();
 
   const { data: conversations, isLoading } = useListConversations({ userId: userId || '' }, {
-    query: { enabled: !!userId, queryKey: getListConversationsQueryKey({ userId: userId || '' }) }
+    query: {
+      enabled: !!userId,
+      queryKey: getListConversationsQueryKey({ userId: userId || '' }),
+      refetchInterval: active ? 10000 : false,
+      refetchIntervalInBackground: false,
+    }
   });
   if (!userId) return <RequireAccount />;
 
@@ -26,7 +33,7 @@ export default function ChatsScreen() {
         <EmptyState 
           icon="message-square" 
           title="No messages yet" 
-          description="When you contact a store, your chats will appear here." 
+          description="Your chats will appear here once a message is sent."
         />
       </View>
     );
@@ -42,7 +49,7 @@ export default function ChatsScreen() {
         keyExtractor={item => item.id.toString()}
         renderItem={({ item }) => {
           // If the current user is the customer in this conversation, show the store name.
-          // If they are the retailer (store side), show the customer's email.
+          // Otherwise show the customer's server-resolved store/account name.
           const isCustomer = item.customerId === userId;
           const displayName = isCustomer ? item.storeName : item.customerName;
 

@@ -86,26 +86,30 @@ export default function ChatThreadScreen() {
   const id = parseInt(conversationId, 10);
   const colors = useColors();
   const { userId, userName, userEmail } = useUserIdentity();
+  const active = useActiveScreen();
 
-  // Find this conversation from the cached list so we know the user's role.
-  // If they are the customer → send with their email; if they are the store
-  // owner (retailer) → send with the store name.
+  // The composer includes drafts; the inbox deliberately excludes them.
+  // Names are resolved by the server from store ownership, not the sender role.
   const { data: conversations } = useListConversations(
-    { userId: userId ?? '' },
-    { query: { enabled: !!userId, queryKey: getListConversationsQueryKey({ userId: userId ?? '' }) } }
+    { userId: userId ?? '', includeEmpty: true },
+    { query: {
+      enabled: !!userId,
+      queryKey: getListConversationsQueryKey({ userId: userId ?? '', includeEmpty: true }),
+      refetchInterval: active ? 10000 : false,
+      refetchIntervalInBackground: false,
+    } }
   );
   const conversation = conversations?.find(c => c.id === id);
   const isRetailer = !!conversation && conversation.customerId !== userId;
   const senderType = isRetailer ? ('retailer' as const) : ('customer' as const);
   const senderName = isRetailer
     ? (conversation?.storeName ?? userName)
-    : (userEmail ?? userName);
+    : (conversation?.customerName ?? userEmail ?? userName);
   const [message, setMessage] = useState('');
   const [uploading, setUploading] = useState(false);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const inputRef = useRef<TextInput>(null);
-  const active = useActiveScreen();
 
   const { data: messages, isLoading, isError: messagesError, refetch: refetchMessages } = useListMessages(id, {
     query: { enabled: !!id && !!userId, queryKey: getListMessagesQueryKey(id), refetchInterval: active ? 10000 : false, refetchIntervalInBackground: false }

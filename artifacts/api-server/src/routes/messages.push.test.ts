@@ -326,15 +326,17 @@ describe("POST /conversations/:id/messages — push notification sender name", (
     expect(sentToNonEmpty).toBe(false);
   });
 
-  it("uses customer email as sender name when a customer message triggers a push to the store owner", async () => {
+  it.each([
+    { ownedStores: [], expectedName: CUSTOMER_EMAIL },
+    { ownedStores: [{ id: 12, ownerUserId: CUSTOMER_ID, name: "Buyer's Store" }], expectedName: "Buyer's Store" },
+  ])("uses the customer's resolved identity in recipient notifications: $expectedName", async ({ ownedStores, expectedName }) => {
     /**
      * Sequence of db.select() calls for a customer-sent message:
      *  [0] loadConversationIfParticipant  → conversation (customerId === authUserId → allowed, no second select)
-     *  (no select[1] in loadConversationIfParticipant — customer path returns early)
-     *  Clerk is called (not DB) for resolvedSenderName
-     *  [1] push block                     → conversation row (re-fetched)
-     *  [2] push block                     → store { ownerUserId }
-     *  [3] push block (senderIsCustomer)  → store owner push tokens
+     *  [1] customer identity              → owned stores (email fallback if none)
+     *  [2] push block                     → conversation row (re-fetched)
+     *  [3] push block                     → store { ownerUserId }
+     *  [4] push block (senderIsCustomer)  → store owner push tokens
      */
     const OWNER_TOKEN = "ExponentPushToken[owner-device-xyz]";
 
@@ -349,6 +351,7 @@ describe("POST /conversations/:id/messages — push notification sender name", (
 
     setupSelectMock(db as any, [
       [baseConversation],                            // [0] conv (customer path — returns early)
+      ownedStores,
       [baseConversation],                            // [1] conv for push
       [{ ownerUserId: RETAILER_ID }],                // [2] store for push
       [{ token: OWNER_TOKEN }],                      // [3] owner push tokens
@@ -358,14 +361,18 @@ describe("POST /conversations/:id/messages — push notification sender name", (
       id: 1000,
       conversationId: CONV_ID,
       senderId: CUSTOMER_ID,
-      senderName: CUSTOMER_EMAIL,
+      senderName: expectedName,
       senderType: "customer",
       body: "Hello store!",
       mediaUrl: null,
       createdAt: new Date(),
     };
 
-    (db as any).insert.mockImplementation(() => makeInsertChain([customerMessage]));
+    (db as any).insert.mockImplementation(() => {
+      const chain = makeInsertChain([customerMessage]);
+      vi.spyOn(chain, "values");
+      return chain;
+    });
     (db as any).update.mockImplementation(() => makeUpdateChain());
 
     const app = await buildApp(CUSTOMER_ID);
@@ -374,6 +381,9 @@ describe("POST /conversations/:id/messages — push notification sender name", (
       .send({ senderId: CUSTOMER_ID, senderName: CUSTOMER_EMAIL, senderType: "customer", body: "Hello store!" });
 
     expect(res.status).toBe(201);
+    expect((db as any).insert.mock.results[0].value.values).toHaveBeenCalledWith(expect.objectContaining({
+      senderName: expectedName,
+    }));
 
     expect(notifyTokensMock).toHaveBeenCalledTimes(1);
     const [tokens, title, body] = notifyTokensMock.mock.calls[0];
@@ -381,8 +391,8 @@ describe("POST /conversations/:id/messages — push notification sender name", (
     // Push goes to the store owner's device
     expect(tokens).toContain(OWNER_TOKEN);
 
-    // Title uses the customer's email (resolved from Clerk, not client body)
-    expect(title).toBe(`New message from ${CUSTOMER_EMAIL}`);
+    // Both stored messages and notifications ignore the client-submitted name.
+    expect(title).toBe(`New message from ${expectedName}`);
     expect(body).toBe("Hello store!");
   });
 });

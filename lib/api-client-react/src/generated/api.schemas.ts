@@ -84,6 +84,16 @@ export interface ContactLead {
   submittedAt: string;
 }
 
+export interface MarkSupportReadBody {
+  /**
+     * Only mark replies loaded on screen. Omit for legacy clients that mark all replies.
+     * @maxItems 1000
+     * @items.minimum 1
+     * @items.maximum 2147483647
+     */
+  messageIds?: number[];
+}
+
 export type SupportMessageSenderRole = typeof SupportMessageSenderRole[keyof typeof SupportMessageSenderRole];
 
 
@@ -618,6 +628,10 @@ q: string;
 
 export type ListConversationsParams = {
 userId: string;
+/**
+ * Include empty drafts for opening a conversation; inboxes omit these by default.
+ */
+includeEmpty?: boolean;
 };
 
 export type MarkConversationRead200 = {
