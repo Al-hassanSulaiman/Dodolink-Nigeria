@@ -65,3 +65,8 @@ externalPort = 3001
 [[ports]]
 localPort = 26001
 externalPort = 3002
+
+[userenv]
+
+[userenv.development]
+BACKGROUND_JOBS_ENABLED = "false"

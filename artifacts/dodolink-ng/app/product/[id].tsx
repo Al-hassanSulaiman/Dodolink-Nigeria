@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { StyleSheet, View, Text, ScrollView, RefreshControl, Image, Pressable, Dimensions } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, RefreshControl, Image, Pressable, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, Link, Stack } from 'expo-router';
 import { 
   useGetProduct, 
@@ -16,15 +16,16 @@ import { getImageUrl } from '@/utils/storage';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { showAlert } from '@/utils/alerts';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+import { PhotoPreview } from '@/components/PhotoPreview';
 
 export default function ProductScreen() {
+  const { width: SCREEN_WIDTH } = useWindowDimensions();
   const { id } = useLocalSearchParams<{ id: string }>();
   const productId = parseInt(id, 10);
   const colors = useColors();
   const { userId, userName } = useUserIdentity();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [previewUri, setPreviewUri] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
   const { data: product, isLoading: productLoading, refetch: refetchProduct } = useGetProduct(productId, {
@@ -96,6 +97,7 @@ export default function ProductScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Stack.Screen options={{ title: product.name }} />
+      <PhotoPreview uri={previewUri} images={images.map(getImageUrl)} title={product.name} onClose={() => setPreviewUri(null)} />
       <ScrollView 
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refetchProduct} />}
@@ -117,13 +119,14 @@ export default function ProductScreen() {
                     <ImagePlaceholder name={product.name} size={120} borderRadius={0} />
                   </View>
                 ) : (
-                  <Image
-                    key={index}
-                    source={{ uri: getImageUrl(img) }}
-                    style={[styles.galleryImage, { width: SCREEN_WIDTH }]}
-                    resizeMode="cover"
-                    onError={() => handleImgError(index)}
-                  />
+                  <Pressable key={index} accessibilityRole="button" accessibilityLabel={`View full product photo ${index + 1}`} onPress={() => setPreviewUri(getImageUrl(img))}>
+                    <Image
+                      source={{ uri: getImageUrl(img) }}
+                      style={[styles.galleryImage, { width: SCREEN_WIDTH }]}
+                      resizeMode="contain"
+                      onError={() => handleImgError(index)}
+                    />
+                  </Pressable>
                 )
               ))}
             </ScrollView>
@@ -158,6 +161,9 @@ export default function ProductScreen() {
         )}
 
         <View style={styles.details}>
+          {images.length > 0 && <Pressable accessibilityRole="button" onPress={() => setPreviewUri(getImageUrl(images[Math.min(activeImageIndex, images.length - 1)]))} style={{ paddingVertical: 12 }}>
+            <Text style={{ color: colors.primary }}>View full photos · tap to zoom</Text>
+          </Pressable>}
           <Text style={[styles.category, { color: colors.mutedForeground }]}>{product.category}</Text>
           <Text style={[styles.name, { color: colors.foreground }]}>{product.name}</Text>
           <Text style={[styles.price, { color: colors.primary }]}>

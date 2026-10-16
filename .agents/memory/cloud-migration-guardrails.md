@@ -19,11 +19,11 @@ Use absolute CNAME destinations, including the final dot, in this domain's DNS p
 
 **How to apply:** Compare the actual returned CNAME target with Google's exact expected FQDN, not just the presence of an answer. Correct only the affected record; preserve live, Clerk, mail, and nameserver records until approved cutover.
 
-A staged API using a production database snapshot must not automatically run live billing, account-deletion retries, retention cleanups, or customer notifications.
+A staged API or retained Replit development API using a production database snapshot must not automatically run live billing, account-deletion retries, retention cleanups, or customer notifications.
 
-**Why:** A production snapshot contains real customer identities and payment authorizations. An additional API instance can cause real external effects even when DNS and customer traffic still point at Replit.
+**Why:** A production snapshot contains real customer identities and payment authorizations. An additional API instance can cause real external effects even without customer traffic. Dependency installation can automatically restart managed workflows, including the retained development API.
 
-**How to apply:** Explicitly disable background jobs before booting a staging API with copied production data and verify that startup respects this setting. Only enable the intended production jobs as part of a controlled cutover.
+**How to apply:** Explicitly disable background jobs before booting an API with copied production data and verify that startup respects this setting. Keep the Replit development environment's background jobs disabled through dependency changes as well. Only enable the intended production jobs as part of a controlled cutover.
 
 ## Provider validation from the deployed environment
 

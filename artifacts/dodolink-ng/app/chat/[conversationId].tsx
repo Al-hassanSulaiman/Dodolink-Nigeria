@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, FlatList, TextInput, Pressable, ActivityIndicat
 import { Image } from 'expo-image';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import * as Clipboard from 'expo-clipboard';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import {
   useListMessages,
@@ -27,6 +28,33 @@ import { PhotoPreview } from '@/components/PhotoPreview';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const MEDIA_WIDTH = SCREEN_WIDTH * 0.65;
+
+function CopyableMessage({ body, color }: { body: string; color: string }) {
+  const [status, setStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
+  useEffect(() => {
+    if (status !== 'copied') return;
+    const timer = setTimeout(() => setStatus('idle'), 2000);
+    return () => clearTimeout(timer);
+  }, [status]);
+  const copy = async () => {
+    try {
+      const success = await Clipboard.setStringAsync(body);
+      setStatus(success ? 'copied' : 'failed');
+    } catch {
+      setStatus('failed');
+    }
+  };
+  return (
+    <View style={{ gap: 6 }}>
+      <Text selectable style={[styles.messageText, { color }]}>{body}</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel="Copy message" onPress={copy} style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', gap: 5, minHeight: 36, paddingHorizontal: 6 }}>
+        <Feather name={status === 'copied' ? 'check' : 'copy'} size={13} color={color} />
+        <Text accessibilityLiveRegion="polite" style={{ color, fontSize: 11 }}>{status === 'copied' ? 'Copied' : 'Copy'}</Text>
+      </Pressable>
+      {status === 'failed' && <Text accessibilityRole="alert" style={{ color, fontSize: 12 }}>Could not access the clipboard. Select the message text to copy it.</Text>}
+    </View>
+  );
+}
 
 function mediaSendErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message.trim() : '';
@@ -215,13 +243,9 @@ export default function ChatThreadScreen() {
             )
           ) : null}
           {item.body ? (
-            <Text style={[
-              styles.messageText,
-              { color: isMe ? colors.primaryForeground : colors.foreground },
-              item.mediaUrl ? { marginTop: 6 } : null,
-            ]}>
-              {item.body}
-            </Text>
+            <View style={item.mediaUrl ? { marginTop: 6 } : undefined}>
+              <CopyableMessage body={item.body} color={isMe ? colors.primaryForeground : colors.foreground} />
+            </View>
           ) : null}
         </View>
       </View>
