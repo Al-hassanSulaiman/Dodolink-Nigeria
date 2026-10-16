@@ -125,11 +125,11 @@ Retaining the source is not enough for an instant writable rollback.
 
 ## Publishing shutdown navigation
 
-The user's current Publishing overview shows Sharing, Infrastructure, and Publish history, but their screenshots show no Shut down control or deployment-management three-dot menu. Published-history list icons are not proven shutdown controls.
+In the user's current Publishing UI, open Adjust settings (the Infrastructure arrow also opens it), then scroll to the very bottom. Manage your app contains Pause, Change deployment type, and Unpublish. The source-stop action is labeled Unpublish, not Shut down.
 
-**Why:** Instructions to use a three-dot menu and then scroll to the bottom did not reveal a shutdown control. The current official documentation confirms shutdown exists but does not establish its exact location in this UI.
+**Why:** The user supplied screenshots establishing the actual location after overview-menu instructions failed. The overview has no visible shutdown control, and the published-history list icons are not shutdown controls. The Pause label says billing continues and users lose access; it does not establish that background execution stops.
 
-**How to apply:** Base further navigation on visible controls and inspect safely without promising where shutdown is located. Do not infer source shutdown from screenshots of the publishing overview; Google writes and jobs still require confirmed source shutdown or an independently verified source freeze.
+**How to apply:** Use the settings-bottom Unpublish control for the approved source-runtime shutdown. Explain that the published runtime and custom-domain associations are removed, while project/code/database remain; rollback requires republishing and reconnecting domains. Leave the destructive development-to-production database-copy checkbox unchecked. Verify shutdown before enabling Google writes or jobs; merely seeing the button is not confirmation.
 
 ## Operator cloud credentials
 
