@@ -25,6 +25,14 @@ A staged API using a production database snapshot must not automatically run liv
 
 **How to apply:** Explicitly disable background jobs before booting a staging API with copied production data and verify that startup respects this setting. Only enable the intended production jobs as part of a controlled cutover.
 
+## Provider validation from the deployed environment
+
+Do not diagnose production provider credentials from a development-workspace API denial alone.
+
+**Why:** A read-only Paystack request from the workspace returned HTTP 403, while the Cloud Run probe successfully authenticated using the exact same Secret Manager binding as the live service. The cause of the workspace denial was not established.
+
+**How to apply:** Inspect the existing probe before running it and compare its credential binding with the live service. Prefer an attached-identity, read-only production-environment check before rotating credentials. Keep charges and sent emails at zero; successful API authentication is not proof of a completed checkout or future account funding.
+
 ## Authentication continuity
 
 The user explicitly requested: "I want to use my own personal clerk pls." The target is user-owned Clerk rather than Replit-managed Clerk. Do not deploy workspace test keys or switch live authentication as a shortcut.
