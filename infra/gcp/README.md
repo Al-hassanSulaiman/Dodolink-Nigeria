@@ -47,11 +47,14 @@ authorization, not a reason to recreate the certificate. Its DNS authorization
 is `dodolink-root-auth`; the prepared certificate map is `dodolink-domains-map`.
 It covers the root and wildcard, including `www` and staging.
 
-Personal Clerk still reports `native_settings.api_enabled=false` and no enabled
-social providers. Configure Native API and the Google/Apple connections used by
-the shipped clients in the personal **production** instance, not Replit's
-development Auth tenant. Do not reuse the App Store Connect API key as an Apple
-Sign in with Apple private key. No such credentials were requested in chat.
+Personal Clerk now reports Native API enabled and `oauth_google` enabled.
+The user configured Google with custom production OAuth credentials and reported
+enabling it with a replacement secret. Confirm that the older exposed secret
+has been disabled; do not retain credential values in source or documentation.
+This configuration check is not proof of a complete Google sign-in round trip.
+Apple connection/native registration remains pending in the personal
+**production** instance, not Replit's development Auth tenant. Do not reuse the
+App Store Connect API key as an Apple Sign in with Apple private key.
 
 ### Prepared background-job handoff
 
@@ -526,8 +529,8 @@ The exact build-19 IPA would be needed for direct inspection of its JavaScript
 and signed entitlements, but the user has deferred that audit. It does not hold
 up hosting migration. Do not infer that build 19 lacks the correction or
 recommend rebuilding merely because the personal connector does not list it.
-A native sign-in journey also remains unverified: the personal Clerk Native API
-is disabled and no Apple social connection is enabled.
+A native sign-in journey also remains unverified: Native API is now enabled,
+but the Apple social connection and iOS registration still need configuration.
 
 Write-journey tests, new-account authorization, staging-domain verification,
 and final data synchronization remain pending. Do not enable production jobs
