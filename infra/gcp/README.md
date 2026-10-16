@@ -255,7 +255,26 @@ and restore the service and three job images together. Never switch DNS back
 to the retained Replit database as an image rollback. A locked release can be
 reclaimed automatically only when its owner build is terminal, not merely old.
 
-Initial GitHub-push → build → deployment verification is pending during setup.
+Verified on 2026-10-16 with a real GitHub push:
+
+- Trigger `dodolink-production-main` completed build
+  `bec35b9f-e9a3-4de3-aef2-221dc402f3c1` successfully from source commit
+  `88fdf9652b88ee528c64dddf1840ccb70aa78bd2`.
+- All 22 API test files and 16 release-safety tests passed; library/API/admin
+  typechecks and both frontend exports completed in Google Cloud.
+- Revision `dodolink-00012-kwq` receives 100% of traffic. The service and three
+  job definitions use image digest
+  `sha256:007b104282dcf32101205d7d98e64a56d18dc39e3b9283402b3d0da21f283771`.
+- Independent pre/post template fingerprints confirm all four runtime pod
+  configurations are unchanged apart from their image references. Ingress
+  remains internal/load-balancer-only.
+- Trusted live checks passed for customer HTML, admin HTML, API health, and
+  public store reads. No production migration or manual billing/job execution
+  was used for this verification.
+
+The official CLI container uses its reported bundled interpreter and, when
+necessary, its trusted certifi roots; HTTPS verification is never disabled.
+Developer workspace interpreters and CA paths are not assumed to exist in CI.
 
 ## Foundation
 
