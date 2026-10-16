@@ -123,6 +123,14 @@ Retaining the source is not enough for an instant writable rollback.
 
 **How to apply:** After target writes begin, freeze and reconcile data/auth before a DNS rollback. Never resume both sides' billing against divergent copies.
 
+## Publishing shutdown navigation
+
+The user's current Publishing overview shows Sharing, Infrastructure, and Publish history, but their screenshots show no Shut down control or deployment-management three-dot menu. Published-history list icons are not proven shutdown controls.
+
+**Why:** Instructions to use a three-dot menu and then scroll to the bottom did not reveal a shutdown control. The current official documentation confirms shutdown exists but does not establish its exact location in this UI.
+
+**How to apply:** Base further navigation on visible controls and inspect safely without promising where shutdown is located. Do not infer source shutdown from screenshots of the publishing overview; Google writes and jobs still require confirmed source shutdown or an independently verified source freeze.
+
 ## Operator cloud credentials
 
 Do not assume the authenticated gcloud operator session persists between workspace sessions.
