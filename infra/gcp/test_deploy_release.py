@@ -151,7 +151,9 @@ class SourceTests(unittest.TestCase):
                 json.dumps({"object": {"sha": "c" * 40}}).encode(),
                 json.dumps({"status": status, "files": files}).encode(),
             ]
-            return cloud.source_is_current(COMMIT)
+            result = cloud.source_is_current(COMMIT)
+            self.assertTrue(cloud.request.call_args.args[0].endswith(":accessReadToken"))
+            return result
 
     def test_ignored_push_does_not_strand_a_valid_pending_build(self):
         self.assertTrue(self.compare([{"filename": "infra/gcp/README.md"},

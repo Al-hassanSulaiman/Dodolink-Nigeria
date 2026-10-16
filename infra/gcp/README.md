@@ -28,8 +28,10 @@ cloud baseline, with no delta to import. There were zero unconsumed subscription
 payment quotes. All 139 media objects verified unchanged, including content/ACL
 metadata; path reconciliation found zero missing/extra objects.
 
-Cloud Run revision `dodolink-00011-c46` is ready and receives 100% of traffic.
-It has `MIGRATION_STAGING=false`, `MIGRATION_ALLOW_AUTH=false`, and
+The hosting cutover completed with Cloud Run revision `dodolink-00011-c46`
+ready and receiving 100% of traffic. Subsequent releases are tracked by Cloud
+Build and the image-only release manifests described below.
+The cutover set `MIGRATION_STAGING=false`, `MIGRATION_ALLOW_AUTH=false`, and
 `BACKGROUND_JOBS_ENABLED=false`. Trusted root customer/admin/health checks pass.
 An unauthenticated store-create request returns 401, not the staging write block;
 no store was created. Startup confirms all web background jobs are disabled,
@@ -201,6 +203,11 @@ Replit in the delivery path. Production source is
 the previously unpushed migration source so an old checkout cannot replace the
 live migrated application. Private data exports and incidental screenshots are
 not included in that synchronization.
+
+Only commits pushed to `main` start automatic delivery. Saving in an editor or
+creating a local Replit checkpoint does not push code to GitHub. Documentation,
+memory, screenshots, and unrelated portfolio/promo changes do not trigger a
+DodoLink release. Native-only branches do not match the production trigger.
 
 Cloud Build host connection `dodolink-github` is `COMPLETE`, with repository
 `dodolink-nigeria` linked in `africa-south1`. The Google-managed service agent's

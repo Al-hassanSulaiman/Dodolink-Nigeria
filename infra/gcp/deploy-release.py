@@ -73,7 +73,7 @@ class Cloud:
         repository = (f"projects/{self.project}/locations/{self.region}/connections/"
                       "dodolink-github/repositories/dodolink-nigeria")
         credential = self.request(
-            "https://cloudbuild.googleapis.com/v2/" + repository + ":fetchReadToken",
+            "https://cloudbuild.googleapis.com/v2/" + repository + ":accessReadToken",
             "POST", {},
         )
         # Short-lived, read-only GitHub credential stays in worker memory.
