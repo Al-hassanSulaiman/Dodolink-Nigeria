@@ -202,9 +202,12 @@ branch does not yet contain the migration source and infrastructure files.
 Synchronize those changes safely before activating any production push trigger.
 
 Cloud Build host connection `dodolink-github` was created in `africa-south1`.
-It is awaiting the user's Google/GitHub authorization
-(`PENDING_USER_OAUTH`). No repository link or automatic deployment trigger has
-been activated, and this setup has not changed the running production image.
+It has advanced to GitHub app installation (`PENDING_INSTALL_APP`). A denied
+OAuth callback was traced through audit logs to a browser Google account other
+than the project's existing owner. Use the already-authorized owner in Google's
+account chooser rather than granting new roles to the other account. GitHub
+account selection is separate. No repository link or automatic deployment
+trigger has been activated, and setup has not changed the production image.
 
 Creating this connection required the Google-managed Cloud Build service agent
 to provision its OAuth secret. Custom role `dodolinkGitHubBootstrap` grants only

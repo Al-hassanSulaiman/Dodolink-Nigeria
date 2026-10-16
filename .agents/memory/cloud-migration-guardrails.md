@@ -141,6 +141,12 @@ In the user's current Publishing UI, open Adjust settings (the Infrastructure ar
 
 ## Operator cloud credentials
 
+Browser OAuth callbacks can use a different Google identity from the authenticated CLI.
+
+**Why:** A GitHub/Cloud Build callback was denied connection-update permission even though CLI connection creation succeeded; audit logs identified a different, unprivileged browser principal.
+
+**How to apply:** Check the denied audit principal and connection installation state before granting roles or recreating connections. Prefer selecting the already-authorized project owner in Google's account chooser. GitHub's signed-in identity is separate from the Google identity.
+
 Do not assume the authenticated gcloud operator session persists between workspace sessions.
 
 **Why:** Infrastructure creation succeeded with an active account, but a later session had no credentialed accounts while the public DNS and load-balancer redirect still proved those resources existed.
