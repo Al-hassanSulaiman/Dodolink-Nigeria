@@ -3,9 +3,10 @@
 ## Current cutover status
 
 **Google Cloud staging is verified; the live domain has NOT been moved.**
-The immediate account actions are correcting certificate DNS authorization and
-refreshing the Google Cloud CLI login. Native API and both social connections
-are enabled; full login/native-registration checks still remain. The exact iPhone archive audit was deferred
+The certificate CNAME is now correct and Google Cloud CLI access is restored.
+The live-domain certificate is still provisioning; a bounded watcher is running.
+Native API and both social connections are enabled; full login, native-registration,
+and Apple private-email-relay checks still remain. The exact iPhone archive audit was deferred
 by the user and is not a hosting-cutover gate. Do not start a mobile build.
 
 Completed:
@@ -42,13 +43,13 @@ Live certificate prerequisite:
 | --- | --- | --- |
 | CNAME | `_acme-challenge_uu4uzxmmpxy6y2rt` | `97bf1f67-6311-4c8d-8542-82d072ad38b1.5.authorize.certificatemanager.goog.` |
 
-The record exists, but public DNS returns the incorrect target
+Public DNS now returns the exact correct target in the table. Previously it returned
 `97bf1f67-6311-4c8d-8542-82d072ad38b1.5.authorize.certificatemanager.goog.dodolink.com.ng.`
-The DNS panel appended the zone to the destination. Edit the existing CNAME's
-target to the exact absolute name in the table, including the final dot; leave
-the record name and live root/www records unchanged.
-`dodolink-domains` was last verified PROVISIONING with `CNAME_MISMATCH`; this is
-incorrect DNS authorization, not a reason to recreate the certificate. Its DNS authorization
+The DNS panel had appended the zone to the destination; the user corrected it.
+Preserve the absolute destination's final dot and leave live root/www unchanged.
+`dodolink-domains` remains PROVISIONING; its last authorization attempt still
+records the earlier mismatch. Allow Google to retry, rather than recreating the
+certificate. Its DNS authorization
 is `dodolink-root-auth`; the prepared certificate map is `dodolink-domains-map`.
 It covers the root and wildcard, including `www` and staging.
 
@@ -61,10 +62,11 @@ round trips; confirm native iOS registration and Apple private-email-relay setup
 All target configuration belongs to the personal **production** instance, not
 Replit's development Auth tenant.
 
-Google Cloud management requests currently require CLI reauthentication, not
-new IAM grants. Complete `gcloud auth login --no-launch-browser` in the project
-Shell/browser; never pass verification codes through chat. Re-read the actual
-certificate, runtime safety flags, and timer states after restoring access.
+The user completed CLI reauthentication; Google Cloud management access is restored.
+Runtime flags remain read-only staging with auth-only mutation allowance and web
+background jobs disabled. All three Scheduler timers were reverified PAUSED.
+Fresh source comparison found no changed tables, and source media inventory is
+unchanged at 139 objects. No source records were modified by these checks.
 Root and www still resolve to the old `34.111.179.208` address.
 
 ### Prepared background-job handoff
