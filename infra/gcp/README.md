@@ -193,6 +193,37 @@ and per-store charge serialization protect the handoff and concurrent tasks.
 - The hosting cutover is complete. Remaining owner/native/payment journey
   verification limits are explicit above; do not report those as tested.
 
+## GitHub automatic delivery setup
+
+The user requested direct GitHub → Cloud Build → Cloud Run deployment, without
+Replit in the delivery path. The existing repository is
+`Al-hassanSulaiman/Dodolink-Nigeria`; its default branch is `main`. The remote
+branch does not yet contain the migration source and infrastructure files.
+Synchronize those changes safely before activating any production push trigger.
+
+Cloud Build host connection `dodolink-github` was created in `africa-south1`.
+It is awaiting the user's Google/GitHub authorization
+(`PENDING_USER_OAUTH`). No repository link or automatic deployment trigger has
+been activated, and this setup has not changed the running production image.
+
+Creating this connection required the Google-managed Cloud Build service agent
+to provision its OAuth secret. Custom role `dodolinkGitHubBootstrap` grants only
+secret creation, metadata/IAM management, and version addition—not project-wide
+secret-value reads. Its project binding has a two-hour expiry. Remove that
+bootstrap binding once installation is complete; retain only scoped access to
+the connection's own OAuth secret.
+
+The existing `cloudbuild-api.yaml` builds an already-prepared, allowlisted image
+context; it is not a complete GitHub source-build pipeline. The new source
+pipeline must install locked dependencies, check/test/build the API and both
+frontends, prepare the credential-free runtime context, push an immutable image,
+and update the service and all three maintenance jobs. Preserve environment,
+identity, ingress, database, storage, and the single-host job controls. Prevent
+overlapping/out-of-order releases and retain a recoverable previous image.
+Never run automatic database pushes or native-store builds as part of a web
+push deployment. Build credentials should not include payment/mail/private
+Clerk secrets; only the frontend's public Clerk key is needed during export.
+
 ## Foundation
 
 | Resource | Target |
