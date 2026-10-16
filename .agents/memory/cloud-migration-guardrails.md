@@ -13,6 +13,12 @@ The user approved reusing the existing `wordpress-db` Cloud SQL instance for an 
 
 ## Staging side effects
 
+Use absolute CNAME destinations, including the final dot, in this domain's DNS panel.
+
+**Why:** The panel appended the DodoLink zone to Google's certificate-authorization destination, leaving an existing record with the wrong target. Testing only for the expected answer made this look like a missing record.
+
+**How to apply:** Compare the actual returned CNAME target with Google's exact expected FQDN, not just the presence of an answer. Correct only the affected record; preserve live, Clerk, mail, and nameserver records until approved cutover.
+
 A staged API using a production database snapshot must not automatically run live billing, account-deletion retries, retention cleanups, or customer notifications.
 
 **Why:** A production snapshot contains real customer identities and payment authorizations. An additional API instance can cause real external effects even when DNS and customer traffic still point at Replit.

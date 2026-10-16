@@ -3,8 +3,9 @@
 ## Current cutover status
 
 **Google Cloud staging is verified; the live domain has NOT been moved.**
-The remaining account actions are certificate DNS authorization and personal
-Clerk native/social configuration. The exact iPhone archive audit was deferred
+The immediate account actions are correcting certificate DNS authorization and
+refreshing the Google Cloud CLI login. Native API and both social connections
+are enabled; full login/native-registration checks still remain. The exact iPhone archive audit was deferred
 by the user and is not a hosting-cutover gate. Do not start a mobile build.
 
 Completed:
@@ -41,20 +42,30 @@ Live certificate prerequisite:
 | --- | --- | --- |
 | CNAME | `_acme-challenge_uu4uzxmmpxy6y2rt` | `97bf1f67-6311-4c8d-8542-82d072ad38b1.5.authorize.certificatemanager.goog.` |
 
-Google and Cloudflare did not see that record at the last check.
-`dodolink-domains` is PROVISIONING with `CNAME_MISMATCH`; this is a missing DNS
-authorization, not a reason to recreate the certificate. Its DNS authorization
+The record exists, but public DNS returns the incorrect target
+`97bf1f67-6311-4c8d-8542-82d072ad38b1.5.authorize.certificatemanager.goog.dodolink.com.ng.`
+The DNS panel appended the zone to the destination. Edit the existing CNAME's
+target to the exact absolute name in the table, including the final dot; leave
+the record name and live root/www records unchanged.
+`dodolink-domains` was last verified PROVISIONING with `CNAME_MISMATCH`; this is
+incorrect DNS authorization, not a reason to recreate the certificate. Its DNS authorization
 is `dodolink-root-auth`; the prepared certificate map is `dodolink-domains-map`.
 It covers the root and wildcard, including `www` and staging.
 
-Personal Clerk now reports Native API enabled and `oauth_google` enabled.
-The user configured Google with custom production OAuth credentials and reported
-enabling it with a replacement secret. Confirm that the older exposed secret
-has been disabled; do not retain credential values in source or documentation.
-This configuration check is not proof of a complete Google sign-in round trip.
-Apple connection/native registration remains pending in the personal
-**production** instance, not Replit's development Auth tenant. Do not reuse the
-App Store Connect API key as an Apple Sign in with Apple private key.
+Personal Clerk now reports Native API enabled and both `oauth_google` and
+`oauth_apple` enabled. The user configured a replacement Google secret and
+confirmed deleting the older exposed secret. Apple uses a separate Sign in with
+Apple key, not the App Store Connect key. No credential values belong in source
+or documentation. These configuration checks do not prove complete sign-in
+round trips; confirm native iOS registration and Apple private-email-relay setup.
+All target configuration belongs to the personal **production** instance, not
+Replit's development Auth tenant.
+
+Google Cloud management requests currently require CLI reauthentication, not
+new IAM grants. Complete `gcloud auth login --no-launch-browser` in the project
+Shell/browser; never pass verification codes through chat. Re-read the actual
+certificate, runtime safety flags, and timer states after restoring access.
+Root and www still resolve to the old `34.111.179.208` address.
 
 ### Prepared background-job handoff
 
