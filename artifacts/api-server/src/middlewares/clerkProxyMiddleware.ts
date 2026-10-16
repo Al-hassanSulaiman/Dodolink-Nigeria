@@ -5,10 +5,9 @@
  * authentication on custom domains and .replit.app deployments without
  * requiring CNAME DNS configuration.
  *
- * AUTH CONFIGURATION: To manage users, enable/disable login providers
- * (Google, GitHub, etc.), change app branding, or configure OAuth credentials,
- * use the Auth pane in the workspace toolbar. There is no external Clerk
- * dashboard — all auth configuration is done through the Auth pane.
+ * Replit-managed instances use the Auth pane. External instances are configured
+ * in their owner's Clerk account; their registered canonical proxy URL may be
+ * shared by staging hosts under the same parent domain.
  *
  * IMPORTANT:
  * - Only active in production (Clerk proxying doesn't work for dev instances)
@@ -52,6 +51,22 @@ export function getClerkProxyHost(req: {
   return firstHop || req.headers.host?.trim() || undefined;
 }
 
+export function getClerkProxyUrl(
+  req: { headers: IncomingHttpHeaders },
+  canonicalUrl = process.env.CLERK_PROXY_URL,
+): string {
+  if (canonicalUrl) {
+    const url = new URL(canonicalUrl);
+    if (url.protocol !== "https:" || url.username || url.password ||
+        url.search || url.hash || url.pathname.replace(/\/$/, "") !== CLERK_PROXY_PATH) {
+      throw new Error("CLERK_PROXY_URL must be an HTTPS URL ending in /api/__clerk.");
+    }
+    return canonicalUrl.replace(/\/$/, "");
+  }
+  const protocol = req.headers["x-forwarded-proto"] || "https";
+  return `${protocol}://${getClerkProxyHost(req) || ""}${CLERK_PROXY_PATH}`;
+}
+
 export function clerkProxyMiddleware(): RequestHandler {
   // Only run proxy in production — Clerk proxying doesn't work for dev instances
   if (process.env.NODE_ENV !== "production") {
@@ -63,6 +78,8 @@ export function clerkProxyMiddleware(): RequestHandler {
     return (_req, _res, next) => next();
   }
 
+  // Validate explicit configuration at startup rather than during a sign-in.
+  if (process.env.CLERK_PROXY_URL) getClerkProxyUrl({ headers: {} });
   return createProxyMiddleware({
     target: CLERK_FAPI,
     changeOrigin: true,
@@ -73,18 +90,13 @@ export function clerkProxyMiddleware(): RequestHandler {
       path.replace(new RegExp(`^${CLERK_PROXY_PATH}`), ""),
     on: {
       proxyReq: (proxyReq, req) => {
-        const protocol = req.headers["x-forwarded-proto"] || "https";
-        const host = getClerkProxyHost(req) || "";
-        const proxyUrl = `${protocol}://${host}${CLERK_PROXY_PATH}`;
-
-        proxyReq.setHeader("Clerk-Proxy-Url", proxyUrl);
+        proxyReq.setHeader("Clerk-Proxy-Url", getClerkProxyUrl(req));
         proxyReq.setHeader("Clerk-Secret-Key", secretKey);
 
-        const xff = req.headers["x-forwarded-for"];
-        const clientIp =
-          (Array.isArray(xff) ? xff[0] : xff)?.split(",")[0]?.trim() ||
-          req.socket?.remoteAddress ||
-          "";
+        // Express resolves the trusted proxy chain. Do not forward the
+        // attacker-controlled leftmost X-Forwarded-For entry to Clerk.
+        const clientIp = ("ip" in req && typeof req.ip === "string" ? req.ip : undefined) ||
+          req.socket?.remoteAddress || "";
         if (clientIp) {
           proxyReq.setHeader("X-Forwarded-For", clientIp);
         }

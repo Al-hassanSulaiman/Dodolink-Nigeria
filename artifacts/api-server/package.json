@@ -14,6 +14,7 @@
   "dependencies": {
     "@clerk/express": "^2.1.41",
     "@clerk/shared": "^4.25.3",
+    "@google-cloud/cloud-sql-connector": "^1.12.1",
     "@google-cloud/storage": "^7.21.0",
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",

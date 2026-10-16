@@ -1,0 +1,12 @@
+[
+  {
+    "origin": [
+      "https://dodolink.com.ng",
+      "https://www.dodolink.com.ng",
+      "https://dodolink-q4s65fjn7q-bq.a.run.app"
+    ],
+    "method": ["GET", "HEAD", "PUT"],
+    "responseHeader": ["Content-Type", "ETag"],
+    "maxAgeSeconds": 3600
+  }
+]

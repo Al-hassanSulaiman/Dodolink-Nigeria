@@ -1,0 +1,24 @@
+name: dodolink-production-https-map
+description: Prepared live-domain routing; attach only after certificate authorization.
+defaultUrlRedirect:
+  hostRedirect: dodolink.com.ng
+  httpsRedirect: true
+  redirectResponseCode: MOVED_PERMANENTLY_DEFAULT
+  stripQuery: false
+hostRules:
+  - hosts:
+      - dodolink.com.ng
+      - staging.dodolink.com.ng
+    pathMatcher: app
+  - hosts:
+      - www.dodolink.com.ng
+    pathMatcher: canonical
+pathMatchers:
+  - name: app
+    defaultService: https://www.googleapis.com/compute/v1/projects/project-3a919f28-1462-4a1d-a2c/global/backendServices/dodolink-staging-backend
+  - name: canonical
+    defaultUrlRedirect:
+      hostRedirect: dodolink.com.ng
+      httpsRedirect: true
+      redirectResponseCode: MOVED_PERMANENTLY_DEFAULT
+      stripQuery: false

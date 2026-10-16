@@ -171,7 +171,7 @@ const DAILY_JOBS_LOCK_ID = 748_291_530;
  * deployment ever scales to multiple instances, only one of them executes
  * the run (no duplicate reminders or double charges).
  */
-async function runDailyJobs(): Promise<void> {
+export async function runDailyJobs(): Promise<void> {
   await db.transaction(async (tx) => {
     const result = await tx.execute(
       sql`select pg_try_advisory_xact_lock(${DAILY_JOBS_LOCK_ID}) as locked`,

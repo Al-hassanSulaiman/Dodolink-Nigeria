@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./connection-config": "./src/connection-config.ts",
     "./schema": "./src/schema/index.ts"
   },
   "scripts": {
@@ -12,6 +13,7 @@
     "push-force": "drizzle-kit push --force --config ./drizzle.config.ts"
   },
   "dependencies": {
+    "@google-cloud/cloud-sql-connector": "^1.12.1",
     "drizzle-orm": "catalog:",
     "drizzle-zod": "^0.8.3",
     "pg": "^8.20.0",
