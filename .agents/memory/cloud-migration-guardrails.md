@@ -93,6 +93,18 @@ The user approved setting up public staging HTTPS for `staging.dodolink.com.ng`,
 
 **How to apply:** The approval covers the staging HTTPS front door and its public access, while writes and background jobs remain disabled. It does not authorize moving the live root/www domains, transferring account ownership, or enabling production jobs. Restrict Cloud Run ingress to internal/load-balancer traffic when enabling public staging invocation, so the raw service URL cannot bypass the intended front door.
 
+The user subsequently confirmed normal sign-up on staging works and explicitly requested completing the production migration.
+
+**Why:** The user said they tried staging sign-up successfully and asked to get the migration done.
+
+**How to apply:** This supersedes the earlier staging-only approval. Proceed with cutover when trusted TLS, final data synchronization, and confirmed source-job shutdown are satisfied. Retain Replit for rollback; the approval does not permit duplicate billing, automatic legacy ownership transfers, or a new native build.
+
+The user reports that setting the live DNS TTL to 300 automatically reverts to 3600.
+
+**Why:** The user attempted the requested reduction and reported the DNS panel's behavior.
+
+**How to apply:** Plan for a one-hour DNS cache window; do not keep asking for a lower TTL or treat that reduction as a certificate or cutover prerequisite.
+
 Check both managed-certificate domain status and actual trusted TLS serving, not only the overall certificate status.
 
 **Why:** Overall PROVISIONING concealed FAILED_NOT_VISIBLE for the domain; later ACTIVE preceded successful TLS at the load-balancer edge. Correct authoritative DNS alone did not mean the edge certificate was immediately usable.

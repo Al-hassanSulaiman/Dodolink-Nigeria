@@ -11,6 +11,14 @@ Give app-store reviewers a separate, ordinary account with a per-user Device Tru
 
 Verify that the current instance accepts the per-user exception before relying on it.
 
-**Why:** The personal production instance rejected the setting with HTTP 422. Prior success on a different instance did not prove support on this one.
+**Why:** An earlier production request returned HTTP 422 and was initially treated as an unsupported exception. The production instance subsequently accepted the documented field for the approved reviewer. A validation failure alone does not establish that a feature is unavailable.
 
-**How to apply:** Do not repeat rejected flag requests or disable Device Trust globally. A real mailbox is needed to finish normal password/device-verification testing. Official short-lived sign-in tickets can independently verify session/API authorization, but do not prove the password/device journey.
+**How to apply:** Do not blindly repeat rejected probes or disable Device Trust globally. Inspect the provider's field-specific error codes before choosing a fix. Confirm the saved per-user flag and review marker through a fresh API read, then test password sign-in from a new client. Official short-lived sign-in tickets can independently verify session/API authorization, but do not prove the password/device journey.
+
+## Fresh-directory migration scope
+
+Starting the personal Clerk directory fresh does not mean retiring the product's app-store reviewer access.
+
+**Why:** After choosing a fresh user directory, the user asked whether the existing dashboard-created review account still works and supplied its email for restoration.
+
+**How to apply:** Reprovision only the approved dedicated reviewer account, without recovering legacy users or transferring legacy ownership/admin privileges. Obtain its password through the secure secrets flow, not chat. Preserve the real reviewer account during synthetic-test cleanup. Do not claim that copying SQL preserves the reviewer login, or that a successful sign-in ticket proves an OTP-free password login.

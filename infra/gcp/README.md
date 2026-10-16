@@ -3,8 +3,25 @@
 ## Current cutover status
 
 **Google Cloud staging is verified; the live domain has NOT been moved.**
-The certificate CNAME is now correct and Google Cloud CLI access is restored.
-The live-domain certificate is still provisioning; a bounded watcher is running.
+The original `dodolink-domains` certificate is now ACTIVE with both root and
+wildcard authorized. Both entries in `dodolink-domains-map` already reference it.
+That map and `dodolink-production-https-map` are now attached to the existing
+`dodolink-staging-https-proxy`; `dodolink-production-http-map` is attached to the
+existing HTTP proxy. Root/www public DNS still points to Replit.
+
+Trusted TLS against `8.232.160.236` now passes for root, www, and staging.
+The customer page and `/admin/` return 200 with their expected HTML titles.
+Health returns `{"status":"ok"}` and public store reads return valid JSON with
+200. The www canonical redirect returns 301 and preserves path and query.
+Staging health remains 200. These checks used DNS overrides: public root/www
+DNS remains unchanged. Signed-in owner admin access is still not verified.
+
+The next gate is the user's shutdown of the published Replit DodoLink runtime,
+not the development workflows. Keep Google writes and maintenance disabled until
+shutdown is confirmed and the final source/payment/media checks pass.
+
+The additional `dodolink-domains-fresh` request and the working staging
+certificates are retained. Do not create further replacements.
 Native API and both social connections are enabled; full login, native-registration,
 and Apple private-email-relay checks still remain. The exact iPhone archive audit was deferred
 by the user and is not a hosting-cutover gate. Do not start a mobile build.
@@ -34,8 +51,22 @@ Completed:
   All synthetic accounts were removed; the personal directory remained empty.
 - Normal browser password login reached Device Trust email verification.
   Completing that journey requires a mailbox; it was not bypassed globally.
+- The user subsequently confirmed normal staging sign-up works and explicitly
+  requested finishing the live migration. This confirms the user's sign-up
+  journey, not every OAuth/native journey or signed-in admin access.
 - The final targeted checks passed (62 TypeScript tests plus four delta safety
   tests), TypeScript compilation passed, and the local API workflow restarted.
+- The user subsequently requested restoring the dedicated app-store reviewer.
+  That real account now exists in personal production Clerk, with password
+  authentication, the private review-only marker, and the per-user Device Trust
+  exception confirmed by a fresh backend read. Do not remove it as a synthetic
+  migration test user or expect the production directory to remain empty.
+- A fresh native-client password sign-in through the staging Clerk proxy returned
+  `complete`, with the first factor verified and no email-code challenge.
+  Its authenticated conversation read returned 200, and admin analytics returned
+  403. The test session was revoked. No global Device Trust setting, SQL data,
+  payment, message, or live-domain routing was changed by this restoration.
+  This verifies actual password/API access, not the installed iPhone build.
 
 Live certificate prerequisite:
 
@@ -47,10 +78,9 @@ Public DNS now returns the exact correct target in the table. Previously it retu
 `97bf1f67-6311-4c8d-8542-82d072ad38b1.5.authorize.certificatemanager.goog.dodolink.com.ng.`
 The DNS panel had appended the zone to the destination; the user corrected it.
 Preserve the absolute destination's final dot and leave live root/www unchanged.
-`dodolink-domains` remains PROVISIONING; its last authorization attempt still
-records the earlier mismatch. Allow Google to retry, rather than recreating the
-certificate. Its DNS authorization
-is `dodolink-root-auth`; the prepared certificate map is `dodolink-domains-map`.
+`dodolink-domains` is ACTIVE after Google's successful validation retry.
+Its DNS authorization is `dodolink-root-auth`; the attached certificate map is
+`dodolink-domains-map`.
 It covers the root and wildcard, including `www` and staging.
 
 Personal Clerk now reports Native API enabled and both `oauth_google` and
@@ -68,6 +98,11 @@ background jobs disabled. All three Scheduler timers were reverified PAUSED.
 Fresh source comparison found no changed tables, and source media inventory is
 unchanged at 139 objects. No source records were modified by these checks.
 Root and www still resolve to the old `34.111.179.208` address.
+Their TTL remains 3600 seconds. The user reports changing it to 300 automatically
+reverts to 3600; plan the handoff for a one-hour cache window rather than requiring
+a lower TTL. This does not prevent certificate issuance.
+The latest source payment check found zero unconsumed subscription payment quotes.
+Recheck after source shutdown; this is not permission to run target billing yet.
 
 ### Prepared background-job handoff
 
@@ -96,13 +131,14 @@ and per-store charge serialization protect the handoff and concurrent tasks.
 
 ### Remaining cutover sequence
 
-1. Confirm the certificate CNAME on both authoritative nameservers; wait for
-   `dodolink-domains` ACTIVE and actual trusted TLS readiness.
-2. Complete personal Clerk mobile/provider setup and mailbox-backed sign-in.
-   Verify the owner's admin access; no arbitrary account was granted admin.
-3. Attach `dodolink-domains-map` and `dodolink-production-https-map` to the
-   existing HTTPS proxy, and `dodolink-production-http-map` to the HTTP proxy.
-   The prepared URL maps are not yet attached. Do not replace the load balancer.
+1. Certificate issuance, production map attachment, and actual trusted
+   root/www/staging TLS verification are complete.
+2. Normal staging sign-up is confirmed by the user. Personal Clerk Native API,
+   Google, and Apple connections are enabled; full native/OAuth testing remains
+   unverified and no new native build was authorized.
+3. Customer/admin page routing and public API reads on the new IP are verified.
+   Verify the owner's signed-in admin access during the live smoke test; do not
+   grant arbitrary accounts admin to substitute for that check.
 4. Confirm the old Replit runtime/jobs are stopped and no charge is in flight.
    Refresh source fingerprints, run the guarded delta and media reconciliation
    again, and stop if any table other than `push_tokens` changed.
