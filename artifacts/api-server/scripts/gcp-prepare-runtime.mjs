@@ -9,10 +9,11 @@ const apiRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const workspace = path.resolve(apiRoot, "../..");
 const context = path.join(workspace, "generated-artifacts/gcp-runtime");
 const require = createRequire(path.join(apiRoot, "package.json"));
+const databaseRequire = createRequire(path.join(workspace, "lib/db/package.json"));
 await mkdir(context, { recursive: true, mode: 0o700 });
 const dependencies = {};
-for (const name of ["@google-cloud/cloud-sql-connector", "@google-cloud/storage", "nodemailer"]) {
-  let directory = path.dirname(require.resolve(name));
+for (const name of ["@google-cloud/cloud-sql-connector", "@google-cloud/storage", "nodemailer", "pg"]) {
+  let directory = path.dirname((name === "pg" ? databaseRequire : require).resolve(name));
   while (true) {
     try {
       const manifest = JSON.parse(await readFile(path.join(directory, "package.json"), "utf8"));
@@ -31,6 +32,19 @@ await writeFile(path.join(context, "package.json"), JSON.stringify({
   type: "module", dependencies,
 }, null, 2) + "\n");
 await cp(path.join(apiRoot, "dist"), path.join(context, "dist"), { recursive: true });
+const { build } = require("esbuild");
+await build({
+  entryPoints: [path.join(apiRoot, "scripts/gcp-verify-runtime.mjs")],
+  outfile: path.join(context, "dist/runtime-probe.mjs"),
+  platform: "node",
+  format: "esm",
+  target: "node22",
+  bundle: true,
+  packages: "external",
+  alias: {
+    "@workspace/db/connection-config": path.join(workspace, "lib/db/src/connection-config.ts"),
+  },
+});
 await rm(path.join(context, "web"), { recursive: true, force: true });
 await mkdir(path.join(context, "web"), { recursive: true });
 if (process.argv.includes("--with-frontends")) {

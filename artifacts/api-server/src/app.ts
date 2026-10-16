@@ -12,14 +12,14 @@ import {
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { preventDeletedAccountWrites } from "./lib/accountDeletion";
-import { runtimeSafety, stagingWriteGuard, stagingAuthenticationGuard } from "./lib/runtimeSafety";
+import { runtimeSafety, stagingWriteGuard, stagingAuthenticationGuard, readProxyHopCount } from "./lib/runtimeSafety";
 
 const app: Express = express();
 
-// Trust exactly one proxy hop (the Replit / deployment reverse proxy) so that
-// req.ip reflects the real visitor address from X-Forwarded-For rather than
-// the proxy's internal socket address. express-rate-limit relies on req.ip.
-app.set("trust proxy", 1);
+// Replit uses one hop. Google's external load balancer appends both the client
+// and load-balancer IP, requiring two. Never trust attacker-supplied leftmost
+// X-Forwarded-For entries or use blanket trust; rate limiting depends on req.ip.
+app.set("trust proxy", readProxyHopCount(process.env));
 
 // Cloud-only static hosting. Never change Replit's existing artifact routing.
 if (process.env.WEB_FRONTEND_DIR) {
@@ -30,7 +30,9 @@ app.use("/api", stagingAuthenticationGuard(process.env));
 
 // Before the auth proxy and every API handler: staging cannot trigger external
 // effects or modify the production snapshot through a public mutation route.
-app.use("/api", stagingWriteGuard(runtimeSafety.staging));
+app.use("/api", stagingWriteGuard(
+  runtimeSafety.staging, process.env.MIGRATION_ALLOW_AUTH === "true",
+));
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 
 app.use(

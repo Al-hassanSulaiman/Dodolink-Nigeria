@@ -1,5 +1,108 @@
 # DodoLink Google Cloud migration
 
+## Current cutover status
+
+**Google Cloud staging is verified; the live domain has NOT been moved.**
+The remaining account actions are certificate DNS authorization and personal
+Clerk native/social configuration. The exact iPhone archive audit was deferred
+by the user and is not a hosting-cutover gate. Do not start a mobile build.
+
+Completed:
+
+- The combined web/admin/API image is deployed with immutable image references.
+- `https://staging.dodolink.com.ng` serves customer/admin pages, store reads,
+  health, and the Clerk proxy over trusted HTTPS.
+- An attached-identity Cloud Run probe proved Cloud SQL writes and rollback,
+  read-only rejection, and zero persisted test rows.
+- The guarded `gcp-refresh-push-tokens.py --apply` refreshed the only changed
+  table. All 14 table fingerprints matched the live source after verification.
+  Source writes: zero. Recheck after freezing the source at actual cutover.
+- All 139 media objects matched CRC32C/size/metadata. Source/destination path
+  hashes also matched with zero missing or extra objects. Temporary upload
+  objects and all temporary database-transfer buckets were removed.
+- Attached-identity signed upload, signed download, and deletion succeeded.
+- Runtime Paystack read-only authentication and Gmail SMTP authentication
+  succeeded. No charge was initiated and no email was sent by these probes.
+- Clerk's primary domain proxy is registered as
+  `https://dodolink.com.ng/api/__clerk`. Staging sends that canonical proxy URL;
+  a staging hostname cannot itself be registered as the primary domain's proxy.
+- An official short-lived Clerk sign-in ticket verified a real session through
+  the proxy: a fresh user's conversations were empty, another user's list was
+  forbidden, admin access was forbidden, and business POSTs remained blocked.
+  All synthetic accounts were removed; the personal directory remained empty.
+- Normal browser password login reached Device Trust email verification.
+  Completing that journey requires a mailbox; it was not bypassed globally.
+- The final targeted checks passed (62 TypeScript tests plus four delta safety
+  tests), TypeScript compilation passed, and the local API workflow restarted.
+
+Live certificate prerequisite:
+
+| Type | Name in the existing DNS zone | Target |
+| --- | --- | --- |
+| CNAME | `_acme-challenge_uu4uzxmmpxy6y2rt` | `97bf1f67-6311-4c8d-8542-82d072ad38b1.5.authorize.certificatemanager.goog.` |
+
+Google and Cloudflare did not see that record at the last check.
+`dodolink-domains` is PROVISIONING with `CNAME_MISMATCH`; this is a missing DNS
+authorization, not a reason to recreate the certificate. Its DNS authorization
+is `dodolink-root-auth`; the prepared certificate map is `dodolink-domains-map`.
+It covers the root and wildcard, including `www` and staging.
+
+Personal Clerk still reports `native_settings.api_enabled=false` and no enabled
+social providers. Configure Native API and the Google/Apple connections used by
+the shipped clients in the personal **production** instance, not Replit's
+development Auth tenant. Do not reuse the App Store Connect API key as an Apple
+Sign in with Apple private key. No such credentials were requested in chat.
+
+### Prepared background-job handoff
+
+The web service always uses `BACKGROUND_JOBS_ENABLED=false`. Cloud SQL writable
+mode now requires an explicit background-job decision; disabling the read-only
+guard cannot silently start a second scheduler.
+
+| Cloud Run job (Johannesburg) | Scheduler timer | UTC schedule |
+| --- | --- | --- |
+| `dodolink-maintenance-daily` | `dodolink-daily-timer` | `0 9 * * *` |
+| `dodolink-maintenance-retention` | `dodolink-retention-timer` | `0 * * * *` |
+| `dodolink-maintenance-deletions` | `dodolink-deletions-timer` | `* * * * *` |
+
+All timers are **PAUSED** and every job also has
+`MAINTENANCE_JOBS_ENABLED=false`. Do not run them before source-job shutdown.
+Cloud Scheduler does not offer `africa-south1`; timer/control metadata is in
+`europe-west1`. It invokes the Google Jobs API with OAuth and carries no
+customer payload. Actual job execution, SQL, secrets, and media remain in
+Johannesburg. The runtime identity has job-scoped invocation grants; no
+service-account key files were created.
+
+Jobs run the same compiled API with `MAINTENANCE_JOB_KIND` set to `daily`,
+`retention`, or `deletions`, but never start HTTP or web timers. An explicit
+maintenance enable gate, PostgreSQL advisory locks, the existing daily lock,
+and per-store charge serialization protect the handoff and concurrent tasks.
+
+### Remaining cutover sequence
+
+1. Confirm the certificate CNAME on both authoritative nameservers; wait for
+   `dodolink-domains` ACTIVE and actual trusted TLS readiness.
+2. Complete personal Clerk mobile/provider setup and mailbox-backed sign-in.
+   Verify the owner's admin access; no arbitrary account was granted admin.
+3. Attach `dodolink-domains-map` and `dodolink-production-https-map` to the
+   existing HTTPS proxy, and `dodolink-production-http-map` to the HTTP proxy.
+   The prepared URL maps are not yet attached. Do not replace the load balancer.
+4. Confirm the old Replit runtime/jobs are stopped and no charge is in flight.
+   Refresh source fingerprints, run the guarded delta and media reconciliation
+   again, and stop if any table other than `push_tokens` changed.
+5. Enable target business writes with `MIGRATION_STAGING=false`,
+   `MIGRATION_ALLOW_AUTH=false`, and `BACKGROUND_JOBS_ENABLED=false`. Verify the
+   real root host against the new IP before changing live DNS/webhook routing.
+6. Move root/www DNS only after readiness; preserve Clerk/mail/nameservers.
+   The reserved target IPv4 remains `8.232.160.236`.
+7. After confirming the single-active-host handoff, enable
+   `MAINTENANCE_JOBS_ENABLED=true` on the three jobs and resume their timers.
+   Keep web timers off. Never enable old and new billing against separate SQL
+   copies simultaneously: per-database locks cannot protect that situation.
+8. Retain Replit and its data for rollback. After Google accepts new writes,
+   switching DNS alone is not a safe rollback: freeze and reconcile data/auth
+   first. Do not delete the original application, database, or media.
+
 ## Safety boundaries
 
 - Target project: `project-3a919f28-1462-4a1d-a2c`.
@@ -165,10 +268,10 @@ retention cleanup, or notification jobs. It skips startup schema changes and
 checks that required restored tables exist. Normal Replit behavior is unchanged
 when using the default URL connection mode without staging.
 
-This is an initial **read-only** validation mode, not full sign-in/payment/upload
-journey validation. Do not set `MIGRATION_STAGING=false` just to test writes
-against a production snapshot: that also enables production background jobs.
-Writable journey tests require a separately reviewed test-data/payment setup.
+This is an initial **read-only** validation mode, not a claim of full live
+checkout or mailbox-backed sign-in. `BACKGROUND_JOBS_ENABLED=false` now
+separately controls web jobs. Only the Clerk proxy can receive a staging-write
+exception through `MIGRATION_ALLOW_AUTH=true`; business mutations stay blocked.
 
 The API keeps the connector as a direct runtime dependency as well as a database
 library dependency: esbuild externalizes Google SDK imports into the API bundle,
@@ -188,18 +291,18 @@ needs permission to impersonate the application service account for this local
 probe; Cloud Run's attached identity does not need a permanent operator grant.
 Remove any temporary impersonation permission after checking.
 
-The local impersonation probe has **not passed**; the temporary operator grant
-was removed. However, the deployed Cloud Run backend has now independently
-verified its attached IAM identity can connect to the restored database,
-check required tables, enforce read-only sessions, and read copied media bytes.
-The rolled-back write test remains outstanding.
+The local impersonation probe did not pass and its temporary operator grant
+was removed. The attached-identity Cloud Run job subsequently passed the
+write/rollback and read-only tests with zero persisted probe rows. The backend
+also verified schema, IAM reads, and copied media access.
 
 ### Actual backend deployment
 
 The real API image is deployed to `dodolink` in Johannesburg, replacing the
 Google placeholder. The service URL is
-`https://dodolink-q4s65fjn7q-bq.a.run.app`. This is IAM-private staging,
-not a production cutover. The customer web build is now served at `/` and the
+`https://dodolink-q4s65fjn7q-bq.a.run.app`. Direct external service access is
+blocked by load-balancer-only ingress. Public staging, not live cutover, serves
+the customer web build at `/` and the
 admin build at `/admin/`, alongside the API.
 
 `MIGRATION_AUTH_PENDING=true` is permitted only with `MIGRATION_STAGING=true`.
@@ -249,10 +352,10 @@ for staging charges.
 
 The deployed credential revision passed health and store reads (200),
 anonymous admin rejection (401), and business-write rejection (503).
-Staging also rejects POSTs to the Clerk proxy (503); signed-in browser journeys
-cannot be claimed verified through that proxy while this initial blanket
-write lock remains enabled. Plan isolated authentication/write testing without
-enabling production billing, deletion, or notification jobs on the snapshot.
+The initial blanket guard also rejected Clerk POSTs. The explicit auth-only
+exception now permits real Clerk sessions without allowing business writes.
+See the current-status section for the successful session/API authorization
+checks and the separately blocked mailbox/device-verification journey.
 
 Verified against the deployed service:
 
@@ -419,8 +522,9 @@ and that Apple handler exactly matches the current source.
 This directly verifies the native correction in archive 18, not archive 19.
 The personal Expo connector is not authorized to read the managed Launch
 workflow, and Apple's API key was forbidden from reading build-bundle metadata.
-The exact build-19 IPA is still needed for direct inspection of its JavaScript
-and signed entitlements. Do not infer that build 19 lacks the correction or
+The exact build-19 IPA would be needed for direct inspection of its JavaScript
+and signed entitlements, but the user has deferred that audit. It does not hold
+up hosting migration. Do not infer that build 19 lacks the correction or
 recommend rebuilding merely because the personal connector does not list it.
 A native sign-in journey also remains unverified: the personal Clerk Native API
 is disabled and no Apple social connection is enabled.
@@ -443,18 +547,16 @@ Do not copy workspace test keys or reset existing accounts as a workaround.
 Access to the source managed tenant is account-dependent; check it using the
 Clerk skill instead of assuming the builder can open that dashboard.
 
-## Still required before cutover
+## Original validation scope
 
-- Refresh the confirmed production snapshot and reconcile any final changes.
-- Complete the rolled-back write test; the deployed runtime IAM read connection
-  and read-only enforcement are verified, but write behavior is not yet tested.
+- Refresh the confirmed production snapshot after the source freeze.
+- The rolled-back write and signed upload/read/cleanup tests have passed.
 - Verify new-account ownership and admin authorization with the personal Clerk
   instance. The user accepted starting with zero users; old-user migration is
   no longer required, and legacy records must not confer privileges on new users.
-- Securely populate and bind production runtime secrets.
-- Validate authenticated application behavior through an approved staging
-  hostname. The combined web/admin/API image is deployed privately with jobs
-  and writes disabled.
+- Production runtime secrets are bound and read-only payment/SMTP auth passed.
+- Session/API authorization checks passed on public staging; mailbox-backed
+  password and real native/provider journeys still need account configuration.
 - Copy and validate production media, including the final delta and deletions.
 - Complete browser verification of the deployed web and admin paths.
 - Validate sign-in, admin access, uploads, chat, notifications, and payments.

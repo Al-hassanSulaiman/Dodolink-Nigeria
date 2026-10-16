@@ -29,3 +29,4 @@
 - [Portfolio analytics privacy](portfolio-analytics-privacy.md) — shared-link attribution is not verified client identity; keep anonymous visits cookie-free and unjoined.
 - [Cloud migration guardrails](cloud-migration-guardrails.md) — stage in Johannesburg; retain Replit through validation and cutover, preserving domains and API paths where possible.
 - [Secret environment refresh](secret-environment-refresh.md) — repeated format failures after secure edits can reflect stale shell environments; refresh before re-requesting credentials.
+- [Google SQL transfer validation](gcp-sql-transfers.md) — CSV queries must start with SELECT; controlled imports must select the established table owner.

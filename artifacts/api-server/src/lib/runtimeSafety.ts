@@ -3,11 +3,34 @@ import { isMigrationStaging } from "@workspace/db/connection-config";
 
 type Environment = Readonly<Record<string, string | undefined>>;
 
+export function readProxyHopCount(env: Environment): 1 | 2 {
+  const value = env.TRUST_PROXY_HOPS ?? "1";
+  if (value !== "1" && value !== "2") throw new Error("TRUST_PROXY_HOPS must be 1 or 2.");
+  return value === "2" ? 2 : 1;
+}
+
 export function readRuntimeSafety(env: Environment) {
   const staging = isMigrationStaging(env);
+  const jobs = env.BACKGROUND_JOBS_ENABLED;
+  if (jobs !== undefined && jobs !== "true" && jobs !== "false") {
+    throw new Error("BACKGROUND_JOBS_ENABLED must be true or false.");
+  }
+  if (!staging && env.DATABASE_CONNECTION_MODE === "cloud-sql-iam" && jobs === undefined) {
+    throw new Error("Writable Cloud SQL deployments require explicit BACKGROUND_JOBS_ENABLED.");
+  }
+  if (staging && jobs === "true") {
+    throw new Error("Background jobs cannot be enabled in migration staging.");
+  }
+  if (env.MIGRATION_ALLOW_AUTH !== undefined &&
+      !["true", "false"].includes(env.MIGRATION_ALLOW_AUTH)) {
+    throw new Error("MIGRATION_ALLOW_AUTH must be true or false.");
+  }
+  if (!staging && env.MIGRATION_ALLOW_AUTH === "true") {
+    throw new Error("MIGRATION_ALLOW_AUTH is only for read-only staging.");
+  }
   return {
     staging,
-    backgroundJobsEnabled: !staging,
+    backgroundJobsEnabled: !staging && jobs !== "false",
     initializeSchema: !staging && env.DATABASE_CONNECTION_MODE !== "cloud-sql-iam",
   };
 }
@@ -39,9 +62,11 @@ export function stagingAuthenticationGuard(env: Environment): RequestHandler {
   };
 }
 
-export function stagingWriteGuard(staging: boolean): RequestHandler {
+export function stagingWriteGuard(staging: boolean, allowAuthentication = false): RequestHandler {
   return (req, res, next) => {
-    if (!staging || ["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+    const authProxy = req.path === "/__clerk" || req.path.startsWith("/__clerk/");
+    if (!staging || ["GET", "HEAD", "OPTIONS"].includes(req.method) ||
+        (allowAuthentication && authProxy)) {
       next();
       return;
     }

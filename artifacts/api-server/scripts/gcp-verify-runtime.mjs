@@ -4,16 +4,20 @@ import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { randomUUID } from "node:crypto";
 import { Connector, AuthTypes, IpAddressTypes } from "@google-cloud/cloud-sql-connector";
+import { Storage } from "@google-cloud/storage";
 import { createPoolOptions, readDatabaseSettings } from "@workspace/db/connection-config";
 
 const PROJECT = "project-3a919f28-1462-4a1d-a2c";
 const ROLE = `cloudrun-for-dodolink@${PROJECT}.iam`;
 const ACCOUNT = `${ROLE}.gserviceaccount.com`;
+const attachedIdentity = process.argv.includes("--attached-identity");
 const require = createRequire(import.meta.url);
 const sdkRequire = createRequire(require.resolve("@google-cloud/cloud-sql-connector"));
 // Use the connector's own auth-library version, not a different SDK's copy.
 const { OAuth2Client } = sdkRequire("google-auth-library");
-const databaseRequire = createRequire(new URL("../../../lib/db/package.json", import.meta.url));
+const databaseRequire = attachedIdentity
+  ? require
+  : createRequire(new URL("../../../lib/db/package.json", import.meta.url));
 const { Pool } = databaseRequire("pg");
 let phase = "runtime_identity_token";
 let connector;
@@ -26,15 +30,20 @@ process.on("unhandledRejection", () => {
 });
 
 async function verify() {
-  const token = execFileSync("gcloud", [
-    "auth", "print-access-token", "--project", PROJECT,
-    "--impersonate-service-account", ACCOUNT,
-    "--scopes=https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/sqlservice.login",
-    "--quiet",
-  ], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 30_000 }).trim();
-  const auth = new OAuth2Client();
-  auth.setCredentials({ access_token: token, expiry_date: Date.now() + 45 * 60_000 });
-  connector = new Connector({ auth });
+  if (attachedIdentity) {
+    // A Cloud Run job uses its attached identity, not operator impersonation.
+    connector = new Connector();
+  } else {
+    const token = execFileSync("gcloud", [
+      "auth", "print-access-token", "--project", PROJECT,
+      "--impersonate-service-account", ACCOUNT,
+      "--scopes=https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/sqlservice.login",
+      "--quiet",
+    ], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 30_000 }).trim();
+    const auth = new OAuth2Client();
+    auth.setCredentials({ access_token: token, expiry_date: Date.now() + 45 * 60_000 });
+    connector = new Connector({ auth });
+  }
   phase = "iam_connection";
   const environment = {
     DATABASE_CONNECTION_MODE: "cloud-sql-iam",
@@ -116,8 +125,56 @@ async function verify() {
   }) + "\n");
 }
 
+async function verifyStorage() {
+  phase = "private_bucket_configuration";
+  if (!attachedIdentity || process.env.GCP_STORAGE_BUCKET !== "dodolink-media-729481009477-afs1") {
+    throw new Error("Storage probe requires the attached identity and the migration bucket.");
+  }
+  const bucket = new Storage({ projectId: PROJECT }).bucket(process.env.GCP_STORAGE_BUCKET);
+  const [metadata] = await bucket.getMetadata();
+  if (metadata.location?.toLowerCase() !== "africa-south1" ||
+      metadata.iamConfiguration?.publicAccessPrevention !== "enforced") {
+    throw new Error("Migration bucket safety mismatch.");
+  }
+  const file = bucket.file(`private/migration-probes/${randomUUID()}.bin`);
+  const bytes = Buffer.from("DodoLink synthetic migration upload probe");
+  try {
+    phase = "signed_upload_generation";
+    const [uploadUrl] = await file.getSignedUrl({
+      version: "v4", action: "write", expires: Date.now() + 120_000,
+      contentType: "application/octet-stream",
+    });
+    phase = "signed_upload";
+    const upload = await fetch(uploadUrl, {
+      method: "PUT", body: bytes,
+      headers: { "Content-Type": "application/octet-stream" },
+      signal: AbortSignal.timeout(20_000),
+    });
+    if (!upload.ok) throw new Error("Synthetic signed upload failed.");
+    phase = "signed_read";
+    const [readUrl] = await file.getSignedUrl({
+      version: "v4", action: "read", expires: Date.now() + 120_000,
+    });
+    const read = await fetch(readUrl, { signal: AbortSignal.timeout(20_000) });
+    if (!read.ok || !Buffer.from(await read.arrayBuffer()).equals(bytes)) {
+      throw new Error("Synthetic upload bytes differ.");
+    }
+  } finally {
+    phase = "synthetic_upload_cleanup";
+    await file.delete({ ignoreNotFound: true });
+    const [exists] = await file.exists();
+    if (exists) throw new Error("Synthetic upload cleanup incomplete.");
+  }
+  process.stdout.write(JSON.stringify({
+    status: "verified", private_bucket: true, signed_upload: true,
+    signed_read_bytes_match: true, synthetic_objects_remaining: 0,
+    customer_objects_modified: 0, source_accessed: false,
+  }) + "\n");
+}
+
 try {
-  await verify();
+  if (process.argv.includes("--storage-only")) await verifyStorage();
+  else await verify();
 } catch (error) {
   const detail = String(error?.stderr ?? "").toLowerCase();
   const reasons = [

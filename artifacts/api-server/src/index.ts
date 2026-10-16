@@ -1,19 +1,24 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { startScheduler } from "./lib/scheduler";
+import { startScheduler, runDailyJobs } from "./lib/scheduler";
 import { validatePaystackKey } from "./lib/paystack";
 import { initializeAccountDeletion, retryAccountDeletions } from "./lib/accountDeletion";
 import { initializePortfolioAnalytics, purgeOldPortfolioVisits } from "./lib/portfolioAnalytics";
-import { db } from "@workspace/db";
+import { db, pool } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { runtimeSafety } from "./lib/runtimeSafety";
 import { objectStorageClient } from "./lib/objectStorage";
+import { readMaintenanceKind } from "./lib/maintenanceMode";
+
+// Scheduled Cloud Run jobs never listen for HTTP or start the web timers.
+// The task gate remains OFF until source jobs have been paused at cutover.
+const maintenanceKind = readMaintenanceKind(process.env);
 
 // Refuse to start a production deployment with a missing or test-mode
 // Paystack key — real checkouts would silently be fake otherwise.
 if (!runtimeSafety.staging) validatePaystackKey();
 
-const rawPort = process.env["PORT"];
+const rawPort = process.env["PORT"] ?? (maintenanceKind ? "8080" : undefined);
 
 if (!rawPort) {
   throw new Error(
@@ -62,7 +67,31 @@ if (runtimeSafety.staging && process.env.DATABASE_CONNECTION_MODE === "cloud-sql
   logger.info({ databaseReadOnly: true, mediaReadable: true },
     "Google Cloud staging dependencies verified");
 }
-app.listen(port, (err) => {
+if (maintenanceKind) {
+  const tasks = {
+    daily: runDailyJobs,
+    retention: purgeOldPortfolioVisits,
+    deletions: retryAccountDeletions,
+  };
+  const client = await pool.connect();
+  let locked = false;
+  try {
+    const result = await client.query(
+      "SELECT pg_try_advisory_lock(hashtext($1)) AS acquired",
+      [`dodolink-cloud-maintenance:${maintenanceKind}`],
+    );
+    locked = result.rows[0]?.acquired === true;
+    if (locked) await tasks[maintenanceKind]();
+    logger.info({ task: maintenanceKind, skipped: !locked }, "Cloud maintenance completed");
+  } finally {
+    if (locked) await client.query("SELECT pg_advisory_unlock(hashtext($1))",
+      [`dodolink-cloud-maintenance:${maintenanceKind}`]);
+    client.release();
+    await pool.end();
+  }
+  // The SQL connector owns refresh timers. The one-shot job is finished.
+  process.exit(0);
+} else app.listen(port, (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
     process.exit(1);
@@ -70,7 +99,7 @@ app.listen(port, (err) => {
 
   logger.info({ port }, "Server listening");
   if (!runtimeSafety.backgroundJobsEnabled) {
-    logger.info("Read-only migration staging: billing, deletion, retention, and notification jobs are disabled");
+    logger.info("Runtime safety: billing, deletion, retention, and notification jobs are disabled");
     return;
   }
   startScheduler();

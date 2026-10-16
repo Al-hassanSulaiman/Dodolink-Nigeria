@@ -8,6 +8,7 @@ const fixtureUrl = "postgresql://fixture:fixture@localhost/fixture";
 const iamEnvironment = {
   DATABASE_CONNECTION_MODE: "cloud-sql-iam",
   MIGRATION_STAGING: "false",
+  BACKGROUND_JOBS_ENABLED: "true",
   CLOUD_SQL_INSTANCE_CONNECTION_NAME: "test-project:africa-south1:test-instance",
   CLOUD_SQL_IAM_USER: "test-runtime@test-project.iam",
   CLOUD_SQL_DATABASE: "fixture",
@@ -33,6 +34,33 @@ describe("migration runtime configuration", () => {
     expect(readRuntimeSafety(iamEnvironment)).toEqual({
       staging: false, backgroundJobsEnabled: true, initializeSchema: false,
     });
+  });
+
+  it("allows writes without starting duplicate background jobs", () => {
+    expect(readRuntimeSafety({
+      ...iamEnvironment, BACKGROUND_JOBS_ENABLED: "false",
+    })).toEqual({ staging: false, backgroundJobsEnabled: false, initializeSchema: false });
+  });
+
+  it("requires an explicit job decision for writable Cloud SQL", () => {
+    expect(() => readRuntimeSafety({
+      ...iamEnvironment, BACKGROUND_JOBS_ENABLED: undefined,
+    })).toThrow("explicit BACKGROUND_JOBS_ENABLED");
+  });
+
+  it("refuses to start jobs on a staging snapshot", () => {
+    expect(() => readRuntimeSafety({
+      ...iamEnvironment, MIGRATION_STAGING: "true",
+    })).toThrow("cannot be enabled");
+  });
+
+  it.each(["", "1", "yes", "TRUE"])("rejects ambiguous background-job flag %j", (value) => {
+    expect(() => readRuntimeSafety({ BACKGROUND_JOBS_ENABLED: value })).toThrow();
+  });
+
+  it("limits the auth-write exception to read-only staging", () => {
+    expect(() => readRuntimeSafety({ MIGRATION_ALLOW_AUTH: "true" })).toThrow("only for read-only staging");
+    expect(() => readRuntimeSafety({ MIGRATION_STAGING: "true", MIGRATION_ALLOW_AUTH: "yes" })).toThrow();
   });
 
   it.each(["", "1", "TRUE", "yes"])("fails closed for ambiguous staging flag %j", (value) => {

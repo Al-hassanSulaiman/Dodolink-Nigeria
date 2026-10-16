@@ -93,6 +93,18 @@ Check both managed-certificate domain status and actual trusted TLS serving, not
 
 **How to apply:** Verify authoritative A/AAAA consistency, certificate/proxy attachment, and port 443. After issuance, wait for a real trusted HTTPS request to succeed before opening staging invocation with load-balancer-only ingress. Do not repeatedly recreate certificates or load balancers to bypass propagation.
 
+Treat writable traffic and background-job ownership as separate cutover decisions.
+
+**Why:** Old and new hosts use separate SQL copies, so per-database charge locks cannot serialize across both hosts. Web containers may also scale to zero or multiple instances, making in-process timers unreliable.
+
+**How to apply:** Keep web timers off on Cloud Run, use separate scheduled execution, and require confirmed source-job shutdown before enabling target schedules. Timer/control metadata may use a supported location while all job execution and customer data remain in Johannesburg.
+
+Retaining the source is not enough for an instant writable rollback.
+
+**Why:** New SQL writes and the user's fresh personal Clerk directory are not replicated back into the retained source.
+
+**How to apply:** After target writes begin, freeze and reconcile data/auth before a DNS rollback. Never resume both sides' billing against divergent copies.
+
 ## Operator cloud credentials
 
 Do not assume the authenticated gcloud operator session persists between workspace sessions.
