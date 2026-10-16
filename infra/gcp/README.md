@@ -2,19 +2,22 @@
 
 ## Current cutover status
 
-**Google is ready for live traffic; root/www DNS still needs to move.**
+**Hosting cutover completed on 2026-10-16: DodoLink is live on Google Cloud.**
 The original `dodolink-domains` certificate is now ACTIVE with both root and
 wildcard authorized. Both entries in `dodolink-domains-map` already reference it.
 That map and `dodolink-production-https-map` are now attached to the existing
 `dodolink-staging-https-proxy`; `dodolink-production-http-map` is attached to the
-existing HTTP proxy. Root/www public DNS still points to Replit.
+existing HTTP proxy. Both authoritative nameservers now return only
+`8.232.160.236` for root and www, with TTL 3600 and no AAAA records.
 
 Trusted TLS against `8.232.160.236` now passes for root, www, and staging.
 The customer page and `/admin/` return 200 with their expected HTML titles.
 Health returns `{"status":"ok"}` and public store reads return valid JSON with
 200. The www canonical redirect returns 301 and preserves path and query.
-Staging health remains 200. These checks used DNS overrides: public root/www
-DNS remains unchanged. Signed-in owner admin access is still not verified.
+Staging health remains 200. Final checks without DNS overrides reached Google's
+IP and returned 200 for customer, admin, API health, and the Clerk environment
+proxy. HTTP and www return canonical HTTPS redirects. Signed-in owner admin
+access is still not verified; a public admin sign-in page is not that proof.
 
 The user completed Unpublish in Replit. The deployment service confirms
 `isDeployed=false`, and the old replit.app health URL returns 404. Development
@@ -30,9 +33,17 @@ It has `MIGRATION_STAGING=false`, `MIGRATION_ALLOW_AUTH=false`, and
 `BACKGROUND_JOBS_ENABLED=false`. Trusted root customer/admin/health checks pass.
 An unauthenticated store-create request returns 401, not the staging write block;
 no store was created. Startup confirms all web background jobs are disabled,
-with no startup errors observed. Maintenance jobs/timers remain disabled/paused.
-The user must now edit existing root/www A records to `8.232.160.236`, retaining
-TTL 3600 and all unrelated DNS records. Do not republish the old Replit runtime.
+with no startup errors observed. The three maintenance jobs are enabled and
+their timers resumed after source shutdown and live-domain verification.
+The first automatically scheduled deletion-maintenance execution completed
+successfully with one successful task and zero failures. The daily and hourly
+tasks have not yet reached their scheduled times; no manual billing run was
+triggered to test them. Do not republish the old Replit runtime.
+
+The existing Cloud SQL instance reports regional availability, automated backups
+enabled with seven retained backups, and point-in-time recovery enabled. A
+DodoLink-specific restore drill and dedicated operational alerts were not part
+of this cutover.
 
 The additional `dodolink-domains-fresh` request and the working staging
 certificates are retained. Do not create further replacements.
@@ -91,7 +102,7 @@ Live certificate prerequisite:
 Public DNS now returns the exact correct target in the table. Previously it returned
 `97bf1f67-6311-4c8d-8542-82d072ad38b1.5.authorize.certificatemanager.goog.dodolink.com.ng.`
 The DNS panel had appended the zone to the destination; the user corrected it.
-Preserve the absolute destination's final dot and leave live root/www unchanged.
+Preserve the absolute destination's final dot and the new root/www A records.
 `dodolink-domains` is ACTIVE after Google's successful validation retry.
 Its DNS authorization is `dodolink-root-auth`; the attached certificate map is
 `dodolink-domains-map`.
@@ -109,17 +120,17 @@ Replit's development Auth tenant.
 The user completed CLI reauthentication; Google Cloud management access is restored.
 Prior staging checks used read-only flags with auth-only mutation allowance and
 web background jobs disabled. The current post-shutdown writable state is above.
-All three Scheduler timers remain PAUSED.
+All three Scheduler timers are now ENABLED after the single-host handoff.
 Fresh source comparison found no changed tables, and source media inventory is
 unchanged at 139 objects. No source records were modified by these checks.
-Root and www still resolve to the old `34.111.179.208` address.
+Root and www now resolve to `8.232.160.236` on both authoritative nameservers.
 Their TTL remains 3600 seconds. The user reports changing it to 300 automatically
 reverts to 3600; plan the handoff for a one-hour cache window rather than requiring
 a lower TTL. This does not prevent certificate issuance.
-The latest source payment check found zero unconsumed subscription payment quotes.
-Recheck after source shutdown; this is not permission to run target billing yet.
+The final post-shutdown source payment check found zero unconsumed subscription
+payment quotes. Source writes were zero throughout the data migration.
 
-### Prepared background-job handoff
+### Active background-job handoff
 
 The web service always uses `BACKGROUND_JOBS_ENABLED=false`. Cloud SQL writable
 mode now requires an explicit background-job decision; disabling the read-only
@@ -131,8 +142,9 @@ guard cannot silently start a second scheduler.
 | `dodolink-maintenance-retention` | `dodolink-retention-timer` | `0 * * * *` |
 | `dodolink-maintenance-deletions` | `dodolink-deletions-timer` | `* * * * *` |
 
-All timers are **PAUSED** and every job also has
-`MAINTENANCE_JOBS_ENABLED=false`. Do not run them before source-job shutdown.
+All timers are **ENABLED** and every maintenance job has
+`MAINTENANCE_JOBS_ENABLED=true`. Source shutdown was confirmed first.
+Web containers still use `BACKGROUND_JOBS_ENABLED=false`.
 Cloud Scheduler does not offer `africa-south1`; timer/control metadata is in
 `europe-west1`. It invokes the Google Jobs API with OAuth and carries no
 customer payload. Actual job execution, SQL, secrets, and media remain in
@@ -144,7 +156,7 @@ Jobs run the same compiled API with `MAINTENANCE_JOB_KIND` set to `daily`,
 maintenance enable gate, PostgreSQL advisory locks, the existing daily lock,
 and per-store charge serialization protect the handoff and concurrent tasks.
 
-### Remaining cutover sequence
+### Completed cutover sequence and verification limits
 
 1. Certificate issuance, production map attachment, and actual trusted
    root/www/staging TLS verification are complete.
@@ -158,12 +170,13 @@ and per-store charge serialization protect the handoff and concurrent tasks.
    health URL is 404. Post-shutdown fingerprint/media/payment checks passed.
 5. COMPLETE: Target business writes enabled with `MIGRATION_STAGING=false`,
    `MIGRATION_ALLOW_AUTH=false`, and `BACKGROUND_JOBS_ENABLED=false`. Real root
-   host checks against the new IP pass; maintenance is still disabled.
-6. Move root/www DNS only after readiness; preserve Clerk/mail/nameservers.
-   The reserved target IPv4 remains `8.232.160.236`.
-7. After confirming the single-active-host handoff, enable
-   `MAINTENANCE_JOBS_ENABLED=true` on the three jobs and resume their timers.
-   Keep web timers off. Never enable old and new billing against separate SQL
+   host checks against the new IP pass; web timers remain disabled.
+6. COMPLETE: root/www DNS now points to `8.232.160.236` on both nameservers.
+   Public requests reach Google with trusted HTTPS; Clerk/mail/nameservers
+   were preserved. Old resolver caches may continue for up to one hour.
+7. COMPLETE: `MAINTENANCE_JOBS_ENABLED=true` on all three maintenance jobs;
+   all Scheduler timers are ENABLED. The first automatic deletion run succeeded.
+   Web timers remain off. Never enable old and new billing against separate SQL
    copies simultaneously: per-database locks cannot protect that situation.
 8. Retain Replit and its data for rollback. After Google accepts new writes,
    switching DNS alone is not a safe rollback: freeze and reconcile data/auth
@@ -177,13 +190,14 @@ and per-store charge serialization protect the handoff and concurrent tasks.
 - Do not replace the existing `postgres` database or change its users.
 - Keep Replit, DNS, production API URLs, Clerk, and Paystack routing unchanged
   until the migrated application and data are verified.
-- This setup is **not** a completed migration or a production cutover.
+- The hosting cutover is complete. Remaining owner/native/payment journey
+  verification limits are explicit above; do not report those as tested.
 
 ## Foundation
 
 | Resource | Target |
 | --- | --- |
-| Cloud Run service | `dodolink`; public read-only staging through the HTTPS load balancer only |
+| Cloud Run service | `dodolink`; writable production through the HTTPS load balancer only |
 | Cloud SQL instance | Existing `wordpress-db`, PostgreSQL 18 |
 | New application database | `dodolink` |
 | Backend identity | Existing `cloudrun-for-dodolink` service account |
@@ -592,12 +606,13 @@ The exact build-19 IPA would be needed for direct inspection of its JavaScript
 and signed entitlements, but the user has deferred that audit. It does not hold
 up hosting migration. Do not infer that build 19 lacks the correction or
 recommend rebuilding merely because the personal connector does not list it.
-A native sign-in journey also remains unverified: Native API is now enabled,
-but the Apple social connection and iOS registration still need configuration.
+A physical native sign-in journey remains unverified. Native API and the Apple
+social connection are now enabled; iOS registration remains unconfirmed.
 
-Write-journey tests, new-account authorization, staging-domain verification,
-and final data synchronization remain pending. Do not enable production jobs
-to bypass the staging restrictions.
+This archive audit preceded the completed staging authorization checks and
+hosting cutover described at the top. The final source synchronization and
+single-host scheduled-job handoff are complete. Full native/OAuth, signed-in
+owner admin, and real checkout journeys must not be inferred from hosting health.
 
 ## Production authentication gate
 

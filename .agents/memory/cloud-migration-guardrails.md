@@ -3,7 +3,7 @@ name: Cloud migration guardrails
 description: User requirements for staging the DodoLink Google Cloud migration and preserving the existing deployment.
 ---
 
-The user authorized beginning a staged Google Cloud migration and selected `africa-south1` (Johannesburg). Keep the existing Replit deployment intact through validation and cutover; do not delete the existing service. Preserve the existing DodoLink domains and API paths where possible.
+The user authorized beginning a staged Google Cloud migration and selected `africa-south1` (Johannesburg). Preserve the existing Replit project, database, and media through validation and cutover. The user subsequently approved and completed Unpublish of the old runtime for the single-host handoff; retaining Replit does not mean keeping a second live runtime. Preserve the existing DodoLink domains and API paths where possible.
 
 The user approved reusing the existing `wordpress-db` Cloud SQL instance for an isolated DodoLink database and application user, rather than creating a second database server. Do not replace the existing database.
 
