@@ -35,6 +35,7 @@ migrate production. Do not add startup-time DDL or assume Replit Publish updates
 the external Cloud SQL database. Phone clients also need an updated native build;
 the web/backend delivery pipeline does not publish phone releases.
 
+ 03a1779996bae912c701d48afe1a35bd0c0aac10
 ## Current cutover status
 
 **Hosting cutover completed on 2026-10-16: DodoLink is live on Google Cloud.**
