@@ -15,7 +15,7 @@ import { parseProductPrice } from '@/utils/productPrice';
 import { upsertProduct } from '@/utils/productCache';
 import type { Product } from '@workspace/api-client-react';
 
-const MAX_IMAGES = 5;
+const MAX_IMAGES = 15;
 
 export default function AddProductScreen() {
   const { storeId } = useLocalSearchParams<{ storeId: string }>();
