@@ -1,5 +1,6 @@
-# Manual AWS deploy. Does NOT run on push, so it cannot interfere with the
-# existing Cloud Build -> Cloud Run pipeline. Start it from the Actions tab.
+# AWS deploy. It only ever touches AWS, so it cannot interfere with the
+# existing Cloud Build -> Cloud Run pipeline. While testing, it runs on pushes to
+# the feat/aws-s3-rds-support branch (see the temporary `push:` trigger below).
 #
 # Required repository SECRET:  DODOLINK_CLERK_PRODUCTION_PUBLISHABLE_KEY
 # Required repository VARIABLES (Settings > Secrets and variables > Actions):
@@ -10,6 +11,11 @@
 name: Deploy to AWS (manual)
 
 on:
+  # TEMPORARY, for testing on the AWS branch only. It never runs for `main` or
+  # any other branch, and it deploys to the AWS service only. Remove this
+  # `push:` block before merging this branch into `main`.
+  push:
+    branches: [feat/aws-s3-rds-support]
   workflow_dispatch:
     inputs:
       deploy:
@@ -76,7 +82,7 @@ jobs:
           docker push "$IMAGE"
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
       - name: Update ECS service
-        if: ${{ inputs.deploy }}
+        if: ${{ github.event_name == 'push' || inputs.deploy }}
         env:
           IMAGE: ${{ steps.image.outputs.image }}
         run: |
