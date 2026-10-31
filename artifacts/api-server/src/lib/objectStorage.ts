@@ -8,6 +8,11 @@ import {
   getObjectAclPolicy,
   setObjectAclPolicy,
 } from "./objectAcl";
+import { createS3StorageClient, isS3Provider, presignS3, s3UrlToObjectPath } from "./s3Storage";
+
+// STORAGE_PROVIDER=s3 switches media storage to Amazon S3 (AWS deployment).
+// When unset, behaviour is unchanged: Google Cloud Storage / Replit sidecar.
+const useS3 = isS3Provider();
 
 /**
  * Running on Replit: use the sidecar credential endpoint.
@@ -17,7 +22,10 @@ import {
 const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
 const isReplit = !!process.env.REPL_ID;
 
-export const objectStorageClient = isReplit
+export const objectStorageClient: Storage = useS3
+  // The S3 client provides the same bucket(name).file(key) calls the app uses.
+  ? (createS3StorageClient() as unknown as Storage)
+  : isReplit
   ? new Storage({
       credentials: {
         audience: "replit",
@@ -142,12 +150,12 @@ export class ObjectStorageService {
   }
 
   normalizeObjectEntityPath(rawPath: string): string {
-    if (!rawPath.startsWith("https://storage.googleapis.com/")) {
+    const s3Path = useS3 ? s3UrlToObjectPath(rawPath) : null;
+    if (s3Path === null && !rawPath.startsWith("https://storage.googleapis.com/")) {
       return rawPath;
     }
 
-    const url = new URL(rawPath);
-    const rawObjectPath = url.pathname;
+    const rawObjectPath = s3Path ?? new URL(rawPath).pathname;
 
     let objectEntityDir = this.getPrivateObjectDir();
     if (!objectEntityDir.endsWith("/")) {
@@ -223,6 +231,9 @@ async function signObjectURL({
   method: "GET" | "PUT" | "DELETE" | "HEAD";
   ttlSec: number;
 }): Promise<string> {
+  if (useS3) {
+    return presignS3(bucketName, objectName, method, ttlSec);
+  }
   if (isReplit) {
     const request = {
       bucket_name: bucketName,

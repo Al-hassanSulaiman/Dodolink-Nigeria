@@ -1,0 +1,98 @@
+# Manual AWS deploy. Does NOT run on push, so it cannot interfere with the
+# existing Cloud Build -> Cloud Run pipeline. Start it from the Actions tab.
+#
+# Required repository SECRET:  DODOLINK_CLERK_PRODUCTION_PUBLISHABLE_KEY
+# Required repository VARIABLES (Settings > Secrets and variables > Actions):
+#   AWS_ROLE_ARN, AWS_REGION, ECR_REPOSITORY, ECS_SERVICE_ARN, S3_BUCKET,
+#   ARN_DATABASE_URL, ARN_CLERK_SECRET_KEY, ARN_CLERK_PUBLISHABLE_KEY,
+#   ARN_PAYSTACK_SECRET_KEY, ARN_GMAIL_APP_PASSWORD
+# See infra/aws/README.md.
+name: Deploy to AWS (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: "After pushing the image, update the ECS service (leave off to only build and push)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-aws
+  cancel-in-progress: false
+
+jobs:
+  test-and-compile:
+    runs-on: ubuntu-latest
+    container: node:22-bookworm
+    services:
+      ci-postgres:
+        image: postgres:18-bookworm
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: dodolink_ci
+    env:
+      CI: "1"
+      EXPO_NO_DOTENV: "1"
+      # build-source.sh refuses to run against anything but this disposable database.
+      CI_DATABASE_URL: postgresql://ci:ci@ci-postgres:5432/dodolink_ci
+      DODOLINK_CLERK_PRODUCTION_PUBLISHABLE_KEY: ${{ secrets.DODOLINK_CLERK_PRODUCTION_PUBLISHABLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test, type-check and build (same script Cloud Build uses)
+        run: bash infra/gcp/build-source.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: runtime-context
+          path: generated-artifacts/gcp-runtime
+          if-no-files-found: error
+          retention-days: 3
+
+  image-and-deploy:
+    needs: test-and-compile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: runtime-context
+          path: generated-artifacts/gcp-runtime
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Build and push image
+        id: image
+        run: |
+          IMAGE="${{ steps.ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:${{ github.sha }}"
+          docker build -f infra/aws/runtime.Dockerfile -t "$IMAGE" generated-artifacts/gcp-runtime
+          docker push "$IMAGE"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+      - name: Update ECS service
+        if: ${{ inputs.deploy }}
+        env:
+          IMAGE: ${{ steps.image.outputs.image }}
+        run: |
+          sed -e "s|__IMAGE__|$IMAGE|" \
+              -e "s|__AWS_REGION__|${{ vars.AWS_REGION }}|" \
+              -e "s|__S3_BUCKET__|${{ vars.S3_BUCKET }}|g" \
+              -e "s|__ARN_DATABASE_URL__|${{ vars.ARN_DATABASE_URL }}|" \
+              -e "s|__ARN_CLERK_SECRET_KEY__|${{ vars.ARN_CLERK_SECRET_KEY }}|" \
+              -e "s|__ARN_CLERK_PUBLISHABLE_KEY__|${{ vars.ARN_CLERK_PUBLISHABLE_KEY }}|" \
+              -e "s|__ARN_PAYSTACK_SECRET_KEY__|${{ vars.ARN_PAYSTACK_SECRET_KEY }}|" \
+              -e "s|__ARN_GMAIL_APP_PASSWORD__|${{ vars.ARN_GMAIL_APP_PASSWORD }}|" \
+              infra/aws/primary-container.template.json > primary-container.json
+          if grep -q '__[A-Z0-9_]*__' primary-container.json; then
+            echo "A placeholder was not filled in; set the missing repository variable." >&2
+            exit 1
+          fi
+          aws ecs update-express-gateway-service \
+            --service-arn "${{ vars.ECS_SERVICE_ARN }}" \
+            --primary-container file://primary-container.json
