@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import type { PushRegistrationState } from '@/hooks/usePushNotifications';
+
+// The "turn on notifications" reminder is shown once per install. Without this
+// it re-opened every time the app returned to the foreground.
+const DENIED_PROMPT_SEEN_KEY = 'dodolink.push.deniedPromptSeen.v1';
 
 interface PushNotificationSetupProps {
   state: PushRegistrationState;
@@ -14,9 +19,29 @@ export function PushNotificationSetup({
 }: PushNotificationSetupProps) {
   const [dismissed, setDismissed] = useState(false);
   const [showSlowRegistration, setShowSlowRegistration] = useState(false);
+  // null = still reading storage; the denied reminder waits for the answer.
+  const [deniedPromptSeen, setDeniedPromptSeen] = useState<boolean | null>(null);
   const registering = state.status === 'registering';
+  const permissionDenied = state.status === 'permission-denied';
+
+  useEffect(() => {
+    AsyncStorage.getItem(DENIED_PROMPT_SEEN_KEY)
+      .then(value => setDeniedPromptSeen(value === '1'))
+      .catch(() => setDeniedPromptSeen(true));
+  }, []);
+
+  const markDeniedPromptSeen = () => {
+    setDeniedPromptSeen(true);
+    AsyncStorage.setItem(DENIED_PROMPT_SEEN_KEY, '1').catch(() => {});
+  };
+
+  const dismiss = () => {
+    setDismissed(true);
+    if (permissionDenied) markDeniedPromptSeen();
+  };
+
   const needsAttention =
-    state.status === 'permission-denied' ||
+    (permissionDenied && deniedPromptSeen === false) ||
     state.status === 'unsupported' ||
     state.status === 'error' ||
     (registering && showSlowRegistration);
@@ -37,10 +62,8 @@ export function PushNotificationSetup({
 
   if (!needsAttention || dismissed) return null;
 
-  const permissionDenied = state.status === 'permission-denied';
-
   return (
-    <Modal transparent animationType="fade" visible onRequestClose={() => setDismissed(true)}>
+    <Modal transparent animationType="fade" visible onRequestClose={dismiss}>
       <View style={styles.backdrop}>
         <View style={styles.card}>
           <View style={styles.icon}>
@@ -58,7 +81,14 @@ export function PushNotificationSetup({
           <Pressable
             accessibilityRole="button"
             style={styles.primaryButton}
-            onPress={permissionDenied ? () => void Linking.openSettings() : onRetry}
+            onPress={
+              permissionDenied
+                ? () => {
+                    markDeniedPromptSeen();
+                    void Linking.openSettings();
+                  }
+                : onRetry
+            }
           >
             <Text style={styles.primaryButtonText}>
               {permissionDenied ? 'Open phone settings' : 'Try again now'}
@@ -74,7 +104,7 @@ export function PushNotificationSetup({
           <Pressable
             accessibilityRole="button"
             style={styles.laterButton}
-            onPress={() => setDismissed(true)}
+            onPress={dismiss}
           >
             <Text style={styles.laterButtonText}>Not now</Text>
           </Pressable>
