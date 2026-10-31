@@ -4,7 +4,8 @@
 #
 # Required repository SECRET:  DODOLINK_CLERK_PRODUCTION_PUBLISHABLE_KEY
 # Required repository VARIABLES (Settings > Secrets and variables > Actions):
-#   AWS_ROLE_ARN, AWS_REGION, ECR_REPOSITORY, ECS_SERVICE_ARN, S3_BUCKET,
+#   AWS_ROLE_ARN, AWS_REGION, ECR_REPOSITORY, ECS_SERVICE_ARN,
+#   PRIVATE_OBJECT_DIR, PUBLIC_OBJECT_SEARCH_PATHS, CLERK_AUTH_MODE, CLERK_PROXY_URL,
 #   ARN_DATABASE_URL, ARN_CLERK_SECRET_KEY, ARN_CLERK_PUBLISHABLE_KEY,
 #   ARN_PAYSTACK_SECRET_KEY, ARN_GMAIL_APP_PASSWORD
 # See infra/aws/README.md.
@@ -85,20 +86,46 @@ jobs:
         if: ${{ github.event_name == 'push' || inputs.deploy }}
         env:
           IMAGE: ${{ steps.image.outputs.image }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          PRIVATE_OBJECT_DIR: ${{ vars.PRIVATE_OBJECT_DIR }}
+          PUBLIC_OBJECT_SEARCH_PATHS: ${{ vars.PUBLIC_OBJECT_SEARCH_PATHS }}
+          CLERK_AUTH_MODE: ${{ vars.CLERK_AUTH_MODE }}
+          CLERK_PROXY_URL: ${{ vars.CLERK_PROXY_URL }}
+          ARN_DATABASE_URL: ${{ vars.ARN_DATABASE_URL }}
+          ARN_CLERK_SECRET_KEY: ${{ vars.ARN_CLERK_SECRET_KEY }}
+          ARN_CLERK_PUBLISHABLE_KEY: ${{ vars.ARN_CLERK_PUBLISHABLE_KEY }}
+          ARN_PAYSTACK_SECRET_KEY: ${{ vars.ARN_PAYSTACK_SECRET_KEY }}
+          ARN_GMAIL_APP_PASSWORD: ${{ vars.ARN_GMAIL_APP_PASSWORD }}
+          SERVICE_ARN: ${{ vars.ECS_SERVICE_ARN }}
         run: |
+          # Refuse to deploy with any setting missing, so a blank value can never
+          # be written into the service.
+          for name in AWS_REGION PRIVATE_OBJECT_DIR PUBLIC_OBJECT_SEARCH_PATHS CLERK_AUTH_MODE \
+                      CLERK_PROXY_URL ARN_DATABASE_URL ARN_CLERK_SECRET_KEY ARN_CLERK_PUBLISHABLE_KEY \
+                      ARN_PAYSTACK_SECRET_KEY ARN_GMAIL_APP_PASSWORD SERVICE_ARN; do
+            if [ -z "${!name}" ]; then
+              echo "Repository variable for $name is missing." >&2
+              exit 1
+            fi
+          done
           sed -e "s|__IMAGE__|$IMAGE|" \
-              -e "s|__AWS_REGION__|${{ vars.AWS_REGION }}|" \
-              -e "s|__S3_BUCKET__|${{ vars.S3_BUCKET }}|g" \
-              -e "s|__ARN_DATABASE_URL__|${{ vars.ARN_DATABASE_URL }}|" \
-              -e "s|__ARN_CLERK_SECRET_KEY__|${{ vars.ARN_CLERK_SECRET_KEY }}|" \
-              -e "s|__ARN_CLERK_PUBLISHABLE_KEY__|${{ vars.ARN_CLERK_PUBLISHABLE_KEY }}|" \
-              -e "s|__ARN_PAYSTACK_SECRET_KEY__|${{ vars.ARN_PAYSTACK_SECRET_KEY }}|" \
-              -e "s|__ARN_GMAIL_APP_PASSWORD__|${{ vars.ARN_GMAIL_APP_PASSWORD }}|" \
+              -e "s|__AWS_REGION__|$AWS_REGION|" \
+              -e "s|__PRIVATE_OBJECT_DIR__|$PRIVATE_OBJECT_DIR|" \
+              -e "s|__PUBLIC_OBJECT_SEARCH_PATHS__|$PUBLIC_OBJECT_SEARCH_PATHS|" \
+              -e "s|__CLERK_AUTH_MODE__|$CLERK_AUTH_MODE|" \
+              -e "s|__CLERK_PROXY_URL__|$CLERK_PROXY_URL|" \
+              -e "s|__ARN_DATABASE_URL__|$ARN_DATABASE_URL|" \
+              -e "s|__ARN_CLERK_SECRET_KEY__|$ARN_CLERK_SECRET_KEY|" \
+              -e "s|__ARN_CLERK_PUBLISHABLE_KEY__|$ARN_CLERK_PUBLISHABLE_KEY|" \
+              -e "s|__ARN_PAYSTACK_SECRET_KEY__|$ARN_PAYSTACK_SECRET_KEY|" \
+              -e "s|__ARN_GMAIL_APP_PASSWORD__|$ARN_GMAIL_APP_PASSWORD|" \
               infra/aws/primary-container.template.json > primary-container.json
           if grep -q '__[A-Z0-9_]*__' primary-container.json; then
-            echo "A placeholder was not filled in; set the missing repository variable." >&2
+            echo "A placeholder was not filled in." >&2
             exit 1
           fi
+          python3 -c "import json; json.load(open('primary-container.json'))"
           aws ecs update-express-gateway-service \
-            --service-arn "${{ vars.ECS_SERVICE_ARN }}" \
-            --primary-container file://primary-container.json
+            --service-arn "$SERVICE_ARN" \
+            --primary-container file://primary-container.json \
+            --health-check-path /api/healthz

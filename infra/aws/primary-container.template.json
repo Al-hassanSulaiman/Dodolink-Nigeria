@@ -9,12 +9,15 @@
     { "name": "DATABASE_CONNECTION_MODE", "value": "url" },
     { "name": "MIGRATION_STAGING", "value": "false" },
     { "name": "MIGRATION_ALLOW_AUTH", "value": "false" },
+    { "name": "MIGRATION_AUTH_PENDING", "value": "false" },
     { "name": "BACKGROUND_JOBS_ENABLED", "value": "false" },
     { "name": "STORAGE_PROVIDER", "value": "s3" },
     { "name": "AWS_REGION", "value": "__AWS_REGION__" },
-    { "name": "PRIVATE_OBJECT_DIR", "value": "/__S3_BUCKET__/private" },
-    { "name": "PUBLIC_OBJECT_SEARCH_PATHS", "value": "/__S3_BUCKET__/public" },
-    { "name": "WEB_FRONTEND_DIR", "value": "/app/web" }
+    { "name": "PRIVATE_OBJECT_DIR", "value": "__PRIVATE_OBJECT_DIR__" },
+    { "name": "PUBLIC_OBJECT_SEARCH_PATHS", "value": "__PUBLIC_OBJECT_SEARCH_PATHS__" },
+    { "name": "WEB_FRONTEND_DIR", "value": "/app/web" },
+    { "name": "CLERK_AUTH_MODE", "value": "__CLERK_AUTH_MODE__" },
+    { "name": "CLERK_PROXY_URL", "value": "__CLERK_PROXY_URL__" }
   ],
   "secrets": [
     { "name": "DATABASE_URL", "valueFrom": "__ARN_DATABASE_URL__" },
