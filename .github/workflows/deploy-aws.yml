@@ -3,8 +3,9 @@
 # the feat/aws-s3-rds-support branch (see the temporary `push:` trigger below).
 #
 # Required repository SECRET:  DODOLINK_CLERK_PRODUCTION_PUBLISHABLE_KEY
+# Plus, if not using the OIDC role: secrets AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
 # Required repository VARIABLES (Settings > Secrets and variables > Actions):
-#   AWS_ROLE_ARN, AWS_REGION, ECR_REPOSITORY, ECS_SERVICE_ARN,
+#   AWS_REGION, ECR_REPOSITORY, (AWS_ROLE_ARN only when using the OIDC role), ECS_SERVICE_ARN,
 #   TASK_ROLE_ARN, PRIVATE_OBJECT_DIR, PUBLIC_OBJECT_SEARCH_PATHS, CLERK_AUTH_MODE, CLERK_PROXY_URL,
 #   ARN_DATABASE_URL, ARN_CLERK_SECRET_KEY, ARN_CLERK_PUBLISHABLE_KEY,
 #   ARN_PAYSTACK_SECRET_KEY, ARN_GMAIL_APP_PASSWORD
@@ -69,9 +70,15 @@ jobs:
         with:
           name: runtime-context
           path: generated-artifacts/gcp-runtime
+      # Two ways to sign in to AWS. Use ONE:
+      #  * Preferred: set the AWS_ROLE_ARN variable (GitHub OIDC role, no stored keys).
+      #  * Fallback: set the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY secrets of a
+      #    limited IAM user, and leave AWS_ROLE_ARN unset.
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ vars.AWS_REGION }}
       - id: ecr
         uses: aws-actions/amazon-ecr-login@v2
