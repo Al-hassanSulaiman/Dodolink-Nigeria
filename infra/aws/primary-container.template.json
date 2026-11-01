@@ -16,6 +16,7 @@
     { "name": "PRIVATE_OBJECT_DIR", "value": "__PRIVATE_OBJECT_DIR__" },
     { "name": "PUBLIC_OBJECT_SEARCH_PATHS", "value": "__PUBLIC_OBJECT_SEARCH_PATHS__" },
     { "name": "WEB_FRONTEND_DIR", "value": "/app/web" },
+    { "name": "NODE_EXTRA_CA_CERTS", "value": "/app/rds-global-bundle.pem" },
     { "name": "CLERK_AUTH_MODE", "value": "__CLERK_AUTH_MODE__" },
     { "name": "CLERK_PROXY_URL", "value": "__CLERK_PROXY_URL__" }
   ],
