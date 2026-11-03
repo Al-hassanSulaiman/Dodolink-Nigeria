@@ -326,7 +326,11 @@ export function usePushNotifications(
         );
         let finalPermission = permission;
         let finalStatus = permission.status;
-        if (permission.status !== 'granted') {
+        // Only show the system prompt when the user has never been asked
+        // ('undetermined'). If they already answered, asking again just nags
+        // them (Android 13+ re-prompts after a first denial) and does nothing
+        // on iOS. A denied user is sent to phone settings instead.
+        if (permission.status === 'undetermined') {
           const requested = await withTimeout(
             N.requestPermissionsAsync({
               ios: {
