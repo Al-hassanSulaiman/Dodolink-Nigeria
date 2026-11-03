@@ -27,6 +27,8 @@ import { Feather } from '@expo/vector-icons';
 import { Input, Button } from '@/components/ui';
 import { FollowButton } from '@/components/FollowButton';
 import { useStoreFollowStatus } from '@/hooks/useHomeFeed';
+import { useFollowTotal } from '@/hooks/useFollowLists';
+import { formatCount } from '@/components/FollowButton';
 import { useQueryClient } from '@tanstack/react-query';
 
 export default function StoreScreen() {
@@ -61,6 +63,7 @@ export default function StoreScreen() {
   });
 
   const followStatus = useStoreFollowStatus(storeId);
+  const followingTotal = useFollowTotal('store-following', storeId);
 
   const createReview = useCreateReview({
     mutation: {
@@ -266,6 +269,33 @@ export default function StoreScreen() {
             )}
           </View>
         </View>
+
+        {!isEditing && (
+          <View style={[styles.profileStats, { borderColor: colors.border }]}>
+            <View style={styles.statBox} accessibilityLabel={`${products?.length ?? 0} posts`}>
+              <Text style={[styles.statNumber, { color: colors.foreground }]}>{formatCount(products?.length ?? 0)}</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>posts</Text>
+            </View>
+            <Pressable
+              style={styles.statBox}
+              accessibilityRole="button"
+              accessibilityLabel="See followers"
+              onPress={() => router.push({ pathname: '/follow-list', params: { kind: 'store-followers', storeId: String(storeId) } })}
+            >
+              <Text style={[styles.statNumber, { color: colors.foreground }]}>{followStatus.data ? formatCount(followStatus.data.followerCount) : '–'}</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>followers</Text>
+            </Pressable>
+            <Pressable
+              style={styles.statBox}
+              accessibilityRole="button"
+              accessibilityLabel="See who this store owner follows"
+              onPress={() => router.push({ pathname: '/follow-list', params: { kind: 'store-following', storeId: String(storeId) } })}
+            >
+              <Text style={[styles.statNumber, { color: colors.foreground }]}>{followingTotal.data !== undefined ? formatCount(followingTotal.data) : '–'}</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>following</Text>
+            </Pressable>
+          </View>
+        )}
 
         {!isEditing && (
           <View style={styles.section}>
@@ -479,6 +509,10 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#fff',
   },
+  profileStats: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 12, marginHorizontal: 16, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth },
+  statBox: { alignItems: 'center', minWidth: 80, paddingVertical: 4 },
+  statNumber: { fontFamily: 'Inter_700Bold', fontSize: 18 },
+  statLabel: { fontFamily: 'Inter_400Regular', fontSize: 13 },
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',

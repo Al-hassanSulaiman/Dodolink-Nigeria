@@ -5,7 +5,12 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vites
 import { db, pool, storesTable, productsTable, storeFollowsTable, accountDeletionsTable } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
 const auth = vi.hoisted(() => ({ userId: null as string | null }));
-vi.mock("@clerk/express", () => ({ getAuth: () => ({ userId: auth.userId }) }));
+vi.mock("@clerk/express", () => ({
+  getAuth: () => ({ userId: auth.userId }),
+  clerkClient: { users: { getUserList: async ({ userId }: { userId: string[] }) => ({
+    data: userId.map(id => ({ id, firstName: "Ada", lastName: "QA", username: null, imageUrl: "https://img.test/a.png" })),
+  }) } },
+}));
 vi.mock("../lib/accountDeletion", () => ({ ACCOUNT_DELETION_LOCK_NAMESPACE: 4243 }));
 import follows from "./follows";
 import feed from "./home-feed";
@@ -108,5 +113,41 @@ describe("store following and personalized Home", () => {
     for (const query of ["limit=100", "offset=-1", "offset=0.5", "limit=NaN"]) {
       expect((await request(app).get(`/home/products?${query}`)).status).toBe(400);
     }
+  });
+});
+describe("follower and following lists", () => {
+  it("requires sign-in and lists followers by display name, never by email or account id", async () => {
+    const s = await store();
+    const follower = `follower_${randomUUID()}`;
+    await db.insert(storeFollowsTable).values({ userId: follower, storeId: s.id });
+    auth.userId = null;
+    expect((await request(app).get(`/stores/${s.id}/followers`)).status).toBe(401);
+    auth.userId = user;
+    const res = await request(app).get(`/stores/${s.id}/followers`);
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBe(1);
+    expect(res.body.items[0]).toEqual({ name: "Ada QA", imageUrl: "https://img.test/a.png", storeId: null });
+    expect(JSON.stringify(res.body)).not.toContain(follower);
+    expect((await request(app).get("/stores/abc/followers")).status).toBe(400);
+  });
+  it("shows the store name for a follower who owns a store", async () => {
+    const s = await store();
+    const owner = `owner_${randomUUID()}`;
+    const mine = await store(owner);
+    await db.insert(storeFollowsTable).values({ userId: owner, storeId: s.id });
+    const res = await request(app).get(`/stores/${s.id}/followers`);
+    expect(res.body.items[0]).toMatchObject({ name: mine.name, storeId: mine.id });
+  });
+  it("lists the stores a user follows and hides hidden stores", async () => {
+    const a = await store(); const hidden = await store(undefined, true);
+    await db.insert(storeFollowsTable).values([{ userId: user, storeId: a.id }, { userId: user, storeId: hidden.id }]);
+    const mine = await request(app).get("/me/following");
+    expect(mine.body.total).toBe(1);
+    expect(mine.body.items.map((i: { id: number }) => i.id)).toEqual([a.id]);
+    const owner = `owner_${randomUUID()}`;
+    const ownerStore = await store(owner);
+    await db.insert(storeFollowsTable).values({ userId: owner, storeId: a.id });
+    const theirs = await request(app).get(`/stores/${ownerStore.id}/following`);
+    expect(theirs.body.items.map((i: { id: number }) => i.id)).toEqual([a.id]);
   });
 });
