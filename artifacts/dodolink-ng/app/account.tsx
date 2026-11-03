@@ -7,6 +7,7 @@ import { useDeleteMyAccount } from '@workspace/api-client-react';
 import { RequireAccount } from '@/components/RequireAccount';
 import { useColors } from '@/hooks/useColors';
 import { Button, Input } from '@/components/ui';
+import { useFollowTotal } from '@/hooks/useFollowLists';
 
 export default function AccountScreen() {
   const colors = useColors();
@@ -17,6 +18,7 @@ export default function AccountScreen() {
   const [result, setResult] = useState<'deleted' | 'pending' | null>(null);
   const [error, setError] = useState('');
   const deletion = useDeleteMyAccount();
+  const following = useFollowTotal('my-following');
   const finish = async () => {
     setError('');
     let accepted = false;
@@ -51,6 +53,11 @@ export default function AccountScreen() {
         <Button title="Browse marketplace" onPress={() => router.replace('/(tabs)')} />
       </> : <>
         <Text style={{ color: colors.mutedForeground, fontSize: 16 }}>You can sign out or permanently delete your account here.</Text>
+        <Button
+          title={following.data !== undefined ? `Stores you follow (${following.data})` : 'Stores you follow'}
+          variant="outline"
+          onPress={() => router.push({ pathname: '/follow-list', params: { kind: 'my-following' } })}
+        />
         <Button title="Sign out" onPress={async () => { await queryClient.cancelQueries(); queryClient.clear(); await signOut(); router.replace('/(tabs)'); }} />
         <View style={{ borderColor: colors.border, borderWidth: 1, borderRadius: 12, padding: 20, gap: 16 }}>
           <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', fontSize: 20 }}>Delete account</Text>

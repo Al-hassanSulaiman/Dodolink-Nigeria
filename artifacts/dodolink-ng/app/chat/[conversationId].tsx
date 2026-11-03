@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { StyleSheet, View, Text, FlatList, TextInput, Pressable, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TextInput, Pressable, ActivityIndicator, Image as RNImage } from 'react-native';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as Clipboard from 'expo-clipboard';
@@ -92,6 +92,8 @@ export default function ChatThreadScreen() {
     : (conversation?.customerName ?? userEmail ?? userName);
   const [message, setMessage] = useState('');
   const [uploading, setUploading] = useState(false);
+  // A photo/video the person picked but has not confirmed sending yet.
+  const [pendingMedia, setPendingMedia] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [productContextId, setProductContextId] = useState<number | null>(null);
@@ -101,7 +103,7 @@ export default function ChatThreadScreen() {
     setProductContextId(valid ? value : null);
     if (valid) setReplyTo(null);
   }, [productParam, id]);
-  useEffect(() => { setReplyTo(null); setMessage(''); }, [id]);
+  useEffect(() => { setReplyTo(null); setMessage(''); setPendingMedia(null); }, [id]);
   const { data: contextProduct, isError: productError, refetch: retryProduct } = useGetProduct(productContextId ?? 0, {
     query: { enabled: !!productContextId && !!userId },
   });
@@ -181,8 +183,13 @@ export default function ChatThreadScreen() {
     });
 
     if (result.canceled || !result.assets?.length) return;
-    const asset = result.assets[0];
+    // Do not send yet: show a preview with Send / Cancel first.
+    setPendingMedia(result.assets[0]);
+  };
 
+  const handleSendPendingMedia = async () => {
+    const asset = pendingMedia;
+    if (!asset || !productReady || uploading || sendMessage.isPending) return;
     if (!userId || !userName) return;
 
     setUploading(true);
@@ -203,6 +210,7 @@ export default function ChatThreadScreen() {
             body: '', mediaUrl, replyToMessageId: replyTo?.id, productId: productContextId } },
           {
             onSuccess: async (sent) => {
+              setPendingMedia(null);
               clearContext();
               await queryClient.cancelQueries({ queryKey: getListMessagesQueryKey(id) });
               queryClient.setQueryData<Message[]>(getListMessagesQueryKey(id), old =>
@@ -301,6 +309,38 @@ export default function ChatThreadScreen() {
               <Pressable onPress={clearContext} accessibilityLabel="Cancel reply"><Text style={{ color: colors.primary }}>Remove product</Text></Pressable>
             </View>}
       </View>}
+      {pendingMedia && (
+        <View style={[styles.pendingRow, { backgroundColor: colors.card, borderTopColor: colors.border }]} testID="chat-pending-media">
+          {pendingMedia.type === 'video'
+            ? <View style={[styles.pendingThumb, { backgroundColor: colors.muted }]}><Feather name="video" size={24} color={colors.mutedForeground} /></View>
+            : <RNImage source={{ uri: pendingMedia.uri }} style={styles.pendingThumb} />}
+          <Text style={{ flex: 1, color: colors.foreground }} numberOfLines={1}>
+            {pendingMedia.type === 'video' ? 'Video ready to send' : 'Photo ready to send'}
+          </Text>
+          <Pressable
+            onPress={() => setPendingMedia(null)}
+            disabled={uploading}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel sending this media"
+            style={styles.pendingButton}
+            testID="chat-pending-cancel"
+          >
+            <Text style={{ color: colors.mutedForeground }}>Cancel</Text>
+          </Pressable>
+          <Pressable
+            onPress={handleSendPendingMedia}
+            disabled={isBusy || !productReady}
+            accessibilityRole="button"
+            accessibilityLabel="Send this media"
+            style={[styles.pendingButton, { backgroundColor: colors.primary, opacity: isBusy ? 0.6 : 1 }]}
+            testID="chat-pending-send"
+          >
+            {uploading
+              ? <ActivityIndicator size="small" color={colors.primaryForeground} />
+              : <Text style={{ color: colors.primaryForeground, fontFamily: 'Inter_600SemiBold' }}>Send</Text>}
+          </Pressable>
+        </View>
+      )}
       <View style={[styles.inputContainer, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
         {/* + media button */}
         <Pressable
@@ -385,6 +425,29 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     alignItems: 'flex-end',
     gap: 8,
+  },
+  pendingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+  },
+  pendingThumb: {
+    width: 52,
+    height: 52,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pendingButton: {
+    minWidth: 72,
+    height: 40,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   mediaButton: {
     width: 40,

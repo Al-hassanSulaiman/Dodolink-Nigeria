@@ -1,0 +1,32 @@
+# Test-only check: runs the same script Cloud Build uses (tests, type-check, build)
+# against a disposable database. It deploys nothing and touches no cloud account.
+name: CI check (no deploy)
+
+on:
+  push:
+    branches: [fix/chat-media-viewer]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-compile:
+    runs-on: ubuntu-latest
+    container: node:22-bookworm
+    services:
+      ci-postgres:
+        image: postgres:18-bookworm
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: dodolink_ci
+    env:
+      CI: "1"
+      EXPO_NO_DOTENV: "1"
+      CI_DATABASE_URL: postgresql://ci:ci@ci-postgres:5432/dodolink_ci
+      DODOLINK_CLERK_PRODUCTION_PUBLISHABLE_KEY: ${{ secrets.DODOLINK_CLERK_PRODUCTION_PUBLISHABLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test, type-check and build (same script Cloud Build uses)
+        run: bash infra/gcp/build-source.sh
