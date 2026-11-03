@@ -13,11 +13,6 @@
 name: Deploy to AWS (manual)
 
 on:
-  # TEMPORARY, for testing on the AWS branch only. It never runs for `main` or
-  # any other branch, and it deploys to the AWS service only. Remove this
-  # `push:` block before merging this branch into `main`.
-  push:
-    branches: [feat/aws-s3-rds-support]
   workflow_dispatch:
     inputs:
       deploy:

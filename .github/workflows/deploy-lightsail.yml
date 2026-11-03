@@ -14,9 +14,6 @@
 name: Deploy to Lightsail
 
 on:
-  # TEMPORARY, for testing on this branch only. Remove before merging to main.
-  push:
-    branches: [feat/lightsail-deploy]
   workflow_dispatch:
     inputs:
       deploy:

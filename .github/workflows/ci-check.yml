@@ -4,7 +4,7 @@ name: CI check (no deploy)
 
 on:
   push:
-    branches: [fix/chat-media-viewer]
+    branches: [main, release/merge-all]
   workflow_dispatch:
 
 permissions:
