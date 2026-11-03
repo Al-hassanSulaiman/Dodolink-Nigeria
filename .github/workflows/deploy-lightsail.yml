@@ -1,0 +1,162 @@
+# Deploy to Amazon Lightsail (container service). It only touches AWS, so it
+# cannot interfere with Cloud Run or the ECS service. While testing it runs on
+# pushes to the feat/lightsail-deploy branch (TEMPORARY `push:` trigger below).
+#
+# Repository SECRETS used (Settings > Secrets and variables > Actions):
+#   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY   (deploy user; needs Lightsail + read of the secrets below)
+#   APP_S3_ACCESS_KEY_ID, APP_S3_SECRET_ACCESS_KEY   (limited key, ONLY for the photo bucket)
+#   DODOLINK_CLERK_PRODUCTION_PUBLISHABLE_KEY
+# Repository VARIABLES (already set for the ECS deploy and reused here):
+#   AWS_REGION, PRIVATE_OBJECT_DIR, PUBLIC_OBJECT_SEARCH_PATHS, CLERK_AUTH_MODE, CLERK_PROXY_URL,
+#   ARN_DATABASE_URL, ARN_CLERK_SECRET_KEY, ARN_CLERK_PUBLISHABLE_KEY,
+#   ARN_PAYSTACK_SECRET_KEY, ARN_GMAIL_APP_PASSWORD
+# Optional variable: LIGHTSAIL_SERVICE (default: dodolink)
+name: Deploy to Lightsail
+
+on:
+  # TEMPORARY, for testing on this branch only. Remove before merging to main.
+  push:
+    branches: [feat/lightsail-deploy]
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: "After pushing the image, create the Lightsail deployment"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-lightsail
+  cancel-in-progress: false
+
+jobs:
+  test-and-compile:
+    runs-on: ubuntu-latest
+    container: node:22-bookworm
+    services:
+      ci-postgres:
+        image: postgres:18-bookworm
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: dodolink_ci
+    env:
+      CI: "1"
+      EXPO_NO_DOTENV: "1"
+      CI_DATABASE_URL: postgresql://ci:ci@ci-postgres:5432/dodolink_ci
+      DODOLINK_CLERK_PRODUCTION_PUBLISHABLE_KEY: ${{ secrets.DODOLINK_CLERK_PRODUCTION_PUBLISHABLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test, type-check and build (same script Cloud Build uses)
+        run: bash infra/gcp/build-source.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: runtime-context
+          path: generated-artifacts/gcp-runtime
+          if-no-files-found: error
+          retention-days: 3
+
+  image-and-deploy:
+    needs: test-and-compile
+    runs-on: ubuntu-latest
+    env:
+      SERVICE: ${{ vars.LIGHTSAIL_SERVICE || 'dodolink' }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: runtime-context
+          path: generated-artifacts/gcp-runtime
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+      # Lightsail needs this small helper to push local images.
+      - name: Install lightsailctl
+        run: |
+          sudo curl -fsSL "https://s3.us-west-2.amazonaws.com/lightsailctl/latest/linux-amd64/lightsailctl" -o /usr/local/bin/lightsailctl
+          sudo chmod +x /usr/local/bin/lightsailctl
+      - name: Build and push image to Lightsail
+        id: image
+        run: |
+          docker build -f infra/aws/runtime.Dockerfile -t dodolink-app:ci generated-artifacts/gcp-runtime
+          aws lightsail push-container-image --service-name "$SERVICE" --label app --image dodolink-app:ci
+          IMAGE=$(aws lightsail get-container-images --service-name "$SERVICE" --query 'containerImages[0].image' --output text)
+          case "$IMAGE" in :*) ;; *) echo "Unexpected image name: $IMAGE" >&2; exit 1;; esac
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+      - name: Create Lightsail deployment
+        if: ${{ github.event_name == 'push' || inputs.deploy }}
+        env:
+          IMAGE: ${{ steps.image.outputs.image }}
+          PRIVATE_OBJECT_DIR: ${{ vars.PRIVATE_OBJECT_DIR }}
+          PUBLIC_OBJECT_SEARCH_PATHS: ${{ vars.PUBLIC_OBJECT_SEARCH_PATHS }}
+          CLERK_AUTH_MODE: ${{ vars.CLERK_AUTH_MODE }}
+          CLERK_PROXY_URL: ${{ vars.CLERK_PROXY_URL }}
+          ARN_DATABASE_URL: ${{ vars.ARN_DATABASE_URL }}
+          ARN_CLERK_SECRET_KEY: ${{ vars.ARN_CLERK_SECRET_KEY }}
+          ARN_CLERK_PUBLISHABLE_KEY: ${{ vars.ARN_CLERK_PUBLISHABLE_KEY }}
+          ARN_PAYSTACK_SECRET_KEY: ${{ vars.ARN_PAYSTACK_SECRET_KEY }}
+          ARN_GMAIL_APP_PASSWORD: ${{ vars.ARN_GMAIL_APP_PASSWORD }}
+          APP_S3_ACCESS_KEY_ID: ${{ secrets.APP_S3_ACCESS_KEY_ID }}
+          APP_S3_SECRET_ACCESS_KEY: ${{ secrets.APP_S3_SECRET_ACCESS_KEY }}
+        run: |
+          # Refuse to deploy with anything missing, so a blank value is never written.
+          for name in AWS_REGION PRIVATE_OBJECT_DIR PUBLIC_OBJECT_SEARCH_PATHS CLERK_AUTH_MODE CLERK_PROXY_URL \
+                      ARN_DATABASE_URL ARN_CLERK_SECRET_KEY ARN_CLERK_PUBLISHABLE_KEY ARN_PAYSTACK_SECRET_KEY \
+                      ARN_GMAIL_APP_PASSWORD APP_S3_ACCESS_KEY_ID APP_S3_SECRET_ACCESS_KEY IMAGE; do
+            if [ -z "${!name}" ]; then echo "Setting $name is missing." >&2; exit 1; fi
+          done
+          # Read the stored secrets and hide them from the logs.
+          secret() { aws secretsmanager get-secret-value --secret-id "$1" --query SecretString --output text; }
+          export DATABASE_URL="$(secret "$ARN_DATABASE_URL")"
+          export CLERK_SECRET_KEY="$(secret "$ARN_CLERK_SECRET_KEY")"
+          export CLERK_PUBLISHABLE_KEY="$(secret "$ARN_CLERK_PUBLISHABLE_KEY")"
+          export PAYSTACK_SECRET_KEY="$(secret "$ARN_PAYSTACK_SECRET_KEY")"
+          export GMAIL_APP_PASSWORD="$(secret "$ARN_GMAIL_APP_PASSWORD")"
+          for v in DATABASE_URL CLERK_SECRET_KEY CLERK_PUBLISHABLE_KEY PAYSTACK_SECRET_KEY GMAIL_APP_PASSWORD \
+                   APP_S3_ACCESS_KEY_ID APP_S3_SECRET_ACCESS_KEY; do
+            echo "::add-mask::${!v}"
+          done
+          python3 - <<'PY'
+          import json, os
+          tpl = json.load(open("infra/aws/primary-container.template.json"))
+          fill = {
+            "__AWS_REGION__": os.environ["AWS_REGION"],
+            "__PRIVATE_OBJECT_DIR__": os.environ["PRIVATE_OBJECT_DIR"],
+            "__PUBLIC_OBJECT_SEARCH_PATHS__": os.environ["PUBLIC_OBJECT_SEARCH_PATHS"],
+            "__CLERK_AUTH_MODE__": os.environ["CLERK_AUTH_MODE"],
+            "__CLERK_PROXY_URL__": os.environ["CLERK_PROXY_URL"],
+          }
+          env = {}
+          for item in tpl["environment"]:
+              value = item["value"]
+              for key, replacement in fill.items():
+                  value = value.replace(key, replacement)
+              env[item["name"]] = value
+          for name in ("DATABASE_URL", "CLERK_SECRET_KEY", "CLERK_PUBLISHABLE_KEY",
+                       "PAYSTACK_SECRET_KEY", "GMAIL_APP_PASSWORD"):
+              env[name] = os.environ[name]
+          # Lightsail containers have no IAM role, so the app uses its own
+          # limited key (photo bucket only). The AWS SDK reads these automatically.
+          env["AWS_ACCESS_KEY_ID"] = os.environ["APP_S3_ACCESS_KEY_ID"]
+          env["AWS_SECRET_ACCESS_KEY"] = os.environ["APP_S3_SECRET_ACCESS_KEY"]
+          leftover = [k for k, v in env.items() if "__" in v and v.startswith("__")]
+          assert not leftover, f"placeholder not filled: {leftover}"
+          containers = {"app": {"image": os.environ["IMAGE"], "environment": env,
+                                "ports": {str(tpl["containerPort"]): "HTTP"}}}
+          json.dump(containers, open("containers.json", "w"))
+          json.dump({"containerName": "app", "containerPort": tpl["containerPort"],
+                     "healthCheck": {"path": "/api/healthz", "successCodes": "200",
+                                     "intervalSeconds": 10, "timeoutSeconds": 5,
+                                     "healthyThreshold": 2, "unhealthyThreshold": 5}},
+                    open("endpoint.json", "w"))
+          PY
+          aws lightsail create-container-service-deployment \
+            --service-name "$SERVICE" \
+            --containers file://containers.json \
+            --public-endpoint file://endpoint.json \
+            --query 'containerService.{state:state,next:nextDeployment.state}'
