@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import palettes from '@/constants/colors';
@@ -129,15 +129,24 @@ export function PhotoPreview({ uri, images, title = 'Photo preview', onClose }: 
   return (
     <Modal visible={!!uri} animationType="fade" presentationStyle="fullScreen" onRequestClose={onClose}>
       <GestureHandlerRootView style={styles.flex}>
-        <SafeAreaView style={styles.screen}>
-          <View style={styles.header}>
-            <Text numberOfLines={1} style={[styles.label, styles.flex]}>{title}</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="Close photo preview" onPress={onClose} style={styles.control}>
-              <Feather name="x" size={26} color={colors.foreground} />
+        {/* A Modal renders outside the app's SafeAreaProvider, so on iPhone the
+            top inset is 0 and the header sat under the status bar. This gives
+            the modal its own provider. */}
+        <SafeAreaProvider>
+          <SafeAreaView style={styles.screen}>
+            <View style={styles.header}>
+              <Text numberOfLines={1} style={[styles.label, styles.flex]}>{title}</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close photo preview" onPress={onClose} style={styles.control}>
+                <Feather name="x" size={26} color={colors.foreground} />
+              </Pressable>
+            </View>
+            {uri && <Gallery key={uri} uri={uri} images={images} />}
+            {/* Second close button within thumb reach, in case the top one is hard to hit. */}
+            <Pressable accessibilityRole="button" accessibilityLabel="Close photo preview" onPress={onClose} style={styles.closeBottom}>
+              <Text style={styles.label}>Close</Text>
             </Pressable>
-          </View>
-          {uri && <Gallery key={uri} uri={uri} images={images} />}
-        </SafeAreaView>
+          </SafeAreaView>
+        </SafeAreaProvider>
       </GestureHandlerRootView>
     </Modal>
   );
@@ -153,4 +162,5 @@ const styles = StyleSheet.create({
   hint: { color: colors.foreground, textAlign: 'center', padding: 12, fontSize: 13 },
   controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20 },
   disabled: { opacity: 0.3 },
+  closeBottom: { alignSelf: 'center', minWidth: 120, height: 48, margin: 12, alignItems: 'center', justifyContent: 'center', borderRadius: 24, borderWidth: 1, borderColor: colors.foreground },
 });
