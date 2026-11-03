@@ -116,7 +116,7 @@ router.get("/stores/:storeId/followers", listLimit, async (req, res): Promise<vo
   res.setHeader("Cache-Control", "private, no-store");
   const userId = requireUser(req, res);
   if (!userId) return;
-  const id = parseStoreId(req.params.storeId);
+  const id = parseStoreId(String(req.params.storeId));
   if (id === null) { res.status(400).json({ error: "Invalid store" }); return; }
   const [store] = await db.select().from(storesTable).where(eq(storesTable.id, id));
   if (!store || (isStoreHidden(store) && store.ownerUserId !== userId)) { res.status(404).json({ error: "Store not found" }); return; }
@@ -135,7 +135,7 @@ router.get("/stores/:storeId/following", listLimit, async (req, res): Promise<vo
   res.setHeader("Cache-Control", "private, no-store");
   const userId = requireUser(req, res);
   if (!userId) return;
-  const id = parseStoreId(req.params.storeId);
+  const id = parseStoreId(String(req.params.storeId));
   if (id === null) { res.status(400).json({ error: "Invalid store" }); return; }
   const [store] = await db.select().from(storesTable).where(eq(storesTable.id, id));
   if (!store || (isStoreHidden(store) && store.ownerUserId !== userId)) { res.status(404).json({ error: "Store not found" }); return; }
