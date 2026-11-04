@@ -6,6 +6,7 @@ export type DeliveryType = "intrastate" | "interstate" | "both";
 export interface DeliveryAgent {
   id: number; name: string; imageUrl: string | null; bio: string | null;
   deliveryType: DeliveryType; homeState: string | null; coveredStates: string[]; nationwide: boolean;
+  ratingAvg: number | null; ratingCount: number;
 }
 export interface DeliveryInboxItem {
   id: number; role: "customer" | "agent"; title: string; imageUrl: string | null;
@@ -14,9 +15,22 @@ export interface DeliveryInboxItem {
 export interface DeliveryMessage {
   id: number; body: string; senderType: "customer" | "agent"; senderName: string; mine: boolean; createdAt: string;
 }
-export interface DeliveryThread {
-  role: "customer" | "agent"; title: string; agent: DeliveryAgent; messages: DeliveryMessage[];
+export type OrderStatus = "requested" | "paid" | "delivered" | "disputed" | "refunded" | "cancelled";
+export interface DeliveryOrder {
+  id: number; status: OrderStatus; amountKobo: number; pickupState: string; dropState: string;
+  description: string | null; createdAt: string; paidAt: string | null; deliveredAt: string | null;
+  refundKobo: number; ratingStars: number | null; disputeOpen: boolean;
+  // customer only
+  deliveryCode?: string | null;
+  // company only
+  payoutStatus?: string;
+  breakdown?: { platformFeeKobo: number; paystackFeeKobo: number; transferFeeKobo: number; companyReceivesKobo: number; estimated: boolean };
 }
+export interface DeliveryThread {
+  role: "customer" | "agent"; title: string; agent: DeliveryAgent; messages: DeliveryMessage[]; orders: DeliveryOrder[];
+}
+
+export const naira = (kobo: number) => `₦${(kobo / 100).toLocaleString('en-NG')}`;
 
 export const deliveryTypeLabel: Record<DeliveryType, string> = {
   intrastate: "Intrastate", interstate: "Interstate", both: "Interstate + Intrastate",

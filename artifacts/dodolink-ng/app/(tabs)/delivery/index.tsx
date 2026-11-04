@@ -148,6 +148,11 @@ export default function DeliveryScreen() {
                 <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>{item.name}</Text>
                 <TypeBadge agent={item} />
               </View>
+              <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>
+                {item.ratingCount > 0
+                  ? `★ ${item.ratingAvg?.toFixed(1)} (${item.ratingCount} ${item.ratingCount === 1 ? 'rating' : 'ratings'})`
+                  : 'No ratings yet'}
+              </Text>
               <Text style={{ color: colors.mutedForeground, fontSize: 13 }} numberOfLines={2}>
                 Delivers: {coverageLine(item) || 'Ask in chat'}
               </Text>

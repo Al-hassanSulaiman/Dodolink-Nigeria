@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import crypto from "node:crypto";
 import { activateFromWebhook } from "../lib/subscriptionBilling";
+import { applyPayment, applyTransferEvent } from "../lib/deliveryOrders";
 
 const router: IRouter = Router();
 
@@ -42,7 +43,34 @@ router.post("/webhooks/paystack", async (req, res): Promise<void> => {
     };
   };
 
+  // Delivery payouts: Paystack tells us how a transfer ended.
+  if (event.event?.startsWith("transfer.") && event.data?.reference) {
+    try {
+      await applyTransferEvent(event.event, event.data.reference);
+    } catch (err) {
+      req.log.error({ err }, "Delivery transfer event failed");
+      res.status(500).json({ error: "Processing failed" });
+      return;
+    }
+    res.json({ received: true });
+    return;
+  }
+
   if (event.event !== "charge.success" || !event.data?.reference) {
+    res.json({ received: true });
+    return;
+  }
+
+  // Delivery payments use their own reference prefix and never touch subscriptions.
+  if (event.data.reference.startsWith("del_")) {
+    try {
+      const result = await applyPayment(event.data.reference);
+      req.log.info({ reference: event.data.reference, result }, "Delivery payment processed");
+    } catch (err) {
+      req.log.error({ err }, "Delivery payment processing failed");
+      res.status(500).json({ error: "Processing failed" });
+      return;
+    }
     res.json({ received: true });
     return;
   }

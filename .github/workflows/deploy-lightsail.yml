@@ -100,6 +100,9 @@ jobs:
           ARN_GMAIL_APP_PASSWORD: ${{ vars.ARN_GMAIL_APP_PASSWORD }}
           APP_S3_ACCESS_KEY_ID: ${{ secrets.APP_S3_ACCESS_KEY_ID }}
           APP_S3_SECRET_ACCESS_KEY: ${{ secrets.APP_S3_SECRET_ACCESS_KEY }}
+          # Delivery money switches. Off unless the repository variable is exactly "true".
+          DELIVERY_PAYMENTS_ENABLED: ${{ vars.DELIVERY_PAYMENTS_ENABLED }}
+          DELIVERY_PAYOUTS_ENABLED: ${{ vars.DELIVERY_PAYOUTS_ENABLED }}
         run: |
           # Refuse to deploy with anything missing, so a blank value is never written.
           for name in AWS_REGION PRIVATE_OBJECT_DIR PUBLIC_OBJECT_SEARCH_PATHS CLERK_AUTH_MODE CLERK_PROXY_URL \
@@ -141,6 +144,8 @@ jobs:
           # limited key (photo bucket only). The AWS SDK reads these automatically.
           env["AWS_ACCESS_KEY_ID"] = os.environ["APP_S3_ACCESS_KEY_ID"]
           env["AWS_SECRET_ACCESS_KEY"] = os.environ["APP_S3_SECRET_ACCESS_KEY"]
+          for flag in ("DELIVERY_PAYMENTS_ENABLED", "DELIVERY_PAYOUTS_ENABLED"):
+              env[flag] = "true" if os.environ.get(flag) == "true" else "false"
           leftover = [k for k, v in env.items() if "__" in v and v.startswith("__")]
           assert not leftover, f"placeholder not filled: {leftover}"
           containers = {"app": {"image": os.environ["IMAGE"], "environment": env,

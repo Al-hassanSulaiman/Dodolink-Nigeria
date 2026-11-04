@@ -19,11 +19,12 @@ import PrivacyPolicyPage from "@/pages/privacy";
 import TermsOfServicePage from "@/pages/terms";
 import DeleteAccountPage from "@/pages/delete-account";
 import DeliveryPage from "@/pages/delivery";
+import DeliveryJobsPage from "@/pages/delivery-jobs";
 import {
   useAdminListSupportThreads,
   getAdminListSupportThreadsQueryKey,
 } from "@workspace/api-client-react";
-import { LayoutDashboard, Store, LogOut, ShieldCheck, Users, HelpCircle, Inbox, BarChart3, Truck } from "lucide-react";
+import { LayoutDashboard, Store, LogOut, ShieldCheck, Users, HelpCircle, Inbox, BarChart3, Truck, PackageCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const queryClient = new QueryClient({
@@ -60,7 +61,8 @@ const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/stores", label: "Stores", icon: Store },
   { to: "/users", label: "Users", icon: Users },
-  { to: "/delivery", label: "Delivery", icon: Truck },
+  { to: "/delivery", label: "Delivery companies", icon: Truck },
+  { to: "/delivery-jobs", label: "Delivery jobs", icon: PackageCheck },
   { to: "/admins", label: "Admins", icon: ShieldCheck },
   { to: "/support", label: "Support", icon: HelpCircle },
   { to: "/leads", label: "Leads", icon: Inbox },
@@ -199,6 +201,9 @@ function Router() {
       </Route>
       <Route path="/users">
         <ProtectedRoute component={UsersPage} />
+      </Route>
+      <Route path="/delivery-jobs">
+        <ProtectedRoute component={DeliveryJobsPage} />
       </Route>
       <Route path="/delivery">
         <ProtectedRoute component={DeliveryPage} />

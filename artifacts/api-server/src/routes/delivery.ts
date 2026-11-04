@@ -9,6 +9,8 @@ import { rateLimit } from "../lib/rateLimit";
 import { notifyTokens } from "../lib/push";
 import { logger } from "../lib/logger";
 import { NIGERIAN_STATES, DELIVERY_TYPES } from "../lib/nigerianStates";
+import { ratingSummaries } from "../lib/deliveryOrders";
+import { ordersForConversation } from "../lib/deliveryOrderView";
 
 // Customer-facing and delivery-person-facing delivery routes.
 // Never returns phone numbers or bank details.
@@ -17,15 +19,16 @@ const sendLimit = rateLimit({ name: "delivery-msg", max: 30, windowMs: 60_000 })
 const startLimit = rateLimit({ name: "delivery-start", max: 15, windowMs: 5 * 60_000 });
 
 type AgentRow = typeof deliveryAgentsTable.$inferSelect;
-function publicAgent(a: AgentRow) {
+export function publicAgent(a: AgentRow, rating?: { avg: number; count: number }) {
   return {
+    ratingAvg: rating?.avg ?? null, ratingCount: rating?.count ?? 0,
     id: a.id, name: a.name, imageUrl: a.imageUrl, bio: a.bio,
     deliveryType: a.deliveryType, homeState: a.homeState,
     coveredStates: a.coveredStates, nationwide: a.nationwide,
   };
 }
 
-function toId(raw: unknown): number | null {
+export function toId(raw: unknown): number | null {
   const n = Number(raw);
   return Number.isInteger(n) && n >= 1 && n <= 2147483647 ? n : null;
 }
@@ -67,7 +70,8 @@ router.get("/delivery/agents", async (req, res): Promise<void> => {
     }
     return true;
   });
-  res.json(filtered.map(publicAgent));
+  const ratings = await ratingSummaries(filtered.map(a => a.id));
+  res.json(filtered.map(a => publicAgent(a, ratings.get(a.id))));
 });
 
 // Is the signed-in user a delivery person? (lets the app show his inbox)
@@ -125,7 +129,7 @@ router.get("/delivery/conversations", async (req, res): Promise<void> => {
   }));
 });
 
-async function participant(conversationId: number, userId: string) {
+export async function participant(conversationId: number, userId: string) {
   const [conv] = await db.select().from(deliveryConversationsTable).where(eq(deliveryConversationsTable.id, conversationId));
   if (!conv) return null;
   const [agent] = await db.select().from(deliveryAgentsTable).where(eq(deliveryAgentsTable.id, conv.agentId));
@@ -145,10 +149,13 @@ router.get("/delivery/conversations/:id/messages", async (req, res): Promise<voi
   if (!p) { res.status(404).json({ error: "Chat not found" }); return; }
   const messages = await db.select().from(deliveryMessagesTable)
     .where(eq(deliveryMessagesTable.conversationId, id)).orderBy(deliveryMessagesTable.createdAt, deliveryMessagesTable.id);
+  const orders = await ordersForConversation(id, p.role === "agent" ? "company" : "customer");
+  const ratings = await ratingSummaries([p.agent.id]);
   res.json({
     role: p.role,
     title: p.role === "agent" ? p.conv.customerName : p.agent.name,
-    agent: publicAgent(p.agent),
+    agent: publicAgent(p.agent, ratings.get(p.agent.id)),
+    orders,
     messages: messages.map(m => ({
       id: m.id, body: m.body, senderType: m.senderType, senderName: m.senderName,
       mine: m.senderId === userId, createdAt: m.createdAt,

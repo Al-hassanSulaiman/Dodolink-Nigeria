@@ -9,7 +9,7 @@ on:
       file:
         description: "File name inside lib/db/migrations"
         required: true
-        default: "20261104_delivery.sql"
+        default: "20261104b_delivery_payments.sql"
       confirm:
         description: "Type APPLY to confirm you approve this database change"
         required: true

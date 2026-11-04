@@ -16,18 +16,18 @@ type Agent = {
   id: number; name: string; phone: string; imageUrl: string | null; bio: string | null;
   linkedUserId: string | null; deliveryType: DeliveryType; homeState: string | null;
   coveredStates: string[]; nationwide: boolean; bankName: string | null;
-  bankAccountNumber: string | null; bankAccountName: string | null; active: boolean;
+  bankCode: string | null; bankAccountNumber: string | null; bankAccountName: string | null; active: boolean;
 };
 type Form = {
-  name: string; phone: string; bio: string; accountEmail: string; deliveryType: DeliveryType;
+  name: string; phone: string; bio: string; imageUrl: string; accountEmail: string; deliveryType: DeliveryType;
   homeState: string; coveredStates: string[]; nationwide: boolean;
-  bankName: string; bankAccountNumber: string; bankAccountName: string; active: boolean;
+  bankName: string; bankCode: string; bankAccountNumber: string; active: boolean;
 };
 
 const EMPTY: Form = {
-  name: "", phone: "", bio: "", accountEmail: "", deliveryType: "intrastate",
+  name: "", phone: "", bio: "", imageUrl: "", accountEmail: "", deliveryType: "intrastate",
   homeState: "", coveredStates: [], nationwide: false,
-  bankName: "", bankAccountNumber: "", bankAccountName: "", active: true,
+  bankName: "", bankCode: "", bankAccountNumber: "", active: true,
 };
 
 const TYPE_LABEL: Record<DeliveryType, string> = {
@@ -62,7 +62,29 @@ export default function DeliveryPage() {
     queryFn: () => customFetch<{ states: string[] }>("/api/delivery/meta"),
     staleTime: Infinity,
   });
+  const banks = useQuery({
+    queryKey: ["delivery-banks"],
+    queryFn: () => customFetch<{ name: string; code: string }[]>("/api/admin/delivery/banks"),
+    staleTime: 6 * 60 * 60 * 1000,
+  });
   const states = meta.data?.states ?? [];
+  const [uploading, setUploading] = useState(false);
+
+  const uploadPicture = async (file: File) => {
+    setUploading(true);
+    try {
+      const { uploadURL, objectPath } = await customFetch<{ uploadURL: string; objectPath: string }>("/api/storage/uploads/request-url", {
+        method: "POST", body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
+      });
+      const put = await fetch(uploadURL, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
+      if (!put.ok) throw new Error("upload failed");
+      setForm(f => ({ ...f, imageUrl: objectPath }));
+    } catch {
+      toast.error("Could not upload the picture. You can paste a link to the picture instead.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const [editing, setEditing] = useState<Agent | "new" | null>(null);
   const [form, setForm] = useState<Form>(EMPTY);
@@ -71,10 +93,10 @@ export default function DeliveryPage() {
   const openNew = () => { setForm(EMPTY); setEditing("new"); };
   const openEdit = (a: Agent) => {
     setForm({
-      name: a.name, phone: a.phone, bio: a.bio ?? "", accountEmail: "",
+      name: a.name, phone: a.phone, bio: a.bio ?? "", imageUrl: a.imageUrl ?? "", accountEmail: "",
       deliveryType: a.deliveryType, homeState: a.homeState ?? "", coveredStates: a.coveredStates,
-      nationwide: a.nationwide, bankName: a.bankName ?? "", bankAccountNumber: a.bankAccountNumber ?? "",
-      bankAccountName: a.bankAccountName ?? "", active: a.active,
+      nationwide: a.nationwide, bankName: a.bankName ?? "", bankCode: a.bankCode ?? "",
+      bankAccountNumber: a.bankAccountNumber ?? "", active: a.active,
     });
     setEditing(a);
   };
@@ -106,12 +128,12 @@ export default function DeliveryPage() {
     <div>
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Delivery people</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Delivery companies</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Only you can add delivery people. Users see their name, photo and delivery type, never their phone number.
+            Only you can add delivery companies. Users see the company name, picture, delivery type and rating, never the phone number.
           </p>
         </div>
-        <Button onClick={openNew}><Plus className="w-4 h-4 mr-2" />Add delivery person</Button>
+        <Button onClick={openNew}><Plus className="w-4 h-4 mr-2" />Add delivery company</Button>
       </div>
 
       {agents.isLoading ? (
@@ -122,9 +144,13 @@ export default function DeliveryPage() {
             <Card key={a.id}>
               <CardContent className="py-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-full bg-green-100 text-green-800 flex items-center justify-center flex-shrink-0">
-                    <Truck className="w-5 h-5" />
-                  </div>
+                  {a.imageUrl ? (
+                    <img src={a.imageUrl.startsWith("http") ? a.imageUrl : `/api/storage${a.imageUrl}`} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-green-100 text-green-800 flex items-center justify-center flex-shrink-0">
+                      <Truck className="w-5 h-5" />
+                    </div>
+                  )}
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">
                       {a.name}
@@ -140,29 +166,53 @@ export default function DeliveryPage() {
               </CardContent>
             </Card>
           ))}
-          {(agents.data ?? []).length === 0 && <p className="text-sm text-gray-500">No delivery people yet.</p>}
+          {(agents.data ?? []).length === 0 && <p className="text-sm text-gray-500">No delivery companies yet.</p>}
         </div>
       )}
 
       <Dialog open={!!editing} onOpenChange={open => !open && setEditing(null)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto bg-white text-gray-900">
           <DialogHeader>
-            <DialogTitle>{editing === "new" ? "Add delivery person" : "Edit delivery person"}</DialogTitle>
+            <DialogTitle>{editing === "new" ? "Add delivery company" : "Edit delivery company"}</DialogTitle>
             <DialogDescription>Fields marked * are required.</DialogDescription>
           </DialogHeader>
           <form
             className="space-y-4"
             onSubmit={e => { e.preventDefault(); save.mutate(); }}
           >
-            <Input required placeholder="Full name *" value={form.name} onChange={e => set("name", e.target.value)} />
-            <Input required placeholder="Phone number * (hidden from users)" value={form.phone} onChange={e => set("phone", e.target.value)} />
+            <Input required placeholder="Company name *" value={form.name} onChange={e => set("name", e.target.value)} />
+            <Input required placeholder="Company phone number * (hidden from users)" value={form.phone} onChange={e => set("phone", e.target.value)} />
             <Input
               type="email"
-              placeholder={editing === "new" ? "His DodoLink account email (so he can chat)" : "Account email (leave empty to keep the current link)"}
+              placeholder={editing === "new" ? "The email the company will log in with (it must already have a DodoLink account)" : "Account email (leave empty to keep the current link)"}
               value={form.accountEmail}
               onChange={e => set("accountEmail", e.target.value)}
             />
-            <Input placeholder="Short bio (optional)" value={form.bio} onChange={e => set("bio", e.target.value)} />
+            <Input placeholder="Short description (optional)" value={form.bio} onChange={e => set("bio", e.target.value)} />
+
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium text-gray-900">Company picture</legend>
+              <div className="flex items-center gap-3">
+                {form.imageUrl ? (
+                  <img
+                    src={form.imageUrl.startsWith("http") ? form.imageUrl : `/api/storage${form.imageUrl}`}
+                    alt="Company"
+                    className="w-14 h-14 rounded-full object-cover border border-gray-200"
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center text-gray-400"><Truck className="w-6 h-6" /></div>
+                )}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  disabled={uploading}
+                  onChange={e => { const f = e.target.files?.[0]; if (f) void uploadPicture(f); }}
+                  className="text-sm text-gray-900"
+                />
+              </div>
+              {uploading && <p className="text-xs text-gray-500">Uploading…</p>}
+              <Input placeholder="…or paste a link to the picture" value={form.imageUrl.startsWith("/objects") ? "" : form.imageUrl} onChange={e => set("imageUrl", e.target.value)} />
+            </fieldset>
 
             <fieldset className="space-y-2">
               <legend className="text-sm font-medium text-gray-900">Delivery type *</legend>
@@ -179,7 +229,7 @@ export default function DeliveryPage() {
                 <span className="font-medium text-gray-900">Home state *</span>
                 <select
                   required
-                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900"
                   value={form.homeState}
                   onChange={e => set("homeState", e.target.value)}
                 >
@@ -191,7 +241,7 @@ export default function DeliveryPage() {
 
             {needsStates && (
               <fieldset className="space-y-2">
-                <legend className="text-sm font-medium text-gray-900">States he delivers to *</legend>
+                <legend className="text-sm font-medium text-gray-900">States the company delivers to *</legend>
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" checked={form.nationwide} onChange={e => set("nationwide", e.target.checked)} />
                   Nationwide (all states)
@@ -210,10 +260,22 @@ export default function DeliveryPage() {
             )}
 
             <fieldset className="space-y-2">
-              <legend className="text-sm font-medium text-gray-900">Bank account for payouts (needed before payments go live)</legend>
-              <Input placeholder="Bank name" value={form.bankName} onChange={e => set("bankName", e.target.value)} />
-              <Input placeholder="Account number" value={form.bankAccountNumber} onChange={e => set("bankAccountNumber", e.target.value)} />
-              <Input placeholder="Account name" value={form.bankAccountName} onChange={e => set("bankAccountName", e.target.value)} />
+              <legend className="text-sm font-medium text-gray-900">Company bank account for payouts (checked with the bank when you save)</legend>
+              <select
+                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900"
+                value={form.bankCode}
+                onChange={e => {
+                  const bank = (banks.data ?? []).find(b => b.code === e.target.value);
+                  setForm(f => ({ ...f, bankCode: e.target.value, bankName: bank?.name ?? "" }));
+                }}
+              >
+                <option value="">{banks.isLoading ? "Loading banks…" : "Choose the bank"}</option>
+                {(banks.data ?? []).map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
+              </select>
+              <Input placeholder="Account number (10 digits)" inputMode="numeric" maxLength={10} value={form.bankAccountNumber} onChange={e => set("bankAccountNumber", e.target.value.replace(/\D/g, ""))} />
+              {editing !== "new" && editing && (editing as Agent).bankAccountName && (
+                <p className="text-xs text-gray-600">Verified account name: <span className="font-medium">{(editing as Agent).bankAccountName}</span></p>
+              )}
             </fieldset>
 
             <label className="flex items-center gap-2 text-sm">

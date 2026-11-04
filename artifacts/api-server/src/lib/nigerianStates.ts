@@ -29,3 +29,21 @@ export function validateCoverage(input: AgentCoverageInput): string | null {
   }
   return null;
 }
+
+export type AgentCoverage = {
+  deliveryType: string;
+  homeState: string | null;
+  coveredStates: string[];
+  nationwide: boolean;
+};
+
+/** Can this delivery company take a job from `pickup` to `drop`? */
+export function agentCoversJob(agent: AgentCoverage, pickup: string, drop: string): boolean {
+  const intra = (agent.deliveryType === "intrastate" || agent.deliveryType === "both")
+    && !!agent.homeState && pickup === agent.homeState && drop === agent.homeState;
+  const inter = (agent.deliveryType === "interstate" || agent.deliveryType === "both")
+    && pickup !== drop
+    && (agent.nationwide || agent.coveredStates.includes(pickup) || agent.coveredStates.includes(drop)
+      || (!!agent.homeState && (pickup === agent.homeState || drop === agent.homeState) && agent.deliveryType === "both"));
+  return intra || inter;
+}
