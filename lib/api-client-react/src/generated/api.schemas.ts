@@ -418,6 +418,8 @@ export interface Conversation {
   lastMessage?: string | null;
   lastMessageAt?: string | null;
   unreadCount: number;
+  /** Photo of the other person in the chat (store photo, or account photo if they have one). */
+  partnerImageUrl?: string | null;
   createdAt: string;
 }
 

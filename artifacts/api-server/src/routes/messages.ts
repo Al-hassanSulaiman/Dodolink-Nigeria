@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, eq, inArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { db, conversationsTable, messagesTable, storesTable, pushTokensTable } from "@workspace/db";
 import { SendMessageBody, StartConversationBody } from "@workspace/api-zod";
 import { notifyTokens } from "../lib/push";
@@ -50,6 +50,41 @@ async function customerDisplayName(userId: string): Promise<string> {
   }
 }
 
+// Photo of the person on the other side of each chat, for the chat list.
+// A store's own photo for store chats; for a customer: their store photo if they
+// own one, otherwise their account photo (only if they really uploaded one).
+async function partnerImages(
+  convs: Array<{ customerId: string; storeId: number }>,
+  userId: string,
+): Promise<{ byStore: Map<number, string | null>; byCustomer: Map<string, string | null> }> {
+  const byStore = new Map<number, string | null>();
+  const byCustomer = new Map<string, string | null>();
+  const storeIds = [...new Set(convs.filter(c => c.customerId === userId).map(c => c.storeId))];
+  if (storeIds.length) {
+    const rows = await db.select({ id: storesTable.id, imageUrl: storesTable.imageUrl })
+      .from(storesTable).where(inArray(storesTable.id, storeIds));
+    for (const row of rows) byStore.set(row.id, row.imageUrl ?? null);
+  }
+  const customerIds = [...new Set(convs.filter(c => c.customerId !== userId).map(c => c.customerId))];
+  if (customerIds.length) {
+    const owned = await db.select({ ownerUserId: storesTable.ownerUserId, imageUrl: storesTable.imageUrl, id: storesTable.id })
+      .from(storesTable).where(inArray(storesTable.ownerUserId, customerIds)).orderBy(storesTable.id);
+    for (const row of owned) {
+      if (!byCustomer.has(row.ownerUserId)) byCustomer.set(row.ownerUserId, row.imageUrl ?? null);
+    }
+    const remaining = customerIds.filter(id => !byCustomer.get(id));
+    if (remaining.length) {
+      try {
+        const users = await clerkClient.users.getUserList({ userId: remaining, limit: remaining.length });
+        for (const user of users.data) byCustomer.set(user.id, user.hasImage ? user.imageUrl : null);
+      } catch (err) {
+        logger.warn({ err }, "Could not load chat photos from Clerk");
+      }
+    }
+  }
+  return { byStore, byCustomer };
+}
+
 async function loadConversationIfParticipant(conversationId: number, userId: string) {
   const [conv] = await db.select().from(conversationsTable).where(eq(conversationsTable.id, conversationId));
   if (!conv) return { conv: null, allowed: false };
@@ -88,6 +123,7 @@ router.get("/conversations", async (req, res): Promise<void> => {
 
   const storeNames: Record<number, string> = {};
   for (const s of storesByOwner) storeNames[s.id] = s.name;
+  const photos = await partnerImages(relevant, userId);
 
   const enriched = await Promise.all(
     relevant.map(async (c) => {
@@ -101,7 +137,10 @@ router.get("/conversations", async (req, res): Promise<void> => {
       // - store owner sees messages from customer (storeUnreadCount)
       const isStoreOwner = storeIds.includes(c.storeId) && c.customerId !== authUserId;
       const unreadCount = isStoreOwner ? c.storeUnreadCount : c.unreadCount;
-      return { ...c, customerName: customerStores.get(c.customerId) ?? c.customerName, storeName, unreadCount };
+      const partnerImageUrl = c.customerId === userId
+        ? (photos.byStore.get(c.storeId) ?? null)
+        : (photos.byCustomer.get(c.customerId) ?? null);
+      return { ...c, customerName: customerStores.get(c.customerId) ?? c.customerName, storeName, unreadCount, partnerImageUrl };
     })
   );
 
@@ -152,6 +191,23 @@ router.post("/conversations/start", startConversationLimit, async (req, res): Pr
       return { conversation: { ...existing, customerName: resolvedCustomerName }, created: false };
     }
 
+    // If the owner of this store has already chatted with one of MY stores, continue
+    // that same chat instead of opening a second one with the same person.
+    const [targetStore] = await tx.select({ ownerUserId: storesTable.ownerUserId })
+      .from(storesTable).where(eq(storesTable.id, storeId));
+    if (targetStore && targetStore.ownerUserId !== customerId) {
+      const myStores = await tx.select({ id: storesTable.id }).from(storesTable)
+        .where(eq(storesTable.ownerUserId, customerId));
+      if (myStores.length) {
+        const [reverse] = await tx.select().from(conversationsTable).where(and(
+          eq(conversationsTable.customerId, targetStore.ownerUserId),
+          inArray(conversationsTable.storeId, myStores.map(m => m.id)),
+          sql`exists (select 1 from ${messagesTable} where ${messagesTable.conversationId} = ${conversationsTable.id})`,
+        )).orderBy(sql`${conversationsTable.lastMessageAt} desc nulls last`, desc(conversationsTable.id)).limit(1);
+        if (reverse) return { conversation: reverse, created: false };
+      }
+    }
+
     const [conversation] = await tx
       .insert(conversationsTable)
       .values({
@@ -179,9 +235,15 @@ router.post("/conversations/start", startConversationLimit, async (req, res): Pr
     await checkAndSetQualifiedAt(storeId).catch(() => undefined);
   }
 
+  let responseStoreName = store.name;
+  if (result.conversation.storeId !== storeId) {
+    const [own] = await db.select({ name: storesTable.name }).from(storesTable)
+      .where(eq(storesTable.id, result.conversation.storeId));
+    responseStoreName = own?.name ?? store.name;
+  }
   res
     .status(result.created ? 201 : 200)
-    .json({ ...result.conversation, storeName: store.name });
+    .json({ ...result.conversation, storeName: responseStoreName });
 });
 
 router.get("/conversations/:conversationId/messages", async (req, res): Promise<void> => {

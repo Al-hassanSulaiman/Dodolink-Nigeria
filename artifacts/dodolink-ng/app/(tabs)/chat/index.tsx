@@ -1,4 +1,5 @@
-import { StyleSheet, View, Text, FlatList, Pressable } from 'react-native';
+import { StyleSheet, View, Text, FlatList, Pressable, Image } from 'react-native';
+import { getImageUrl } from '@/utils/storage';
 import { Link } from 'expo-router';
 import { useListConversations, getListConversationsQueryKey } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
@@ -56,7 +57,14 @@ export default function ChatsScreen() {
           return (
             <Link href={`/chat/${item.id}`} asChild>
               <Pressable style={StyleSheet.flatten([styles.chatItem, { borderBottomColor: colors.border }])}>
-                <ImagePlaceholder name={displayName} size={48} borderRadius={24} />
+                {item.partnerImageUrl ? (
+                  <Image
+                    source={{ uri: getImageUrl(item.partnerImageUrl) }}
+                    style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: colors.muted }}
+                  />
+                ) : (
+                  <ImagePlaceholder name={displayName} size={48} borderRadius={24} />
+                )}
                 <View style={styles.chatInfo}>
                   <Text style={[styles.chatName, { color: colors.foreground }]} numberOfLines={1}>
                     {displayName}

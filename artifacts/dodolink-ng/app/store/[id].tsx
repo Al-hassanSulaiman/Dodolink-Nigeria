@@ -306,7 +306,6 @@ export default function StoreScreen() {
                 followerCount={followStatus.data.followerCount}
                 isOwner={isOwner}
                 returnTo={`/store/${storeId}`}
-                showCount
               />
             ) : followStatus.isError ? (
               <Pressable onPress={() => followStatus.refetch()} accessibilityRole="button">

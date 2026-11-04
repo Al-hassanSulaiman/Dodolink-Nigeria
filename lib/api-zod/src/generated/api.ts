@@ -596,6 +596,7 @@ export const ListConversationsResponseItem = zod.object({
   "lastMessage": zod.string().nullish(),
   "lastMessageAt": zod.coerce.date().nullish(),
   "unreadCount": zod.number(),
+  "partnerImageUrl": zod.string().nullish().describe('Photo of the other person in the chat (store photo, or account photo if they have one).'),
   "createdAt": zod.coerce.date()
 })
 export const ListConversationsResponse = zod.array(ListConversationsResponseItem)

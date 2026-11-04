@@ -237,3 +237,39 @@ describe("chat drafts and store-owned sender identities", () => {
     expect((await send(opened.body.id)).status).toBe(403);
   });
 });
+
+describe("one chat per pair of store owners, and chat-list photos", () => {
+  it("opening a store whose owner already messaged you continues that chat", async () => {
+    identity.userId = seller;
+    const theirs = await request(app).post("/conversations/start").send({
+      customerId: seller, customerName: "x", storeId: ownStore.id, initialMessage: "Hi from the other side",
+    });
+    expect(theirs.status).toBe(201);
+
+    identity.userId = buyer;
+    const mine = await start();
+    expect(mine.status).toBe(200);
+    expect(mine.body.id).toBe(theirs.body.id);
+
+    const rows = await db.select().from(conversationsTable).where(inArray(conversationsTable.storeId, [ownStore.id, targetStore.id]));
+    expect(rows).toHaveLength(1);
+  });
+
+  it("still opens a fresh chat when the other owner has never messaged you", async () => {
+    const mine = await start("First hello");
+    expect(mine.status).toBe(201);
+    expect(mine.body.storeId).toBe(targetStore.id);
+  });
+
+  it("the chat list carries the other side's photo, or null when there is none", async () => {
+    await db.update(storesTable).set({ imageUrl: "/objects/qa-store-photo" }).where(eq(storesTable.id, targetStore.id));
+    await start("Hello with photo");
+    const asBuyer = await inbox();
+    expect(asBuyer.body[0].partnerImageUrl).toBe("/objects/qa-store-photo");
+
+    identity.userId = seller;
+    const asSeller = await inbox();
+    // The buyer owns a store without a photo, and the mocked account has none.
+    expect(asSeller.body[0].partnerImageUrl ?? null).toBeNull();
+  });
+});

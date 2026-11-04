@@ -2108,6 +2108,10 @@ components:
           nullable: true
         unreadCount:
           type: integer
+        partnerImageUrl:
+          type: string
+          nullable: true
+          description: Photo of the other person in the chat (store photo, or account photo if they have one).
         createdAt:
           type: string
           format: date-time
