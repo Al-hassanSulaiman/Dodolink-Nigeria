@@ -23,6 +23,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: "magnifyingglass", selected: "magnifyingglass" }} />
         <Label>Search</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="delivery/index">
+        <Icon sf={{ default: "shippingbox", selected: "shippingbox.fill" }} />
+        <Label>Delivery</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="chat/index">
         <Icon sf={{ default: "message", selected: "message.fill" }} />
         <Label>Chats</Label>
@@ -95,6 +99,18 @@ function ClassicTabLayout() {
               <SymbolView name="magnifyingglass" tintColor={color} size={24} />
             ) : (
               <Feather name="search" size={22} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="delivery/index"
+        options={{
+          title: "Delivery",
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="shippingbox" tintColor={color} size={24} />
+            ) : (
+              <Feather name="truck" size={22} color={color} />
             ),
         }}
       />

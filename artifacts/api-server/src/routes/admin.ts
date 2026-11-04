@@ -12,6 +12,7 @@ import {
 } from "../lib/storeName";
 import adminReviewAccessRouter from "./adminReviewAccess";
 import { portfolioAdminRouter } from "./portfolioAnalytics";
+import { deliveryAdminRouter } from "./deliveryAdmin";
 
 /**
  * Bootstrap seed only: if the admins table is empty (first run after the
@@ -104,6 +105,7 @@ const router: IRouter = Router();
 router.use("/admin", requireAdmin);
 router.use(portfolioAdminRouter);
 router.use(adminReviewAccessRouter);
+router.use(deliveryAdminRouter);
 
 router.get("/admin/stores", async (req, res): Promise<void> => {
   const { status, limit = 50, offset = 0 } = req.query;

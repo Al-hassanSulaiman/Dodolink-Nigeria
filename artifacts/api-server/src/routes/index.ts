@@ -16,6 +16,7 @@ import webhooksRouter from "./webhooks";
 import contactRouter from "./contact";
 import portfolioAnalyticsRouter from "./portfolioAnalytics";
 import deleteAccountRouter from "./delete-account";
+import deliveryRouter from "./delivery";
 
 const router: IRouter = Router();
 
@@ -26,6 +27,7 @@ router.use(contactRouter);
 router.use(portfolioAnalyticsRouter);
 router.use(deleteAccountRouter);
 router.use(adminRouter);
+router.use(deliveryRouter);
 router.use(storesRouter);
 router.use(productsRouter);
 router.use(searchRouter);

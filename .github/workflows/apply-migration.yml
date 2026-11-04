@@ -1,0 +1,51 @@
+# Applies ONE reviewed SQL file from lib/db/migrations to the production database.
+# Manual only. The file must be written to be additive and re-runnable.
+# Needs the same repository secrets/variables as the Lightsail deploy.
+name: Apply database migration (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      file:
+        description: "File name inside lib/db/migrations"
+        required: true
+        default: "20261104_delivery.sql"
+      confirm:
+        description: "Type APPLY to confirm you approve this database change"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check confirmation
+        run: |
+          [ "${{ inputs.confirm }}" = "APPLY" ] || { echo "Type APPLY to continue."; exit 1; }
+      - uses: actions/checkout@v4
+      - name: Check the file name
+        run: |
+          case "${{ inputs.file }}" in
+            */*|*..*) echo "Use a plain file name."; exit 1;;
+          esac
+          test -f "lib/db/migrations/${{ inputs.file }}"
+          echo "---- SQL about to run ----"
+          cat "lib/db/migrations/${{ inputs.file }}"
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Apply
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y -qq postgresql-client >/dev/null
+          URL="$(aws secretsmanager get-secret-value --secret-id "${{ vars.ARN_DATABASE_URL }}" --query SecretString --output text)"
+          echo "::add-mask::$URL"
+          # psql does not understand sslmode=no-verify; "require" encrypts without CA checks.
+          URL="${URL//sslmode=no-verify/sslmode=require}"
+          psql "$URL" -v ON_ERROR_STOP=1 -f "lib/db/migrations/${{ inputs.file }}"
+          echo "Migration applied."
+          psql "$URL" -Atc "select table_name from information_schema.tables where table_name like 'delivery_%' order by 1"
