@@ -9,25 +9,25 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
-import { Truck, Plus, Pencil } from "lucide-react";
+import { Truck, Plus, Pencil, Upload } from "lucide-react";
 
 type DeliveryType = "intrastate" | "interstate" | "both";
 type Agent = {
   id: number; name: string; phone: string; imageUrl: string | null; bio: string | null;
   linkedUserId: string | null; deliveryType: DeliveryType; homeState: string | null;
   coveredStates: string[]; nationwide: boolean; bankName: string | null;
-  bankAccountNumber: string | null; bankAccountName: string | null; active: boolean;
+  bankCode: string | null; bankAccountNumber: string | null; bankAccountName: string | null; active: boolean;
 };
 type Form = {
-  name: string; phone: string; bio: string; accountEmail: string; deliveryType: DeliveryType;
+  imageUrl: string; name: string; phone: string; bio: string; accountEmail: string; deliveryType: DeliveryType;
   homeState: string; coveredStates: string[]; nationwide: boolean;
-  bankName: string; bankAccountNumber: string; bankAccountName: string; active: boolean;
+  bankName: string; bankCode: string; bankAccountNumber: string; active: boolean;
 };
 
 const EMPTY: Form = {
-  name: "", phone: "", bio: "", accountEmail: "", deliveryType: "intrastate",
+  imageUrl: "", name: "", phone: "", bio: "", accountEmail: "", deliveryType: "intrastate",
   homeState: "", coveredStates: [], nationwide: false,
-  bankName: "", bankAccountNumber: "", bankAccountName: "", active: true,
+  bankName: "", bankCode: "", bankAccountNumber: "", active: true,
 };
 
 const TYPE_LABEL: Record<DeliveryType, string> = {
@@ -63,6 +63,30 @@ export default function DeliveryPage() {
     staleTime: Infinity,
   });
   const states = meta.data?.states ?? [];
+  const banks = useQuery({
+    queryKey: ["delivery-banks"],
+    queryFn: () => customFetch<{ name: string; code: string }[]>("/api/admin/delivery-banks"),
+    staleTime: 6 * 60 * 60 * 1000,
+    retry: 0,
+  });
+  const [uploading, setUploading] = useState(false);
+  const uploadLogo = async (file: File) => {
+    setUploading(true);
+    try {
+      const { uploadURL, objectPath } = await customFetch<{ uploadURL: string; objectPath: string }>("/api/storage/uploads/request-url", {
+        method: "POST",
+        body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
+      });
+      const put = await fetch(uploadURL, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
+      if (!put.ok) throw new Error("upload failed");
+      set("imageUrl", objectPath);
+    } catch (err) {
+      toast.error(errorMessage(err) === "Something went wrong" || /upload/i.test(String((err as Error)?.message))
+        ? "The logo upload failed. Check the file is a photo under 10 MB and try again." : errorMessage(err));
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const [editing, setEditing] = useState<Agent | "new" | null>(null);
   const [form, setForm] = useState<Form>(EMPTY);
@@ -71,10 +95,10 @@ export default function DeliveryPage() {
   const openNew = () => { setForm(EMPTY); setEditing("new"); };
   const openEdit = (a: Agent) => {
     setForm({
-      name: a.name, phone: a.phone, bio: a.bio ?? "", accountEmail: "",
+      imageUrl: a.imageUrl ?? "", name: a.name, phone: a.phone, bio: a.bio ?? "", accountEmail: "",
       deliveryType: a.deliveryType, homeState: a.homeState ?? "", coveredStates: a.coveredStates,
-      nationwide: a.nationwide, bankName: a.bankName ?? "", bankAccountNumber: a.bankAccountNumber ?? "",
-      bankAccountName: a.bankAccountName ?? "", active: a.active,
+      nationwide: a.nationwide, bankName: a.bankName ?? "", bankCode: a.bankCode ?? "",
+      bankAccountNumber: a.bankAccountNumber ?? "", active: a.active,
     });
     setEditing(a);
   };
@@ -82,8 +106,9 @@ export default function DeliveryPage() {
   const save = useMutation({
     mutationFn: () => {
       const body = JSON.stringify({
-        ...form, homeState: form.homeState || null, bio: form.bio || null,
-        accountEmail: form.accountEmail || null,
+        ...form, imageUrl: form.imageUrl || null, homeState: form.homeState || null, bio: form.bio || null,
+        accountEmail: form.accountEmail || null, bankName: form.bankName || null, bankCode: form.bankCode || null,
+        bankAccountNumber: form.bankAccountNumber || null,
       });
       return editing === "new"
         ? customFetch("/api/admin/delivery-agents", { method: "POST", body })
@@ -106,12 +131,12 @@ export default function DeliveryPage() {
     <div>
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Delivery people</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Only you can add delivery people. Users see their name, photo and delivery type, never their phone number.
+          <h1 className="text-2xl font-bold text-gray-900">Delivery companies</h1>
+          <p className="text-sm text-gray-600 mt-1">
+            Only you can add delivery companies. Users see the company name, logo, rating and delivery type, never the phone number. Each company logs in with the email you enter.
           </p>
         </div>
-        <Button onClick={openNew}><Plus className="w-4 h-4 mr-2" />Add delivery person</Button>
+        <Button onClick={openNew}><Plus className="w-4 h-4 mr-2" />Add delivery company</Button>
       </div>
 
       {agents.isLoading ? (
@@ -131,8 +156,8 @@ export default function DeliveryPage() {
                       <span className="ml-2 text-xs rounded-full bg-gray-100 px-2 py-0.5 text-gray-700">{TYPE_LABEL[a.deliveryType]}</span>
                       {!a.active && <span className="ml-2 text-xs rounded-full bg-red-100 px-2 py-0.5 text-red-700">Inactive</span>}
                     </p>
-                    <p className="text-xs text-gray-500 truncate">
-                      {coverage(a)} · {a.phone} · {a.linkedUserId ? "account linked" : "no account linked (cannot chat yet)"}
+                    <p className="text-xs text-gray-600 truncate">
+                      {coverage(a)} · {a.phone} · {a.linkedUserId ? "login linked" : "no login linked (cannot chat yet)"}
                     </p>
                   </div>
                 </div>
@@ -140,36 +165,52 @@ export default function DeliveryPage() {
               </CardContent>
             </Card>
           ))}
-          {(agents.data ?? []).length === 0 && <p className="text-sm text-gray-500">No delivery people yet.</p>}
+          {(agents.data ?? []).length === 0 && <p className="text-sm text-gray-600">No delivery people yet.</p>}
         </div>
       )}
 
       <Dialog open={!!editing} onOpenChange={open => !open && setEditing(null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editing === "new" ? "Add delivery person" : "Edit delivery person"}</DialogTitle>
+            <DialogTitle>{editing === "new" ? "Add delivery company" : "Edit delivery company"}</DialogTitle>
             <DialogDescription>Fields marked * are required.</DialogDescription>
           </DialogHeader>
           <form
             className="space-y-4"
             onSubmit={e => { e.preventDefault(); save.mutate(); }}
           >
-            <Input required placeholder="Full name *" value={form.name} onChange={e => set("name", e.target.value)} />
-            <Input required placeholder="Phone number * (hidden from users)" value={form.phone} onChange={e => set("phone", e.target.value)} />
+            <div className="flex items-center gap-3">
+              {form.imageUrl ? (
+                <img src={`/api/storage${form.imageUrl}`} alt="Company logo" className="w-16 h-16 rounded-full object-cover border border-gray-200" />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center text-gray-600"><Truck className="w-6 h-6" /></div>
+              )}
+              <label className="inline-flex items-center gap-2 text-sm font-medium text-gray-900 cursor-pointer rounded-md border border-gray-300 px-3 py-2 hover:bg-gray-50">
+                <Upload className="w-4 h-4" />
+                {uploading ? "Uploading…" : form.imageUrl ? "Change company picture" : "Add company picture"}
+                <input
+                  type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={uploading}
+                  onChange={e => { const f = e.target.files?.[0]; if (f) void uploadLogo(f); e.target.value = ""; }}
+                />
+              </label>
+            </div>
+            <Input required placeholder="Company name *" value={form.name} onChange={e => set("name", e.target.value)} />
+            <Input required placeholder="Company phone number * (hidden from users)" value={form.phone} onChange={e => set("phone", e.target.value)} />
             <Input
               type="email"
-              placeholder={editing === "new" ? "His DodoLink account email (so he can chat)" : "Account email (leave empty to keep the current link)"}
+              required={editing === "new"}
+              placeholder={editing === "new" ? "Login email * (the company signs up in the app with this email first)" : "Login email (leave empty to keep the current one)"}
               value={form.accountEmail}
               onChange={e => set("accountEmail", e.target.value)}
             />
-            <Input placeholder="Short bio (optional)" value={form.bio} onChange={e => set("bio", e.target.value)} />
+            <Input placeholder="Short description (optional)" value={form.bio} onChange={e => set("bio", e.target.value)} />
 
             <fieldset className="space-y-2">
               <legend className="text-sm font-medium text-gray-900">Delivery type *</legend>
               {(["intrastate", "interstate", "both"] as DeliveryType[]).map(t => (
                 <label key={t} className="flex items-start gap-2 text-sm cursor-pointer">
                   <input type="radio" name="deliveryType" className="mt-1" checked={form.deliveryType === t} onChange={() => set("deliveryType", t)} />
-                  <span><span className="font-medium">{TYPE_LABEL[t]}</span> <span className="text-gray-500">{TYPE_HELP[t]}</span></span>
+                  <span><span className="font-medium">{TYPE_LABEL[t]}</span> <span className="text-gray-600">{TYPE_HELP[t]}</span></span>
                 </label>
               ))}
             </fieldset>
@@ -210,10 +251,23 @@ export default function DeliveryPage() {
             )}
 
             <fieldset className="space-y-2">
-              <legend className="text-sm font-medium text-gray-900">Bank account for payouts (needed before payments go live)</legend>
-              <Input placeholder="Bank name" value={form.bankName} onChange={e => set("bankName", e.target.value)} />
-              <Input placeholder="Account number" value={form.bankAccountNumber} onChange={e => set("bankAccountNumber", e.target.value)} />
-              <Input placeholder="Account name" value={form.bankAccountName} onChange={e => set("bankAccountName", e.target.value)} />
+              <legend className="text-sm font-medium text-gray-900">Company bank account for payouts</legend>
+              <select
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                value={form.bankCode}
+                onChange={e => {
+                  const bank = (banks.data ?? []).find(b => b.code === e.target.value);
+                  set("bankCode", e.target.value); set("bankName", bank?.name ?? "");
+                }}
+              >
+                <option value="">{banks.isLoading ? "Loading banks…" : banks.isError ? "Could not load banks" : "Choose the bank"}</option>
+                {(banks.data ?? []).map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
+              </select>
+              <Input inputMode="numeric" maxLength={10} placeholder="10-digit account number" value={form.bankAccountNumber} onChange={e => set("bankAccountNumber", e.target.value.replace(/\D/g, ""))} />
+              <p className="text-xs text-gray-600">When you save, Paystack checks the account and we keep the real account name. A wrong number is rejected.</p>
+              {editing && editing !== "new" && editing.bankAccountName && (
+                <p className="text-xs text-green-700">Verified account name: {editing.bankAccountName}</p>
+              )}
             </fieldset>
 
             <label className="flex items-center gap-2 text-sm">

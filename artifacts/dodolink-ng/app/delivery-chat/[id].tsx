@@ -10,7 +10,9 @@ import { useColors } from '@/hooks/useColors';
 import { useActiveScreen } from '@/hooks/useActiveScreen';
 import { LoadingScreen } from '@/components/Loading';
 import { showAlert } from '@/utils/alerts';
-import { useDeliveryThread, coverageLine, deliveryTypeLabel } from '@/hooks/useDelivery';
+import { useDeliveryThread, coverageLine, deliveryTypeLabel, ratingLine } from '@/hooks/useDelivery';
+import { DeliveryOrderCard } from '@/components/DeliveryOrderCard';
+import { DeliveryRequestModal } from '@/components/DeliveryRequestModal';
 
 export default function DeliveryChatScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
@@ -21,6 +23,7 @@ export default function DeliveryChatScreen() {
   const thread = useDeliveryThread(id, active ? 5000 : false);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+  const [requesting, setRequesting] = useState(false);
   const list = useRef<FlatList>(null);
   const count = thread.data?.messages.length ?? 0;
 
@@ -65,9 +68,22 @@ export default function DeliveryChatScreen() {
         {data.role === 'customer' && (
           <View style={[styles.banner, { backgroundColor: colors.secondary }]}>
             <Text style={{ color: colors.secondaryForeground, fontSize: 13 }}>
-              {deliveryTypeLabel[data.agent.deliveryType]} · Delivers: {coverageLine(data.agent) || 'ask in chat'}
+              {deliveryTypeLabel[data.agent.deliveryType]} · {ratingLine(data.agent)} · Delivers: {coverageLine(data.agent) || 'ask in chat'}
             </Text>
           </View>
+        )}
+        {data.orders.length > 0 && (
+          <View style={styles.orders}>
+            {data.orders.slice(0, 2).map(order => (
+              <DeliveryOrderCard key={order.id} order={order} role={data.role} onChanged={() => queryClient.invalidateQueries({ queryKey: ['delivery'] })} />
+            ))}
+          </View>
+        )}
+        {data.role === 'agent' && data.paymentsEnabled && (
+          <Pressable onPress={() => setRequesting(true)} style={[styles.requestBtn, { backgroundColor: colors.secondary }]}>
+            <Feather name="plus-circle" size={16} color={colors.primary} />
+            <Text style={{ color: colors.primary, fontFamily: 'Inter_600SemiBold', fontSize: 14 }}>New delivery request</Text>
+          </Pressable>
         )}
         <FlatList
           ref={list}
@@ -104,6 +120,12 @@ export default function DeliveryChatScreen() {
           </Pressable>
         </View>
       </KeyboardControllerView>
+      <DeliveryRequestModal
+        visible={requesting}
+        conversationId={id}
+        onClose={() => setRequesting(false)}
+        onCreated={() => queryClient.invalidateQueries({ queryKey: ['delivery'] })}
+      />
     </SafeAreaView>
   );
 }
@@ -112,6 +134,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   banner: { paddingHorizontal: 16, paddingVertical: 8 },
+  orders: { paddingHorizontal: 12, paddingTop: 10 },
+  requestBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginHorizontal: 12, marginTop: 6, paddingVertical: 10, borderRadius: 10 },
   messages: { padding: 12, gap: 8, flexGrow: 1 },
   bubble: { maxWidth: '80%', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8 },
   mine: { alignSelf: 'flex-end' },

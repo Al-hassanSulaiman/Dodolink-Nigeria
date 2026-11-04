@@ -6,6 +6,15 @@ export type DeliveryType = "intrastate" | "interstate" | "both";
 export interface DeliveryAgent {
   id: number; name: string; imageUrl: string | null; bio: string | null;
   deliveryType: DeliveryType; homeState: string | null; coveredStates: string[]; nationwide: boolean;
+  ratingAverage?: number | null; ratingCount?: number;
+}
+export interface DeliveryOrder {
+  id: number; status: string; amountKobo: number; pickupState: string; dropState: string; description: string | null;
+  createdAt: string; paidAt: string | null; deliveredAt: string | null; disputed: boolean;
+  rating: { stars: number; comment: string | null } | null;
+  code: string | null;
+  breakdown: { platformFeeKobo: number; paystackFeeKobo: number; transferFeeKobo: number; youReceiveKobo: number } | null;
+  payoutStatus: string | null; needsReview: boolean;
 }
 export interface DeliveryInboxItem {
   id: number; role: "customer" | "agent"; title: string; imageUrl: string | null;
@@ -16,6 +25,23 @@ export interface DeliveryMessage {
 }
 export interface DeliveryThread {
   role: "customer" | "agent"; title: string; agent: DeliveryAgent; messages: DeliveryMessage[];
+  orders: DeliveryOrder[]; paymentsEnabled: boolean;
+}
+
+export const naira = (kobo: number) => `₦${(kobo / 100).toLocaleString('en-NG', { maximumFractionDigits: 2 })}`;
+
+export function ratingLine(a: DeliveryAgent): string {
+  return a.ratingCount && a.ratingAverage ? `★ ${a.ratingAverage.toFixed(1)} (${a.ratingCount})` : 'New, no ratings yet';
+}
+
+/** Same rules the server applies, so a company can preview what it will receive before sending a request. */
+export function previewQuote(amountNaira: number) {
+  const amount = Math.round(amountNaira * 100);
+  const platform = Math.round(amount * 0.1);
+  const paystack = Math.min(Math.ceil(amount * 0.015) + (amount >= 250000 ? 10000 : 0), 200000);
+  const before = Math.max(amount - platform - paystack, 0);
+  const transfer = before <= 500000 ? 1000 : before <= 5000000 ? 2500 : 5000;
+  return { platform, paystack, transfer, receive: Math.max(before - transfer, 0) };
 }
 
 export const deliveryTypeLabel: Record<DeliveryType, string> = {

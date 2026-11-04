@@ -88,7 +88,7 @@ router.get("/delivery/agents", async (req, res): Promise<void> => {
   res.json(filtered.map(a => publicAgent(a, ratings.get(a.id))));
 });
 
-// Is the signed-in user a delivery person? (lets the app show his inbox)
+// Is the signed-in user a delivery company? (lets the app show his inbox)
 router.get("/delivery/me", async (req, res): Promise<void> => {
   const userId = requireUser(req, res);
   if (!userId) return;
@@ -101,10 +101,10 @@ router.post("/delivery/conversations/start", startLimit, async (req, res): Promi
   const userId = requireUser(req, res);
   if (!userId) return;
   const agentId = toId(req.body?.agentId);
-  if (agentId === null) { res.status(400).json({ error: "Invalid delivery person" }); return; }
+  if (agentId === null) { res.status(400).json({ error: "Invalid delivery company" }); return; }
   const [agent] = await db.select().from(deliveryAgentsTable)
     .where(and(eq(deliveryAgentsTable.id, agentId), eq(deliveryAgentsTable.active, true)));
-  if (!agent) { res.status(404).json({ error: "Delivery person not found" }); return; }
+  if (!agent) { res.status(404).json({ error: "Delivery company not found" }); return; }
   if (agent.linkedUserId === userId) { res.status(400).json({ error: "You cannot chat with yourself" }); return; }
   const customerName = await customerLabel(userId);
   const [created] = await db.insert(deliveryConversationsTable)
@@ -189,7 +189,7 @@ router.post("/delivery/conversations/:id/messages", sendLimit, async (req, res):
   if (body.length > 2000) { res.status(400).json({ error: "Message is too long" }); return; }
   const p = await participant(id, userId);
   if (!p) { res.status(404).json({ error: "Chat not found" }); return; }
-  if (!p.agent.active) { res.status(403).json({ error: "This delivery person is not available" }); return; }
+  if (!p.agent.active) { res.status(403).json({ error: "This delivery company is not available" }); return; }
 
   const senderName = p.role === "agent" ? p.agent.name : p.conv.customerName;
   const message = await db.transaction(async tx => {

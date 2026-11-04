@@ -14,7 +14,7 @@ import { RequireAccount } from '@/components/RequireAccount';
 import { getImageUrl } from '@/utils/storage';
 import { showAlert } from '@/utils/alerts';
 import {
-  useDeliveryAgents, useDeliveryInbox, useDeliveryStates, coverageLine, deliveryTypeLabel,
+  useDeliveryAgents, useDeliveryInbox, useDeliveryStates, coverageLine, deliveryTypeLabel, ratingLine,
   type DeliveryAgent,
 } from '@/hooks/useDelivery';
 
@@ -70,7 +70,7 @@ export default function DeliveryScreen() {
     <View>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Text style={[styles.title, { color: colors.foreground }]}>Delivery</Text>
-        <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Chat with a delivery person to move your goods.</Text>
+        <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Chat with a delivery company to move your goods.</Text>
       </View>
 
       {myChats.length > 0 && (
@@ -102,7 +102,7 @@ export default function DeliveryScreen() {
       )}
 
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Delivery people</Text>
+        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Delivery companies</Text>
         <View style={styles.chipRow}>
           {chips.map(chip => {
             const selected = type === chip.key;
@@ -122,7 +122,7 @@ export default function DeliveryScreen() {
     </View>
   );
 
-  if (agents.isLoading && !agents.data) return <LoadingScreen message="Loading delivery people..." />;
+  if (agents.isLoading && !agents.data) return <LoadingScreen message="Loading delivery companies..." />;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -135,7 +135,7 @@ export default function DeliveryScreen() {
           agents.isError ? (
             <EmptyState icon="alert-circle" title="Could not load" description="Check your connection and pull to try again." />
           ) : (
-            <EmptyState icon="truck" title="No delivery people yet" description={type || state ? 'None match this filter. Try another.' : 'Delivery people will appear here soon.'} />
+            <EmptyState icon="truck" title="No delivery companies yet" description={type || state ? 'None match this filter. Try another.' : 'Delivery companies will appear here soon.'} />
           )
         }
         renderItem={({ item }) => (
@@ -148,6 +148,7 @@ export default function DeliveryScreen() {
                 <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>{item.name}</Text>
                 <TypeBadge agent={item} />
               </View>
+              <Text style={{ color: colors.foreground, fontSize: 13, fontFamily: 'Inter_600SemiBold' }}>{ratingLine(item)}</Text>
               <Text style={{ color: colors.mutedForeground, fontSize: 13 }} numberOfLines={2}>
                 Delivers: {coverageLine(item) || 'Ask in chat'}
               </Text>
