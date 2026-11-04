@@ -38,6 +38,11 @@ async function resolveAccount(email: string | null | undefined): Promise<{ id: s
   }
 }
 
+function isUniqueViolation(err: unknown): boolean {
+  const e = err as { code?: string; cause?: { code?: string } };
+  return e?.code === "23505" || e?.cause?.code === "23505";
+}
+
 function clean(body: z.infer<typeof AgentBody>) {
   const intra = body.deliveryType === "intrastate";
   return {
@@ -73,7 +78,7 @@ deliveryAdminRouter.post("/admin/delivery-agents", async (req, res): Promise<voi
       .values({ ...values, linkedUserId: account.id, createdBy: getAuth(req).userId ?? null }).returning();
     res.status(201).json(row);
   } catch (err) {
-    if ((err as { code?: string }).code === "23505") {
+    if (isUniqueViolation(err)) {
       res.status(409).json({ error: "That account is already linked to another delivery person." });
       return;
     }
@@ -97,7 +102,7 @@ deliveryAdminRouter.patch("/admin/delivery-agents/:id", async (req, res): Promis
     if (!row) { res.status(404).json({ error: "Delivery person not found" }); return; }
     res.json(row);
   } catch (err) {
-    if ((err as { code?: string }).code === "23505") {
+    if (isUniqueViolation(err)) {
       res.status(409).json({ error: "That account is already linked to another delivery person." });
       return;
     }
