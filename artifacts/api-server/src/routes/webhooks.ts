@@ -1,6 +1,9 @@
 import { Router, type IRouter } from "express";
 import crypto from "node:crypto";
 import { activateFromWebhook } from "../lib/subscriptionBilling";
+import { and, eq } from "drizzle-orm";
+import { db, deliveryOrdersTable } from "@workspace/db";
+import { markDeliveryOrderPaid } from "../lib/deliveryOrders";
 
 const router: IRouter = Router();
 
@@ -39,8 +42,39 @@ router.post("/webhooks/paystack", async (req, res): Promise<void> => {
       status?: string;
       authorization?: { authorization_code?: string; reusable?: boolean };
       customer?: { customer_code?: string };
+      fees?: number;
     };
   };
+
+  // Delivery payouts: Paystack reports the final result of each transfer.
+  if (event.event === "transfer.success" || event.event === "transfer.failed" || event.event === "transfer.reversed") {
+    const transferRef = event.data?.reference;
+    if (transferRef?.startsWith("delpay_")) {
+      const done = event.event === "transfer.success";
+      await db.update(deliveryOrdersTable).set({
+        payoutStatus: done ? "paid" : "failed",
+        payoutNote: done ? null : `Paystack reported: ${event.event}`,
+      }).where(and(eq(deliveryOrdersTable.transferReference, transferRef)));
+    }
+    res.json({ received: true });
+    return;
+  }
+
+  // Delivery payments are recognised by their reference prefix; store subscriptions are untouched.
+  if (event.event === "charge.success" && event.data?.reference?.startsWith("del_")) {
+    try {
+      const result = await markDeliveryOrderPaid({
+        reference: event.data.reference, amountKobo: event.data.amount ?? 0, feesKobo: event.data.fees ?? 0,
+      });
+      req.log.info({ reference: event.data.reference, result }, "Delivery payment webhook processed");
+    } catch (err) {
+      req.log.error({ err }, "Delivery payment webhook failed");
+      res.status(500).json({ error: "Processing failed" });
+      return;
+    }
+    res.json({ received: true });
+    return;
+  }
 
   if (event.event !== "charge.success" || !event.data?.reference) {
     res.json({ received: true });

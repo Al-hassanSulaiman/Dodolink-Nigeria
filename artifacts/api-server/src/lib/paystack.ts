@@ -32,6 +32,7 @@ export interface PaystackTransaction {
   status: string;
   amount: number;
   currency?: string;
+  fees?: number;
   reference: string;
   authorization: {
     authorization_code: string;
@@ -113,5 +114,82 @@ export async function paystackChargeAuthorization(
     data: { status: string; reference: string };
   };
   if (!json.status) throw new Error(json.message || "Charge authorization failed");
+  return json.data;
+}
+
+// ---------------------------------------------------------------------------
+// Delivery payouts and refunds
+// ---------------------------------------------------------------------------
+
+export interface PaystackBank { name: string; code: string }
+
+export async function paystackListBanks(): Promise<PaystackBank[]> {
+  const res = await paystackFetch(`${PAYSTACK_BASE}/bank?country=nigeria&perPage=200`, { headers: headers() });
+  const json = (await res.json()) as { status: boolean; data: PaystackBank[] };
+  return (json.data ?? []).map(b => ({ name: b.name, code: b.code }));
+}
+
+export async function paystackResolveAccount(accountNumber: string, bankCode: string): Promise<{ account_name: string }> {
+  const res = await paystackFetch(
+    `${PAYSTACK_BASE}/bank/resolve?account_number=${encodeURIComponent(accountNumber)}&bank_code=${encodeURIComponent(bankCode)}`,
+    { headers: headers() },
+  );
+  const json = (await res.json()) as { status: boolean; message: string; data: { account_name: string } };
+  if (!json.status) throw new Error(json.message || "Could not verify the bank account");
+  return json.data;
+}
+
+export async function paystackCreateRecipient(name: string, accountNumber: string, bankCode: string): Promise<{ recipient_code: string }> {
+  const res = await paystackFetch(`${PAYSTACK_BASE}/transferrecipient`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify({ type: "nuban", name, account_number: accountNumber, bank_code: bankCode, currency: "NGN" }),
+  });
+  const json = (await res.json()) as { status: boolean; message: string; data: { recipient_code: string } };
+  if (!json.status) throw new Error(json.message || "Could not create the payout recipient");
+  return json.data;
+}
+
+/** Starts a transfer. With OTP on, Paystack answers status "otp" and an admin must finalize it. */
+export async function paystackInitiateTransfer(
+  amountKobo: number, recipientCode: string, reference: string, reason: string,
+): Promise<{ status: string; transfer_code: string }> {
+  const res = await paystackFetch(`${PAYSTACK_BASE}/transfer`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify({ source: "balance", amount: amountKobo, recipient: recipientCode, reference, reason }),
+  });
+  const json = (await res.json()) as { status: boolean; message: string; data: { status: string; transfer_code: string } };
+  if (!json.status) throw new Error(json.message || "Transfer failed to start");
+  return json.data;
+}
+
+export async function paystackFinalizeTransfer(transferCode: string, otp: string): Promise<{ status: string }> {
+  const res = await paystackFetch(`${PAYSTACK_BASE}/transfer/finalize_transfer`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify({ transfer_code: transferCode, otp }),
+  });
+  const json = (await res.json()) as { status: boolean; message: string; data: { status: string } };
+  if (!json.status) throw new Error(json.message || "Could not finalize the transfer");
+  return json.data;
+}
+
+export async function paystackResendTransferOtp(transferCode: string): Promise<void> {
+  await paystackFetch(`${PAYSTACK_BASE}/transfer/resend_otp`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify({ transfer_code: transferCode, reason: "transfer" }),
+  });
+}
+
+export async function paystackRefund(transactionReference: string, amountKobo?: number): Promise<{ status: string }> {
+  const res = await paystackFetch(`${PAYSTACK_BASE}/refund`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify({ transaction: transactionReference, ...(amountKobo ? { amount: amountKobo } : {}) }),
+  });
+  const json = (await res.json()) as { status: boolean; message: string; data: { status: string } };
+  if (!json.status) throw new Error(json.message || "Refund failed");
   return json.data;
 }

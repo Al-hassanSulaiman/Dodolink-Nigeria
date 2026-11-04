@@ -2,7 +2,10 @@ import { Router, type IRouter } from "express";
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import {
   db, deliveryAgentsTable, deliveryConversationsTable, deliveryMessagesTable, pushTokensTable,
+  deliveryOrdersTable, deliveryRatingsTable,
 } from "@workspace/db";
+import { orderView } from "../lib/deliveryOrders";
+import { deliveryPaymentsEnabled } from "../lib/deliveryMoney";
 import { clerkClient } from "@clerk/express";
 import { requireUser } from "../lib/auth";
 import { rateLimit } from "../lib/rateLimit";
@@ -17,12 +20,26 @@ const sendLimit = rateLimit({ name: "delivery-msg", max: 30, windowMs: 60_000 })
 const startLimit = rateLimit({ name: "delivery-start", max: 15, windowMs: 5 * 60_000 });
 
 type AgentRow = typeof deliveryAgentsTable.$inferSelect;
-function publicAgent(a: AgentRow) {
+type Rating = { average: number | null; count: number };
+function publicAgent(a: AgentRow, rating: Rating = { average: null, count: 0 }) {
   return {
     id: a.id, name: a.name, imageUrl: a.imageUrl, bio: a.bio,
     deliveryType: a.deliveryType, homeState: a.homeState,
     coveredStates: a.coveredStates, nationwide: a.nationwide,
+    ratingAverage: rating.average, ratingCount: rating.count,
   };
+}
+
+async function ratingsFor(agentIds: number[]): Promise<Map<number, Rating>> {
+  const map = new Map<number, Rating>();
+  if (!agentIds.length) return map;
+  const rows = await db.select({
+    agentId: deliveryRatingsTable.agentId,
+    average: sql<number>`round(avg(${deliveryRatingsTable.stars})::numeric, 1)::float`,
+    count: sql<number>`count(*)::integer`,
+  }).from(deliveryRatingsTable).where(inArray(deliveryRatingsTable.agentId, agentIds)).groupBy(deliveryRatingsTable.agentId);
+  for (const r of rows) map.set(r.agentId, { average: r.average, count: r.count });
+  return map;
 }
 
 function toId(raw: unknown): number | null {
@@ -67,7 +84,8 @@ router.get("/delivery/agents", async (req, res): Promise<void> => {
     }
     return true;
   });
-  res.json(filtered.map(publicAgent));
+  const ratings = await ratingsFor(filtered.map(a => a.id));
+  res.json(filtered.map(a => publicAgent(a, ratings.get(a.id))));
 });
 
 // Is the signed-in user a delivery person? (lets the app show his inbox)
@@ -145,10 +163,15 @@ router.get("/delivery/conversations/:id/messages", async (req, res): Promise<voi
   if (!p) { res.status(404).json({ error: "Chat not found" }); return; }
   const messages = await db.select().from(deliveryMessagesTable)
     .where(eq(deliveryMessagesTable.conversationId, id)).orderBy(deliveryMessagesTable.createdAt, deliveryMessagesTable.id);
+  const orders = await db.select().from(deliveryOrdersTable)
+    .where(eq(deliveryOrdersTable.conversationId, id)).orderBy(desc(deliveryOrdersTable.createdAt));
+  const ratings = await ratingsFor([p.agent.id]);
   res.json({
     role: p.role,
     title: p.role === "agent" ? p.conv.customerName : p.agent.name,
-    agent: publicAgent(p.agent),
+    agent: publicAgent(p.agent, ratings.get(p.agent.id)),
+    paymentsEnabled: deliveryPaymentsEnabled(),
+    orders: await Promise.all(orders.map(o => orderView(o, p.role))),
     messages: messages.map(m => ({
       id: m.id, body: m.body, senderType: m.senderType, senderName: m.senderName,
       mine: m.senderId === userId, createdAt: m.createdAt,

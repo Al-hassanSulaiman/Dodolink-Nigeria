@@ -15,6 +15,13 @@ vi.mock("@clerk/express", () => ({
     })),
   } },
 }));
+vi.mock("../lib/paystack", () => ({
+  paystackResolveAccount: vi.fn(async (_n: string, code: string) => {
+    if (code === "bad") throw new Error("Could not resolve account name");
+    return { account_name: "MUSA LOGISTICS LTD" };
+  }),
+  paystackListBanks: vi.fn(async () => [{ name: "Test Bank", code: "058" }]),
+}));
 vi.mock("../lib/push", () => ({ notifyTokens: vi.fn().mockResolvedValue(undefined) }));
 import router from "./delivery";
 import { deliveryAdminRouter } from "./deliveryAdmin";
@@ -137,36 +144,41 @@ describe("delivery chat", () => {
   });
 });
 
-describe("admin delivery people", () => {
-  const base = { name: "Musa Rider", phone: "08011112222", deliveryType: "intrastate", homeState: "Kano" };
+describe("admin delivery companies", () => {
+  const base = { name: "Musa Logistics", phone: "08011112222", deliveryType: "intrastate", homeState: "Kano" };
+  let n = 0;
+  const withAccount = (over: Record<string, unknown> = {}) => {
+    const email = `company${++n}-${randomUUID().slice(0, 6)}@example.com`;
+    identity.accounts[email] = `acct_${randomUUID()}`;
+    return { ...base, accountEmail: email, ...over };
+  };
+  const make = async (over: Record<string, unknown> = {}) => {
+    const res = await request(app).post("/admin/delivery-agents").send(withAccount(over));
+    if (res.body?.id) agentIds.push(res.body.id);
+    return res;
+  };
 
-  it("creates all three kinds, rejects incomplete coverage, and links by account email", async () => {
-    const ok = await request(app).post("/admin/delivery-agents").send(base);
-    expect(ok.status).toBe(201);
-    agentIds.push(ok.body.id);
-
-    const bad = await request(app).post("/admin/delivery-agents").send({ ...base, deliveryType: "interstate", homeState: null });
-    expect(bad.status).toBe(400);
-
-    const inter = await request(app).post("/admin/delivery-agents").send({ ...base, deliveryType: "interstate", coveredStates: ["Kaduna", "Kaduna", "Abia"] });
+  it("creates all three kinds, rejects incomplete coverage, requires a login email", async () => {
+    expect((await make()).status).toBe(201);
+    expect((await make({ deliveryType: "interstate", homeState: null })).status).toBe(400);
+    const inter = await make({ deliveryType: "interstate", coveredStates: ["Kaduna", "Kaduna", "Abia"] });
     expect(inter.status).toBe(201);
-    agentIds.push(inter.body.id);
     expect(inter.body.coveredStates).toEqual(["Kaduna", "Abia"]);
-
-    const both = await request(app).post("/admin/delivery-agents").send({ ...base, deliveryType: "both", nationwide: true });
-    expect(both.status).toBe(201);
-    agentIds.push(both.body.id);
+    const both = await make({ deliveryType: "both", nationwide: true });
     expect(both.body).toMatchObject({ deliveryType: "both", nationwide: true, homeState: "Kano" });
-
-    // An intrastate person never keeps interstate coverage.
-    const intra = await request(app).post("/admin/delivery-agents").send({ ...base, coveredStates: ["Lagos"], nationwide: true });
-    agentIds.push(intra.body.id);
+    // An intrastate company never keeps interstate coverage.
+    const intra = await make({ coveredStates: ["Lagos"], nationwide: true });
     expect(intra.body).toMatchObject({ coveredStates: [], nationwide: false });
 
+    const noEmail = await request(app).post("/admin/delivery-agents").send(base);
+    expect(noEmail.status).toBe(400);
+    expect(noEmail.body.error).toMatch(/email/i);
     const noAccount = await request(app).post("/admin/delivery-agents").send({ ...base, accountEmail: "nobody@example.com" });
     expect(noAccount.status).toBe(400);
     expect(noAccount.body.error).toMatch(/sign up/);
+  });
 
+  it("links by account email (case-insensitive) and refuses a second company on the same account", async () => {
     identity.accounts["rider@example.com"] = agentUser;
     const linked = await request(app).post("/admin/delivery-agents").send({ ...base, accountEmail: "Rider@Example.com" });
     expect(linked.status).toBe(201);
@@ -176,22 +188,23 @@ describe("admin delivery people", () => {
     expect(dupe.status).toBe(409);
   });
 
-  it("edits and deactivates", async () => {
-    const a = await agent();
-    const res = await request(app).patch(`/admin/delivery-agents/${a.id}`).send({ ...base, active: false, deliveryType: "both", nationwide: true });
-    expect(res.status).toBe(200);
-    const [row] = await db.select().from(deliveryAgentsTable).where(eq(deliveryAgentsTable.id, a.id));
-    expect(row).toMatchObject({ active: false, deliveryType: "both", nationwide: true });
-    expect((await request(app).patch("/admin/delivery-agents/999999").send(base)).status).toBe(404);
+  it("verifies the bank account with Paystack and stores the real account name", async () => {
+    const ok = await make({ bankName: "Test Bank", bankCode: "058", bankAccountNumber: "0123456789", bankAccountName: "typed by admin" });
+    expect(ok.status).toBe(201);
+    expect(ok.body.bankAccountName).toBe("MUSA LOGISTICS LTD");
+    expect((await make({ bankCode: "bad", bankAccountNumber: "0123456789" })).status).toBe(400);
+    expect((await make({ bankCode: "058", bankAccountNumber: "123" })).status).toBe(400);
+    expect((await make({ bankCode: "058" })).status).toBe(400);
+    expect((await request(app).get("/admin/delivery-banks")).body).toEqual([{ name: "Test Bank", code: "058" }]);
   });
-});
 
-describe("admin edit keeps the account link", () => {
-  it("does not unlink the account when the email box is left empty", async () => {
+  it("edits, deactivates, and does not unlink the account when the email box is left empty", async () => {
     const a = await agent({ linkedUserId: agentUser });
     const res = await request(app).patch(`/admin/delivery-agents/${a.id}`)
-      .send({ name: "Renamed", phone: "08011112222", deliveryType: "intrastate", homeState: "Kano" });
+      .send({ ...base, active: false, deliveryType: "both", nationwide: true });
     expect(res.status).toBe(200);
-    expect(res.body.linkedUserId).toBe(agentUser);
+    const [row] = await db.select().from(deliveryAgentsTable).where(eq(deliveryAgentsTable.id, a.id));
+    expect(row).toMatchObject({ active: false, deliveryType: "both", nationwide: true, linkedUserId: agentUser });
+    expect((await request(app).patch("/admin/delivery-agents/999999").send(base)).status).toBe(404);
   });
 });

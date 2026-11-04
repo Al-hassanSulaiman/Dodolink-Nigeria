@@ -17,6 +17,7 @@ import contactRouter from "./contact";
 import portfolioAnalyticsRouter from "./portfolioAnalytics";
 import deleteAccountRouter from "./delete-account";
 import deliveryRouter from "./delivery";
+import deliveryOrdersRouter from "./deliveryOrders";
 
 const router: IRouter = Router();
 
@@ -28,6 +29,7 @@ router.use(portfolioAnalyticsRouter);
 router.use(deleteAccountRouter);
 router.use(adminRouter);
 router.use(deliveryRouter);
+router.use(deliveryOrdersRouter);
 router.use(storesRouter);
 router.use(productsRouter);
 router.use(searchRouter);
