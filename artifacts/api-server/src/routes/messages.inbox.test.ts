@@ -223,9 +223,9 @@ describe("chat drafts and store-owned sender identities", () => {
   it("people without a store retain their account identity, never a client-spoofed name", async () => {
     await db.delete(storesTable).where(eq(storesTable.id, ownStore.id));
     const opened = await start();
-    expect(opened.body.customerName).toBe("chat-qa@example.com");
+    expect(opened.body.customerName).toBe("chat-qa");
     const sent = await send(opened.body.id);
-    expect(sent.body.senderName).toBe("chat-qa@example.com");
+    expect(sent.body.senderName).toBe("chat-qa");
   });
 
   it("draft access and history remain isolated to participants", async () => {

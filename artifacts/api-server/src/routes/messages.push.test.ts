@@ -327,7 +327,7 @@ describe("POST /conversations/:id/messages — push notification sender name", (
   });
 
   it.each([
-    { ownedStores: [], expectedName: CUSTOMER_EMAIL },
+    { ownedStores: [], expectedName: "buyer" },
     { ownedStores: [{ id: 12, ownerUserId: CUSTOMER_ID, name: "Buyer's Store" }], expectedName: "Buyer's Store" },
   ])("uses the customer's resolved identity in recipient notifications: $expectedName", async ({ ownedStores, expectedName }) => {
     /**

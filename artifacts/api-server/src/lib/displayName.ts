@@ -18,10 +18,11 @@ export async function userDisplayName(userId: string): Promise<string> {
   if (company?.name) return company.name;
   try {
     const user = await clerkClient.users.getUser(userId);
-    const email = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId)?.emailAddress
-      ?? user.emailAddresses[0]?.emailAddress;
+    const emails = user.emailAddresses ?? [];
+    const email = emails.find(e => e.id === user.primaryEmailAddressId)?.emailAddress ?? emails[0]?.emailAddress;
     if (email) return friendlyName(email);
-    return user.username || "Dodolink user";
+    const full = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
+    return full || user.username || "Dodolink user";
   } catch {
     return "Dodolink user";
   }

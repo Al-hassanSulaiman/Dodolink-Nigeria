@@ -11,7 +11,7 @@ import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage"
 import { validateStoredMedia } from "../lib/mediaLimits";
 import { clerkClient } from "@clerk/express";
 import { resolveMessageContext } from "../lib/messageContext";
-import { friendlyName, userDisplayName } from "../lib/displayName";
+import { friendlyName } from "../lib/displayName";
 
 const router: IRouter = Router();
 const objectStorage = new ObjectStorageService();
@@ -39,7 +39,16 @@ async function ownedStoreNames(userIds: string[]): Promise<Map<string, string>> 
 }
 
 async function customerDisplayName(userId: string): Promise<string> {
-  return userDisplayName(userId);
+  const storeName = (await ownedStoreNames([userId])).get(userId);
+  if (storeName) return storeName;
+  try {
+    const user = await clerkClient.users.getUser(userId);
+    const email = user.emailAddresses.find(email => email.id === user.primaryEmailAddressId)?.emailAddress
+      ?? user.emailAddresses[0]?.emailAddress;
+    return email ? friendlyName(email) : userId;
+  } catch {
+    return userId;
+  }
 }
 
 // Photo of the person on the other side of each chat, for the chat list.

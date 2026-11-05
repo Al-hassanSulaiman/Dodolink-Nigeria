@@ -21,11 +21,18 @@ export interface DeliveryInboxItem {
   deliveryType: DeliveryType | null; lastMessage: string | null; lastMessageAt: string | null; unread: number;
 }
 export interface DeliveryMessage {
-  id: number; body: string; senderType: "customer" | "agent" | "support"; senderName: string; mine: boolean; createdAt: string;
+  id: number; body: string; mediaUrl: string | null;
+  replyPreview: { id: number; senderId: string; senderName: string; body: string; mediaUrl: string | null } | null;
+  senderId: string; senderType: "customer" | "agent" | "support"; senderName: string; mine: boolean; createdAt: string;
+}
+export interface DeliverySubscription {
+  agentId: number; engagementCount: number; amountKobo: number; qualified: boolean; exempt: boolean; paid: boolean;
+  dueAt: string | null; lastPaidAt: string | null; graceDaysLeft: number | null; visible: boolean; paymentsLive: boolean;
 }
 export interface DeliveryThread {
   role: "customer" | "agent"; title: string; agent: DeliveryAgent; messages: DeliveryMessage[];
   orders: DeliveryOrder[]; paymentsEnabled: boolean;
+  myRating: { stars: number; comment: string | null } | null; canRate: boolean;
 }
 
 export const naira = (kobo: number) => `₦${(kobo / 100).toLocaleString('en-NG', { maximumFractionDigits: 2 })}`;
@@ -99,5 +106,24 @@ export function useDeliveryThread(id: number | null, refetchInterval: number | f
     enabled: enabled && id !== null,
     refetchInterval,
     queryFn: () => customFetch<DeliveryThread>(`/api/delivery/conversations/${id}/messages`),
+  });
+}
+
+/** The signed-in person's own delivery company (null when they do not have one). */
+export function useMyDeliveryCompany() {
+  const { userId, enabled } = useSignedIn();
+  return useQuery<DeliveryAgent | null>({
+    queryKey: ["delivery", "me", userId],
+    enabled,
+    queryFn: async () => (await customFetch<{ agent: DeliveryAgent | null }>("/api/delivery/me")).agent,
+  });
+}
+
+export function useDeliverySubscription(enabledFlag: boolean) {
+  const { userId, enabled } = useSignedIn();
+  return useQuery<DeliverySubscription>({
+    queryKey: ["delivery", "subscription", userId],
+    enabled: enabled && enabledFlag,
+    queryFn: () => customFetch<DeliverySubscription>("/api/delivery/subscription"),
   });
 }
