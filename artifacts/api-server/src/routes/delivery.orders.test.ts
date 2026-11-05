@@ -284,3 +284,43 @@ describe("disputes", () => {
     expect((await request(app).post(`/admin/delivery-orders/${id}/payout`)).status).toBe(200);
   });
 });
+
+describe("admin: support chat on a disputed job, and deleting a company", () => {
+  it("opens the chat only after a problem is reported, and support messages reach both sides", async () => {
+    asCustomer();
+    await request(app).post(`/delivery/conversations/${convId}/messages`).send({ body: "Where are my goods?" });
+    const { id } = await paidOrder();
+    // No problem reported yet: support cannot read this chat.
+    expect((await request(app).get(`/admin/delivery-orders/${id}/chat`)).status).toBe(404);
+    expect((await request(app).post(`/admin/delivery-orders/${id}/message`).send({ body: "hello" })).status).toBe(404);
+
+    asCustomer();
+    expect((await request(app).post(`/delivery/orders/${id}/dispute`).send({ reason: "Goods never arrived at all" })).status).toBe(201);
+    const chat = await request(app).get(`/admin/delivery-orders/${id}/chat`);
+    expect(chat.status).toBe(200);
+    expect(chat.body.messages.map((m: { body: string }) => m.body)).toContain("Where are my goods?");
+
+    expect((await request(app).post(`/admin/delivery-orders/${id}/message`).send({ body: "  " })).status).toBe(400);
+    expect((await request(app).post(`/admin/delivery-orders/${id}/message`).send({ body: "We are looking into it." })).status).toBe(201);
+    asCustomer();
+    const thread = await request(app).get(`/delivery/conversations/${convId}/messages`);
+    const last = thread.body.messages.at(-1);
+    expect(last).toMatchObject({ body: "We are looking into it.", senderType: "support", senderName: "DodoLink Support", mine: false });
+    asCompany();
+    expect((await request(app).get(`/delivery/conversations/${convId}/messages`)).body.messages.at(-1).senderType).toBe("support");
+  });
+
+  it("deletes a company with no jobs, and refuses one that has jobs", async () => {
+    await paidOrder();
+    const refused = await request(app).delete(`/admin/delivery-agents/${agentId}`);
+    expect(refused.status).toBe(409);
+    expect(refused.body.error).toMatch(/Active off/);
+
+    const [empty] = await db.insert(deliveryAgentsTable).values({
+      name: "Empty Co", phone: "08000000001", deliveryType: "intrastate", homeState: "Lagos",
+    }).returning();
+    expect((await request(app).delete(`/admin/delivery-agents/${empty.id}`)).body).toEqual({ deleted: true });
+    expect(await db.select().from(deliveryAgentsTable).where(eq(deliveryAgentsTable.id, empty.id))).toHaveLength(0);
+    expect((await request(app).delete(`/admin/delivery-agents/${empty.id}`)).status).toBe(404);
+  });
+});

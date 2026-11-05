@@ -177,7 +177,12 @@ export default function ChatThreadScreen() {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images', 'videos'],
-      quality: 0.8,
+      // Smaller files send and download much faster on mobile data. 0.6 still looks good in a chat,
+      // and iPhones re-encode videos to 720p instead of sending the original.
+      quality: 0.6,
+      exif: false,
+      ...(ImagePicker.VideoExportPreset?.H264_1280x720 !== undefined
+        ? { videoExportPreset: ImagePicker.VideoExportPreset.H264_1280x720 } : {}),
       videoMaxDuration: 120, // 2 minutes max
       allowsEditing: false,
     });

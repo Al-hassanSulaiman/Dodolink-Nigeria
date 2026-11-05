@@ -178,7 +178,7 @@ export function DeliveryOrderCard({ order, role, onChanged }: { order: DeliveryO
         <View style={styles.modalBack}>
           <View style={[styles.modal, { backgroundColor: colors.background }]}>
             <Text style={{ color: colors.foreground, fontFamily: 'Inter_700Bold', fontSize: 17, marginBottom: 6 }}>Report a problem</Text>
-            <Text style={{ color: colors.mutedForeground, fontSize: 13, marginBottom: 8 }}>The payment is held while DodoLink support looks into it.</Text>
+            <Text style={{ color: colors.mutedForeground, fontSize: 13, marginBottom: 8 }}>The payment is held while DodoLink support looks into it. Support can read this conversation once a problem is reported.</Text>
             <TextInput
               style={[styles.commentInput, { color: colors.foreground, backgroundColor: colors.secondary, minHeight: 90, textAlignVertical: 'top' }]}
               placeholder="What went wrong?"

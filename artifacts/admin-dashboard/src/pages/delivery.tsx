@@ -122,6 +122,20 @@ export default function DeliveryPage() {
     onError: err => toast.error(errorMessage(err)),
   });
 
+  const remove = useMutation({
+    mutationFn: (id: number) => customFetch(`/api/admin/delivery-agents/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-delivery-agents"] });
+      toast.success("Company deleted");
+      setEditing(null);
+    },
+    onError: err => toast.error(errorMessage(err)),
+  });
+  const confirmDelete = () => {
+    if (!editing || editing === "new") return;
+    if (window.confirm(`Delete ${editing.name}? Its chats and ratings are removed. This cannot be undone.`)) remove.mutate(editing.id);
+  };
+
   const needsHome = form.deliveryType !== "interstate";
   const needsStates = form.deliveryType !== "intrastate";
   const toggleState = (s: string) =>
@@ -276,6 +290,11 @@ export default function DeliveryPage() {
             </label>
 
             <DialogFooter>
+              {editing && editing !== "new" && (
+                <Button type="button" variant="destructive" className="sm:mr-auto" disabled={remove.isPending} onClick={confirmDelete}>
+                  {remove.isPending ? "Deleting…" : "Delete company"}
+                </Button>
+              )}
               <Button type="button" variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
               <Button type="submit" disabled={save.isPending}>{save.isPending ? "Saving…" : "Save"}</Button>
             </DialogFooter>
