@@ -6,6 +6,8 @@ export const adminsTable = pgTable("admins", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),
   addedBy: text("added_by"),
+  // Pages this admin may open. NULL means every page (owners and all older admins).
+  permissions: text("permissions").array(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -1,11 +1,11 @@
 import { useEffect } from "react";
 import { Switch, Route, Router as WouterRouter, Redirect, useLocation, Link } from "wouter";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ClerkProvider, Show, useClerk, useAuth } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
-import { setAuthTokenGetter } from "@workspace/api-client-react";
+import { setAuthTokenGetter, customFetch } from "@workspace/api-client-react";
 import NotFound from "@/pages/not-found";
 import SignInPage from "@/pages/sign-in";
 import DashboardPage from "@/pages/dashboard";
@@ -19,13 +19,12 @@ import PrivacyPolicyPage from "@/pages/privacy";
 import TermsOfServicePage from "@/pages/terms";
 import DeleteAccountPage from "@/pages/delete-account";
 import DeliveryPage from "@/pages/delivery";
-import DeliveryJobsPage from "@/pages/delivery-jobs";
 import ReportsPage from "@/pages/reports";
 import {
   useAdminListSupportThreads,
   getAdminListSupportThreadsQueryKey,
 } from "@workspace/api-client-react";
-import { LayoutDashboard, Store, LogOut, ShieldCheck, Users, HelpCircle, Inbox, BarChart3, Truck, PackageCheck, Flag } from "lucide-react";
+import { LayoutDashboard, Store, LogOut, ShieldCheck, Users, HelpCircle, Inbox, BarChart3, Truck, Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const queryClient = new QueryClient({
@@ -58,20 +57,26 @@ if (!clerkPubKey) {
   throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY");
 }
 
-const NAV = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/stores", label: "Stores", icon: Store },
-  { to: "/users", label: "Users", icon: Users },
-  { to: "/delivery", label: "Delivery companies", icon: Truck },
-  { to: "/delivery-jobs", label: "Delivery jobs", icon: PackageCheck },
-  { to: "/reports", label: "Reports", icon: Flag },
-  { to: "/admins", label: "Admins", icon: ShieldCheck },
-  { to: "/support", label: "Support", icon: HelpCircle },
-  { to: "/leads", label: "Leads", icon: Inbox },
-  { to: "/portfolio-analytics", label: "Portfolio", icon: BarChart3 },
+const NAV: Array<{ to: string; label: string; icon: typeof Store; page: string }> = [
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, page: "dashboard" },
+  { to: "/stores", label: "Stores", icon: Store, page: "stores" },
+  { to: "/users", label: "Users", icon: Users, page: "users" },
+  { to: "/delivery", label: "Delivery companies", icon: Truck, page: "delivery" },
+  { to: "/reports", label: "Reports", icon: Flag, page: "reports" },
+  { to: "/admins", label: "Admins", icon: ShieldCheck, page: "admins" },
+  { to: "/support", label: "Support", icon: HelpCircle, page: "support" },
+  { to: "/leads", label: "Leads", icon: Inbox, page: "leads" },
+  { to: "/portfolio-analytics", label: "Portfolio", icon: BarChart3, page: "portfolio" },
 ];
 
+type AdminMe = { email: string | null; permissions: string[] | null };
+function useAdminMe() {
+  return useQuery<AdminMe>({ queryKey: ["admin-me"], queryFn: () => customFetch<AdminMe>("/api/admin/me"), staleTime: 60_000, retry: 1 });
+}
+const canSee = (me: AdminMe | undefined, page: string) => !me || me.permissions === null || me.permissions.includes(page);
+
 function Sidebar() {
+  const adminMe = useAdminMe();
   const { signOut } = useClerk();
   const [location] = useLocation();
 
@@ -96,7 +101,7 @@ function Sidebar() {
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {NAV.map(({ to, label, icon: Icon }) => {
+        {NAV.filter(item => canSee(adminMe.data, item.page)).map(({ to, label, icon: Icon }) => {
           const active = location === to || (to !== "/" && location.startsWith(to));
           return (
             <Link
@@ -162,12 +167,26 @@ function AuthTokenBridge() {
   return null;
 }
 
-function ProtectedRoute({ component: Component }: { component: () => React.ReactElement | null }) {
+function NoAccess() {
+  const me = useAdminMe();
+  const first = NAV.find(item => canSee(me.data, item.page));
+  return (
+    <div className="py-16 text-center">
+      <p className="text-lg font-semibold text-gray-900">You do not have access to this page</p>
+      <p className="text-sm text-gray-600 mt-1">Ask an owner to give you access.</p>
+      {first && <Link to={first.to} className="inline-block mt-4 text-green-800 underline">Go to {first.label}</Link>}
+    </div>
+  );
+}
+
+function ProtectedRoute({ component: Component, page }: { component: () => React.ReactElement | null; page?: string }) {
+  const me = useAdminMe();
+  const allowed = !page || canSee(me.data, page);
   return (
     <>
       <Show when="signed-in">
         <AppShell>
-          <Component />
+          {allowed ? <Component /> : <NoAccess />}
         </AppShell>
       </Show>
       <Show when="signed-out">
@@ -196,34 +215,31 @@ function Router() {
       <Route path="/" component={HomeRoute} />
       <Route path="/sign-in/*?" component={SignInPage} />
       <Route path="/dashboard">
-        <ProtectedRoute component={DashboardPage} />
+        <ProtectedRoute component={DashboardPage} page="dashboard" />
       </Route>
       <Route path="/stores">
-        <ProtectedRoute component={StoresPage} />
+        <ProtectedRoute component={StoresPage} page="stores" />
       </Route>
       <Route path="/users">
-        <ProtectedRoute component={UsersPage} />
+        <ProtectedRoute component={UsersPage} page="users" />
       </Route>
       <Route path="/delivery">
-        <ProtectedRoute component={DeliveryPage} />
+        <ProtectedRoute component={DeliveryPage} page="delivery" />
       </Route>
       <Route path="/reports">
-        <ProtectedRoute component={ReportsPage} />
-      </Route>
-      <Route path="/delivery-jobs">
-        <ProtectedRoute component={DeliveryJobsPage} />
+        <ProtectedRoute component={ReportsPage} page="reports" />
       </Route>
       <Route path="/admins">
-        <ProtectedRoute component={AdminsPage} />
+        <ProtectedRoute component={AdminsPage} page="admins" />
       </Route>
       <Route path="/support">
-        <ProtectedRoute component={SupportPage} />
+        <ProtectedRoute component={SupportPage} page="support" />
       </Route>
       <Route path="/leads">
-        <ProtectedRoute component={LeadsPage} />
+        <ProtectedRoute component={LeadsPage} page="leads" />
       </Route>
       <Route path="/portfolio-analytics">
-        <ProtectedRoute component={PortfolioAnalyticsPage} />
+        <ProtectedRoute component={PortfolioAnalyticsPage} page="portfolio" />
       </Route>
       <Route path="/privacy" component={PrivacyPolicyPage} />
       <Route path="/terms" component={TermsOfServicePage} />
