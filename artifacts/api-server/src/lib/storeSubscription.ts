@@ -5,7 +5,7 @@ import { notifyTokens } from "./push";
 export const ENGAGEMENT_THRESHOLD = 7;
 /** Stores with this many distinct customers actively chatting in the window pay the premium rate. */
 export const PREMIUM_ENGAGEMENT_THRESHOLD = 12;
-export const GRACE_PERIOD_DAYS = 14;
+export const GRACE_PERIOD_DAYS = 7;
 
 /** Standard tier: ₦2,000/month for stores with 7-11 distinct active customer chats. */
 export const STANDARD_AMOUNT_KOBO = 200_000;
@@ -21,7 +21,7 @@ export function getSubscriptionAmountKobo(engagementCount: number): number {
 
 /**
  * Billing rollout date. Stores that qualified before rollout receive their
- * full 14-day grace period from this date.
+ * full 7-day grace period from this date.
  */
 export const SUBSCRIPTION_LAUNCH_DATE = new Date("2026-09-11T00:00:00.000Z");
 
@@ -41,7 +41,7 @@ function effectiveQualifiedAt(qualifiedAt: Date): Date {
 const QUALIFICATION_PUSH_TITLE = "Important Notice";
 const QUALIFICATION_PUSH_BODY =
   "Dear Valued Retailer, your store has reached the qualifying threshold. " +
-  "Starting in 14 days, a monthly subscription fee will apply (₦2,000/month, or ₦5,000/month for stores with 12+ distinct active customer chats in 30 days). " +
+  "Starting in 7 days, a monthly subscription fee will apply (₦2,000/month, or ₦5,000/month for stores with 12+ distinct active customer chats in 30 days). " +
   "This helps us maintain a secure, reliable marketplace for your business. " +
   "Warm regards, Al-Hassan Sulaiman — Founder & CEO, DodoLink.";
 
@@ -185,7 +185,7 @@ export function isStoreHidden(store: StoreVisibilityFields): boolean {
   if (store.subscriptionStatus === "active") return false;
   if (store.subscriptionStatus === "past_due") return true;
 
-  // Initial qualification (inactive): 14-day grace from effectiveQualifiedAt
+  // Initial qualification (inactive): 7-day grace from effectiveQualifiedAt
   const effQualifiedAt = effectiveQualifiedAt(store.qualifiedAt);
   const graceDeadline = new Date(Date.now() - GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
   return effQualifiedAt < graceDeadline;
@@ -198,7 +198,7 @@ export function gracePeriodDaysRemaining(store: StoreVisibilityFields): number |
   if (store.subscriptionStatus === "active") return null;
   if (store.subscriptionStatus === "past_due") return null;
 
-  // Stores that qualified before rollout get 14 days from the rollout date
+  // Stores that qualified before rollout get 7 days from the rollout date
   const effQualifiedAt = effectiveQualifiedAt(store.qualifiedAt);
   const expiresAt = new Date(effQualifiedAt.getTime() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
   const msLeft = expiresAt.getTime() - Date.now();
