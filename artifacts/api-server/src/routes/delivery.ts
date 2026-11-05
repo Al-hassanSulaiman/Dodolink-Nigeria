@@ -174,7 +174,7 @@ router.get("/delivery/conversations/:id/messages", async (req, res): Promise<voi
     orders: await Promise.all(orders.map(o => orderView(o, p.role))),
     messages: messages.map(m => ({
       id: m.id, body: m.body, senderType: m.senderType, senderName: m.senderName,
-      mine: m.senderId === userId, createdAt: m.createdAt,
+      mine: m.senderType !== "support" && m.senderId === userId, createdAt: m.createdAt,
     })),
   });
 });
