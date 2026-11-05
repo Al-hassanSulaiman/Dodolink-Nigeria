@@ -4,6 +4,7 @@ import { tokenCache } from "@clerk/expo/token-cache";
 import { QueryClient, QueryClientProvider, focusManager } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import UpdatePrompt from "@/components/UpdatePrompt";
 import React, { useEffect, useRef } from "react";
 import { Platform, AppState } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -140,6 +141,7 @@ export default function RootLayout() {
             <QueryClientProvider client={queryClient}>
               <WebMcpRegistration />
               <PushNotificationsGate />
+              <UpdatePrompt />
               <GestureHandlerRootView style={{ flex: 1 }}>
                 <KeyboardProvider>
                   <RootLayoutNav />

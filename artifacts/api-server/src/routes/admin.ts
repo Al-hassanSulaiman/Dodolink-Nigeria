@@ -24,6 +24,10 @@ const BOOTSTRAP_ADMIN_EMAILS = [
   "alhassansulaiman5star@gmail.com",
 ];
 
+/** The two owner emails can never be revoked, whatever the admins table says. */
+const isProtectedAdminEmail = (email: string) =>
+  BOOTSTRAP_ADMIN_EMAILS.some((owner) => owner.toLowerCase() === email.toLowerCase());
+
 let bootstrapChecked = false;
 
 async function ensureBootstrapAdmins(): Promise<void> {
@@ -412,6 +416,11 @@ router.delete("/admin/admins/:adminId", async (req, res): Promise<void> => {
 
   const [target] = await db.select().from(adminsTable).where(eq(adminsTable.id, adminId)).limit(1);
   if (!target) { res.status(404).json({ error: "Admin not found" }); return; }
+
+  if (isProtectedAdminEmail(target.email)) {
+    res.status(403).json({ error: "This is an owner account and can never be revoked" });
+    return;
+  }
 
   // Never allow removing the last admin — that would lock everyone out.
   const [{ total }] = await db.select({ total: count() }).from(adminsTable);
