@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import crypto from "node:crypto";
 import { activateFromWebhook } from "../lib/subscriptionBilling";
+import { DELIVERY_REFERENCE_PREFIX, activateAgentForReference } from "../lib/deliverySubscription";
 import { and, eq } from "drizzle-orm";
 import { db, deliveryOrdersTable } from "@workspace/db";
 import { markDeliveryOrderPaid } from "../lib/deliveryOrders";
@@ -69,6 +70,22 @@ router.post("/webhooks/paystack", async (req, res): Promise<void> => {
       req.log.info({ reference: event.data.reference, result }, "Delivery payment webhook processed");
     } catch (err) {
       req.log.error({ err }, "Delivery payment webhook failed");
+      res.status(500).json({ error: "Processing failed" });
+      return;
+    }
+    res.json({ received: true });
+    return;
+  }
+
+  // Delivery company subscriptions.
+  if (event.event === "charge.success" && event.data?.reference?.startsWith(DELIVERY_REFERENCE_PREFIX)) {
+    try {
+      const result = await activateAgentForReference({
+        reference: event.data.reference, amountKobo: event.data.amount ?? 0, currency: event.data.currency,
+      });
+      req.log.info({ reference: event.data.reference, result }, "Delivery subscription webhook processed");
+    } catch (err) {
+      req.log.error({ err }, "Delivery subscription webhook failed");
       res.status(500).json({ error: "Processing failed" });
       return;
     }
