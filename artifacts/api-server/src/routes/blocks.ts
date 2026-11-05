@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { and, eq } from "drizzle-orm";
-import { db, userBlocksTable, contentReportsTable } from "@workspace/db";
+import { db, userBlocksTable, contentReportsTable, conversationsTable, deliveryConversationsTable } from "@workspace/db";
+import { deliveryCompanyUserId, storeOwnerId } from "../lib/ugcSafety";
 import { requireUser } from "../lib/auth";
 import { rateLimit } from "../lib/rateLimit";
 import { userDisplayName } from "../lib/displayName";
@@ -25,7 +26,18 @@ router.get("/blocks", async (req, res): Promise<void> => {
 router.post("/blocks", blockLimit, async (req, res): Promise<void> => {
   const userId = requireUser(req, res);
   if (!userId) return;
-  const blockedId = typeof req.body?.userId === "string" ? req.body.userId.trim() : "";
+  let blockedId = typeof req.body?.userId === "string" ? req.body.userId.trim() : "";
+  // From inside a chat the app sends the chat; the server works out who is on the other side.
+  const chatId = Number(req.body?.conversationId);
+  if (!blockedId && Number.isInteger(chatId) && chatId > 0 && ["store", "delivery"].includes(req.body?.chatKind)) {
+    if (req.body.chatKind === "store") {
+      const [c] = await db.select().from(conversationsTable).where(eq(conversationsTable.id, chatId));
+      if (c) blockedId = c.customerId === userId ? ((await storeOwnerId(c.storeId)) ?? "") : c.customerId;
+    } else {
+      const [c] = await db.select().from(deliveryConversationsTable).where(eq(deliveryConversationsTable.id, chatId));
+      if (c) blockedId = c.customerId === userId ? ((await deliveryCompanyUserId(c.agentId)) ?? "") : c.customerId;
+    }
+  }
   if (!blockedId || blockedId.length > 200) { res.status(400).json({ error: "Choose someone to block" }); return; }
   if (blockedId === userId) { res.status(400).json({ error: "You cannot block yourself" }); return; }
 

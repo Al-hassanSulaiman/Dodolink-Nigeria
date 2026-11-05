@@ -57,6 +57,13 @@ export default function TermsOfServicePage() {
               <li>Post or transmit content that is obscene, offensive, or infringes the rights of others.</li>
               <li>Violate any applicable law, regulation, or third-party right.</li>
             </ul>
+            <p className="text-gray-700 mt-2 font-semibold">
+              Zero tolerance: there is no place on DodoLink for objectionable content or abusive users.
+              This includes hate, harassment, threats, sexual or violent material, scams and anything illegal.
+              Every user can report content or block another user from the "..." menu. We review every
+              report within 24 hours; offending content is removed and the person responsible is
+              removed from the app.
+            </p>
             <p className="text-gray-700 mt-2">
               We reserve the right to investigate suspected violations and take any action we deem
               appropriate, including removing content or suspending accounts.

@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
+import { customFetch } from '@workspace/api-client-react';
+import { useQuery } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
 import { useAuth } from '@clerk/expo';
 import { useQueryClient } from '@tanstack/react-query';
@@ -19,6 +21,19 @@ export default function AccountScreen() {
   const [error, setError] = useState('');
   const deletion = useDeleteMyAccount();
   const following = useFollowTotal('my-following');
+  const blocked = useQuery({
+    queryKey: ['my-blocks'],
+    queryFn: () => customFetch<{ userId: string; name: string }[]>('/api/blocks'),
+  });
+  const unblock = async (userId: string) => {
+    try {
+      await customFetch(`/api/blocks/${encodeURIComponent(userId)}`, { method: 'DELETE' });
+      await blocked.refetch();
+      queryClient.invalidateQueries();
+    } catch {
+      setError('Could not unblock. Please try again.');
+    }
+  };
   const finish = async () => {
     setError('');
     let accepted = false;
@@ -58,6 +73,17 @@ export default function AccountScreen() {
           variant="outline"
           onPress={() => router.push({ pathname: '/follow-list', params: { kind: 'my-following' } })}
         />
+        <View style={{ borderColor: colors.border, borderWidth: 1, borderRadius: 12, padding: 16, gap: 10 }}>
+          <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', fontSize: 18 }}>Blocked users</Text>
+          {(blocked.data ?? []).length === 0 ? (
+            <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>You have not blocked anyone. Use the "..." menu on a store, product, review or chat to block someone.</Text>
+          ) : (blocked.data ?? []).map(b => (
+            <View key={b.userId} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <Text style={{ color: colors.foreground, fontSize: 15, flex: 1 }} numberOfLines={1}>{b.name}</Text>
+              <Button title="Unblock" variant="outline" onPress={() => unblock(b.userId)} />
+            </View>
+          ))}
+        </View>
         <Button title="Sign out" onPress={async () => { await queryClient.cancelQueries(); queryClient.clear(); await signOut(); router.replace('/(tabs)'); }} />
         <View style={{ borderColor: colors.border, borderWidth: 1, borderRadius: 12, padding: 20, gap: 16 }}>
           <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', fontSize: 20 }}>Delete account</Text>

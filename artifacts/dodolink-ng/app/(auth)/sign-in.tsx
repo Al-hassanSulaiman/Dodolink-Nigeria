@@ -690,10 +690,11 @@ export default function SignInPage() {
           </View>
 
           <View style={styles.legalRow}>
+            <Text style={styles.legalText}>By signing in you agree to our </Text>
             <Pressable onPress={() => WebBrowser.openBrowserAsync(TERMS_URL)} hitSlop={6}>
               <Text style={styles.legalLink}>Terms of Service</Text>
             </Pressable>
-            <Text style={styles.legalText}> · </Text>
+            <Text style={styles.legalText}> and </Text>
             <Pressable onPress={() => WebBrowser.openBrowserAsync(PRIVACY_URL)} hitSlop={6}>
               <Text style={styles.legalLink}>Privacy Policy</Text>
             </Pressable>

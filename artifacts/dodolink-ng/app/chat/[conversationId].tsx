@@ -27,7 +27,7 @@ import { PhotoPreview } from '@/components/PhotoPreview';
 import { ChatMedia } from '@/components/ChatMedia';
 import { MessageQuote } from '@/components/MessageQuote';
 import { SwipeReply } from '@/components/SwipeReply';
-import { ReportChatModal } from '@/components/ReportChatModal';
+import { ContentMenu } from '@/components/ContentMenu';
 
 function CopyableMessage({ body, color }: { body: string; color: string }) {
   const [status, setStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
@@ -98,7 +98,6 @@ export default function ChatThreadScreen() {
   const [previewUri, setPreviewUri] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [productContextId, setProductContextId] = useState<number | null>(null);
-  const [reporting, setReporting] = useState(false);
   useEffect(() => {
     const value = Number(productParam);
     const valid = Number.isInteger(value) && value > 0 && value <= 2147483647;
@@ -296,9 +295,12 @@ export default function ChatThreadScreen() {
       <Stack.Screen options={{
         title: isRetailer ? (conversation?.customerName ?? "Chat") : (conversation?.storeName ?? "Chat"),
         headerRight: () => (
-          <Pressable onPress={() => setReporting(true)} hitSlop={8} accessibilityLabel="Report a problem">
-            <Feather name="flag" size={20} color="#1B5E20" />
-          </Pressable>
+          <ContentMenu
+            target={{ type: 'chat', chatKind: 'store', id }}
+            personName={isRetailer ? (conversation?.customerName ?? 'this person') : (conversation?.storeName ?? 'this store')}
+            color="#1B5E20"
+            onBlocked={() => router.back()}
+          />
         ),
       }} />
       <FlatList
@@ -390,7 +392,6 @@ export default function ChatThreadScreen() {
       </View>
     </KeyboardControllerView>
     <PhotoPreview uri={previewUri} onClose={() => setPreviewUri(null)} />
-    <ReportChatModal visible={reporting} kind="store" conversationId={id} onClose={() => setReporting(false)} />
     </SafeAreaView>
   );
 }

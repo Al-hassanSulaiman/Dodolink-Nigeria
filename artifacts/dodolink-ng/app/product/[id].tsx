@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { ContentMenu } from '@/components/ContentMenu';
 import { StyleSheet, View, Text, ScrollView, RefreshControl, Image, Pressable, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, Link, Stack } from 'expo-router';
 import { 
@@ -98,7 +99,12 @@ export default function ProductScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Stack.Screen options={{ title: product.name }} />
+      <Stack.Screen options={{
+        title: product.name,
+        headerRight: !isOwner && store ? () => (
+          <ContentMenu target={{ type: 'product', id: product.id }} blockUserId={store.ownerUserId} personName={store.name} onBlocked={() => router.back()} />
+        ) : undefined,
+      }} />
       <PhotoPreview uri={previewUri} images={images.map(getImageUrl)} title={product.name} onClose={() => setPreviewUri(null)} />
       <ScrollView 
         contentContainerStyle={styles.content}

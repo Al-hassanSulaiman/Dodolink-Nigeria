@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View, Text, FlatList, TextInput, Pressable, ActivityIndicator, Image as RNImage } from 'react-native';
-import { useLocalSearchParams, Stack } from 'expo-router';
+import { useLocalSearchParams, Stack, router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as Clipboard from 'expo-clipboard';
 import { Feather } from '@expo/vector-icons';
@@ -15,7 +15,7 @@ import { PhotoPreview } from '@/components/PhotoPreview';
 import { ChatMedia } from '@/components/ChatMedia';
 import { MessageQuote } from '@/components/MessageQuote';
 import { SwipeReply } from '@/components/SwipeReply';
-import { ReportChatModal } from '@/components/ReportChatModal';
+import { ContentMenu } from '@/components/ContentMenu';
 import { RateCompanyModal } from '@/components/RateCompanyModal';
 import { getImageUrl, uploadMediaToStorage } from '@/utils/storage';
 import { showAlert } from '@/utils/alerts';
@@ -64,7 +64,6 @@ export default function DeliveryChatScreen() {
   const [pendingMedia, setPendingMedia] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<DeliveryMessage | null>(null);
-  const [reporting, setReporting] = useState(false);
   const [rating, setRating] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const lastPhotoSwipe = useRef({ id: -1, until: 0 });
@@ -199,9 +198,7 @@ export default function DeliveryChatScreen() {
                   <Feather name="star" size={20} color="#1B5E20" />
                 </Pressable>
               ) : null}
-              <Pressable onPress={() => setReporting(true)} hitSlop={8} accessibilityLabel="Report a problem">
-                <Feather name="flag" size={20} color="#1B5E20" />
-              </Pressable>
+              <ContentMenu target={{ type: 'chat', chatKind: 'delivery', id: id! }} personName={data.title} color="#1B5E20" onBlocked={() => router.back()} />
             </View>
           ),
         }} />
@@ -271,7 +268,6 @@ export default function DeliveryChatScreen() {
         </View>
       </KeyboardControllerView>
       <PhotoPreview uri={previewUri} onClose={() => setPreviewUri(null)} />
-      <ReportChatModal visible={reporting} kind="delivery" conversationId={id} onClose={() => setReporting(false)} />
       <RateCompanyModal
         visible={rating}
         agentId={data.agent.id}

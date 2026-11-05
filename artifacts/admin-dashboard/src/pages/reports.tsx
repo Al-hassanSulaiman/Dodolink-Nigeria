@@ -13,6 +13,10 @@ type Report = {
   id: number; kind: "store" | "delivery"; conversationId: number; reporterName: string; otherPartyName: string;
   reason: string; status: "open" | "resolved"; adminNote: string | null; createdAt: string;
 };
+type ContentReport = {
+  id: number; kind: "store" | "product" | "review" | "user" | "block"; targetId: string; targetLabel: string | null;
+  reporterName: string | null; reason: string; status: "open" | "resolved"; action: string | null; adminNote: string | null; createdAt: string;
+};
 type Msg = { id: number; senderName: string; senderType: string; body: string; mediaUrl: string | null; createdAt: string };
 
 const when = (v: string) => new Date(v).toLocaleString("en-NG", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -30,6 +34,15 @@ export default function ReportsPage() {
   const resolve = useMutation({
     mutationFn: () => customFetch(`/api/admin/reports/${open!.id}/resolve`, { method: "POST", body: JSON.stringify({ note }) }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["admin-reports"] }); toast.success("Report closed"); setOpen(null); setNote(""); },
+    onError: err => toast.error(errorMessage(err)),
+  });
+
+  const [cNote, setCNote] = useState<Record<number, string>>({});
+  const contentReports = useQuery({ queryKey: ["admin-content-reports"], queryFn: () => customFetch<ContentReport[]>("/api/admin/content-reports") });
+  const act = useMutation({
+    mutationFn: ({ id, action }: { id: number; action: "dismiss" | "remove" | "ban" }) =>
+      customFetch(`/api/admin/content-reports/${id}/resolve`, { method: "POST", body: JSON.stringify({ action, note: cNote[id] ?? "" }) }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["admin-content-reports"] }); toast.success("Done"); },
     onError: err => toast.error(errorMessage(err)),
   });
 
@@ -58,6 +71,36 @@ export default function ReportsPage() {
             </Card>
           ))}
           {(reports.data ?? []).length === 0 && <p className="text-sm text-gray-600">No reports.</p>}
+        </div>
+      )}
+
+      <div>
+        <h2 className="text-xl font-bold text-gray-900">Content and user reports</h2>
+        <p className="text-sm text-gray-600">Flags and blocks from the app. Act within 24 hours: remove the content, or remove the person from the app.</p>
+      </div>
+      {contentReports.isLoading ? <Skeleton className="h-16 w-full" /> : (
+        <div className="space-y-3">
+          {(contentReports.data ?? []).map(r => (
+            <Card key={r.id}>
+              <CardContent className="py-4 space-y-2">
+                <p className="text-sm font-medium text-gray-900">
+                  <Flag className="inline w-4 h-4 mr-1 text-amber-600" />
+                  {r.kind === "block" ? "Block" : `Reported ${r.kind}`}: {r.targetLabel ?? r.targetId}
+                  {r.status === "resolved" && <span className="ml-2 text-xs rounded-full bg-green-100 px-2 py-0.5 text-green-800">Closed{r.action ? ` · ${r.action}` : ""}</span>}
+                </p>
+                <p className="text-xs text-gray-600">{when(r.createdAt)} · by {r.reporterName ?? "someone"} · {r.reason}</p>
+                {r.status === "open" ? (
+                  <div className="flex flex-wrap gap-2">
+                    <Input className="max-w-xs" placeholder="Your note" value={cNote[r.id] ?? ""} onChange={e => setCNote({ ...cNote, [r.id]: e.target.value })} maxLength={1000} />
+                    <Button variant="outline" size="sm" disabled={act.isPending} onClick={() => act.mutate({ id: r.id, action: "dismiss" })}>Dismiss</Button>
+                    {r.kind !== "user" && r.kind !== "block" && <Button variant="outline" size="sm" disabled={act.isPending} onClick={() => { if (confirm("Remove this content?")) act.mutate({ id: r.id, action: "remove" }); }}>Remove content</Button>}
+                    <Button variant="destructive" size="sm" disabled={act.isPending} onClick={() => { if (confirm("Remove this person from the app?")) act.mutate({ id: r.id, action: "ban" }); }}>Remove person</Button>
+                  </div>
+                ) : r.adminNote ? <p className="text-sm text-gray-700">Note: {r.adminNote}</p> : null}
+              </CardContent>
+            </Card>
+          ))}
+          {(contentReports.data ?? []).length === 0 && <p className="text-sm text-gray-600">No content reports.</p>}
         </div>
       )}
 

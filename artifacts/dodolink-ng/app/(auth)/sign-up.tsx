@@ -32,6 +32,7 @@ export default function SignUpPage() {
   const [pendingVerification, setPendingVerification] = React.useState(false);
   const [finalizeFailed, setFinalizeFailed] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
+  const [agreed, setAgreed] = React.useState(false);
 
   const handleSubmit = async () => {
     if (submitting) return;
@@ -238,7 +239,7 @@ export default function SignUpPage() {
     );
   }
 
-  const canSubmit = emailAddress.length > 0 && password.length >= 8 && !isLoading;
+  const canSubmit = emailAddress.length > 0 && password.length >= 8 && agreed && !isLoading;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -315,6 +316,18 @@ export default function SignUpPage() {
                 <Text style={styles.globalErrorText}>{(errors.global?.[0] as any)?.longMessage ?? errors.global?.[0]?.message}</Text>
               </View>
             )}
+
+            <Pressable
+              onPress={() => setAgreed(a => !a)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: agreed }}
+              style={{ flexDirection: "row", alignItems: "flex-start", gap: 10, marginBottom: 12 }}
+            >
+              <Feather name={agreed ? "check-square" : "square"} size={22} color="#1B5E20" />
+              <Text style={[styles.legalText, { flex: 1, textAlign: "left", fontSize: 13 }]}>
+                I agree to the Terms of Service. There is no tolerance for objectionable content or abusive users: they are removed within 24 hours.
+              </Text>
+            </Pressable>
 
             <Pressable
               style={({ pressed }) => [

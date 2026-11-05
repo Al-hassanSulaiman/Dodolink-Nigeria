@@ -22,6 +22,7 @@ import { LoadingScreen } from '@/components/Loading';
 import { StoreAvatar } from '@/components/StoreAvatar';
 import { ProductCard } from '@/components/ProductCard';
 import { StarRating } from '@/components/StarRating';
+import { ContentMenu } from '@/components/ContentMenu';
 import { EmptyState } from '@/components/EmptyState';
 import { Feather } from '@expo/vector-icons';
 import { Input, Button } from '@/components/ui';
@@ -208,7 +209,11 @@ export default function StoreScreen() {
                 <Feather name="edit-2" size={18} color={colors.mutedForeground} />
               </Pressable>
             )
-          ) : undefined,
+          ) : (
+            () => (
+              <ContentMenu target={{ type: 'store', id: store.id }} blockUserId={store.ownerUserId} personName={store.name} onBlocked={() => router.back()} />
+            )
+          ),
         }}
       />
       <ScrollView
@@ -436,7 +441,12 @@ export default function StoreScreen() {
                     <View key={review.id} style={[styles.reviewItem, { borderBottomColor: colors.border }]}>
                       <View style={styles.reviewHeader}>
                         <Text style={[styles.reviewerName, { color: colors.foreground }]}>{review.reviewerName}</Text>
-                        <StarRating rating={review.rating} size={12} showText={false} />
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                          <StarRating rating={review.rating} size={12} showText={false} />
+                          {review.reviewerId !== userId ? (
+                            <ContentMenu target={{ type: 'review', id: review.id }} blockUserId={review.reviewerId} personName={review.reviewerName} size={18} />
+                          ) : null}
+                        </View>
                       </View>
                       {review.comment ? (
                         <Text style={[styles.reviewComment, { color: colors.foreground }]}>{review.comment}</Text>
