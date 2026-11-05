@@ -12,6 +12,7 @@ import {
 import { PackageCheck } from "lucide-react";
 
 type Dispute = { id: number; openedByRole: string; reason: string; status: string; resolution: string | null; createdAt: string };
+type ChatMsg = { id: number; senderType: string; senderName: string; body: string; createdAt: string };
 type Job = {
   id: number; company: string; status: string; payoutStatus: string; amountKobo: number;
   platformFeeKobo: number; companyReceivesKobo: number; refundedKobo: number;
@@ -73,6 +74,20 @@ export default function DeliveryJobsPage() {
     onSuccess: () => { toast.success("Recorded"); refresh(); },
     onError: err => toast.error(errorMessage(err)),
   });
+  const [chatFor, setChatFor] = useState<Job | null>(null);
+  const [support, setSupport] = useState("");
+  const chat = useQuery({
+    queryKey: ["admin-delivery-chat", chatFor?.id],
+    enabled: !!chatFor,
+    refetchInterval: 15_000,
+    queryFn: () => customFetch<{ customerName: string; messages: ChatMsg[] }>(`/api/admin/delivery-orders/${chatFor!.id}/chat`),
+  });
+  const sendSupport = useMutation({
+    mutationFn: () => post(`${chatFor!.id}/message`, { body: support }),
+    onSuccess: () => { setSupport(""); queryClient.invalidateQueries({ queryKey: ["admin-delivery-chat", chatFor?.id] }); toast.success("Sent to both the customer and the company"); },
+    onError: err => toast.error(errorMessage(err)),
+  });
+
   const resolve = useMutation({
     mutationFn: () => post(`${resolving!.id}/resolve`, { action, note, refundNaira: action === "split" ? Number(refundNaira) : undefined }),
     onSuccess: () => { toast.success("Decision saved"); setResolving(null); setNote(""); setRefundNaira(""); refresh(); },
@@ -122,6 +137,9 @@ export default function DeliveryJobsPage() {
                 <Button size="sm" variant="outline" onClick={() => mark.mutate({ job, outcome: "paid" })}>I checked: it was paid</Button>
                 <Button size="sm" variant="outline" onClick={() => mark.mutate({ job, outcome: "failed" })}>I checked: it did not go</Button>
               </>
+            )}
+            {job.disputes.length > 0 && (
+              <Button size="sm" variant="outline" onClick={() => { setSupport(""); setChatFor(job); }}>Read chat and message them</Button>
             )}
             {job.status === "disputed" && (
               <Button size="sm" variant="outline" onClick={() => { setAction("pay_agent"); setResolving(job); }}>Decide this problem</Button>
@@ -173,6 +191,36 @@ export default function DeliveryJobsPage() {
             <Button variant="outline" onClick={() => resend.mutate()} disabled={resend.isPending}>Send a new code</Button>
             <Button onClick={() => finalize.mutate()} disabled={finalize.isPending || otp.length < 4}>{finalize.isPending ? "Sending…" : "Release money"}</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!chatFor} onOpenChange={open => !open && setChatFor(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Chat for job #{chatFor?.id}: {chatFor?.company} and {chat.data?.customerName ?? "the customer"}</DialogTitle>
+            <DialogDescription>
+              You can read this chat because a problem was reported on this job. Only reported jobs can be opened. What you write below is shown to both sides as DodoLink Support.
+            </DialogDescription>
+          </DialogHeader>
+          {chatFor?.disputes.map(d => (
+            <p key={d.id} className="text-sm text-amber-800 bg-amber-50 rounded-md p-2">Problem raised by the {d.openedByRole}: {d.reason}</p>
+          ))}
+          <div className="space-y-2 max-h-72 overflow-y-auto rounded-md border border-gray-200 p-2">
+            {chat.isLoading && <p className="text-sm text-gray-600">Loading…</p>}
+            {chat.isError && <p className="text-sm text-red-600">Could not load this chat.</p>}
+            {(chat.data?.messages ?? []).map(m => (
+              <div key={m.id} className={`text-sm rounded-md px-2 py-1 ${m.senderType === "support" ? "bg-green-50 text-green-900" : "bg-gray-50 text-gray-900"}`}>
+                <span className="font-semibold">{m.senderType === "support" ? "DodoLink Support" : m.senderType === "agent" ? `${m.senderName} (company)` : `${m.senderName} (customer)`}</span>
+                <span className="text-xs text-gray-500"> · {date(m.createdAt)}</span>
+                <p className="whitespace-pre-wrap">{m.body}</p>
+              </div>
+            ))}
+            {chat.data && chat.data.messages.length === 0 && <p className="text-sm text-gray-600">No messages.</p>}
+          </div>
+          <form className="flex gap-2" onSubmit={e => { e.preventDefault(); if (support.trim()) sendSupport.mutate(); }}>
+            <Input placeholder="Message to both the customer and the company" value={support} onChange={e => setSupport(e.target.value)} maxLength={2000} />
+            <Button type="submit" disabled={sendSupport.isPending || !support.trim()}>Send</Button>
+          </form>
         </DialogContent>
       </Dialog>
 

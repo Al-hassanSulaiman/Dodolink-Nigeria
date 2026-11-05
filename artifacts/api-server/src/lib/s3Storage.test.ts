@@ -156,3 +156,35 @@ describe("createS3StorageClient and presigning", () => {
     expect(options).toEqual({ expiresIn: 900 });
   });
 });
+
+describe("remembering what S3 said about an object", () => {
+  const head = { ContentType: "image/jpeg", ContentLength: 10, Metadata: {} };
+
+  it("asks S3 once for repeated lookups of the same photo", async () => {
+    const { client } = installFakeSdk(async () => head);
+    const file = new S3ObjectFile("b", "photo-1");
+    await file.exists();
+    await file.getMetadata();
+    await file.getMetadata();
+    expect(client.send).toHaveBeenCalledTimes(1);
+    await new S3ObjectFile("b", "photo-2").getMetadata();
+    expect(client.send).toHaveBeenCalledTimes(2);
+  });
+
+  it("forgets the answer after the object is deleted", async () => {
+    const { client } = installFakeSdk(async () => head);
+    const file = new S3ObjectFile("b", "photo-3");
+    await file.getMetadata();
+    await file.delete();
+    await file.getMetadata().catch(() => undefined);
+    const heads = client.send.mock.calls.filter(([c]) => c instanceof HeadObjectCommand);
+    expect(heads).toHaveLength(2);
+  });
+
+  it("makes a direct download link that expires", async () => {
+    const { presign } = installFakeSdk(async () => head);
+    expect(await new S3ObjectFile("b", "photo-4").signedGetUrl(900)).toBe("https://signed.example/url");
+    expect(presign.mock.calls[0][1]).toBeInstanceOf(GetObjectCommand);
+    expect(presign.mock.calls[0][2]).toEqual({ expiresIn: 900 });
+  });
+});

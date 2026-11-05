@@ -98,6 +98,9 @@ export default function DeliveryChatScreen() {
           }
           renderItem={({ item }) => (
             <View style={[styles.bubble, item.mine ? styles.mine : styles.theirs, { backgroundColor: item.mine ? colors.primary : colors.secondary }]}>
+              {item.senderType === 'support' ? (
+                <Text style={{ color: colors.primary, fontFamily: 'Inter_700Bold', fontSize: 12, marginBottom: 2 }}>DodoLink Support</Text>
+              ) : null}
               <Text style={{ color: item.mine ? colors.primaryForeground : colors.secondaryForeground, fontSize: 15 }}>{item.body}</Text>
               <Text style={[styles.time, { color: item.mine ? colors.primaryForeground : colors.mutedForeground }]}>
                 {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

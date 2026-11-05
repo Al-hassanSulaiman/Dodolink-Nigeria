@@ -176,6 +176,17 @@ router.get("/storage/objects/*path", async (req: Request, res: Response) => {
       return;
     }
 
+    // Send the phone straight to a short-lived S3 link. The app remembers the answer for 10 minutes.
+    const direct = typeof objectStorageService.getDirectDownloadUrl === "function"
+      && process.env.MEDIA_DIRECT_DOWNLOAD !== "false"
+      ? await objectStorageService.getDirectDownloadUrl(objectFile)
+      : null;
+    if (direct) {
+      res.setHeader("Cache-Control", "private, max-age=600");
+      res.redirect(302, direct);
+      return;
+    }
+
     const response = await objectStorageService.downloadObject(objectFile);
 
     res.status(response.status);

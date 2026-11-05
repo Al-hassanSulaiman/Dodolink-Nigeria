@@ -96,6 +96,15 @@ export class ObjectStorageService {
     return null;
   }
 
+  /**
+   * On S3, a direct download link so photos and videos skip our small server entirely
+   * (faster, and video seeking works). Returns null on other storage providers.
+   */
+  async getDirectDownloadUrl(file: File): Promise<string | null> {
+    const candidate = file as unknown as { signedGetUrl?: (ttlSec?: number) => Promise<string> };
+    return useS3 && typeof candidate.signedGetUrl === "function" ? candidate.signedGetUrl(900) : null;
+  }
+
   async downloadObject(file: File, cacheTtlSec: number = 3600): Promise<Response> {
     const [metadata] = await file.getMetadata();
     const aclPolicy = await getObjectAclPolicy(file);

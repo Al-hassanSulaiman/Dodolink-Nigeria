@@ -56,7 +56,15 @@ export function loadS3Sdk(): Promise<S3Sdk> {
 /** Test hook: replace the SDK with a fake. */
 export function setS3SdkForTests(sdk: S3Sdk | null): void {
   sdkPromise = sdk ? Promise.resolve(sdk) : null;
+  headCache.clear();
 }
+
+// Stored objects never change (their names are random), so what S3 says about one can be
+// remembered for a while. Each photo view used to cost four separate lookups; now it costs one,
+// and none while the answer is remembered. Changes made through this class clear the entry.
+const HEAD_CACHE_TTL_MS = 10 * 60 * 1000;
+const HEAD_CACHE_MAX = 5000;
+const headCache = new Map<string, { at: number; head: any }>();
 
 function safeDecode(value: string): string {
   try {
@@ -108,8 +116,22 @@ export class S3ObjectFile {
     return sdk.client.send(build(sdk.commands));
   }
 
-  private head(): Promise<any> {
-    return this.send(c => new c.HeadObjectCommand({ Bucket: this.bucketName, Key: this.name }));
+  private get cacheKey(): string {
+    return `${this.bucketName}/${this.name}`;
+  }
+
+  private async head(): Promise<any> {
+    const hit = headCache.get(this.cacheKey);
+    if (hit && Date.now() - hit.at < HEAD_CACHE_TTL_MS) return hit.head;
+    const head = await this.send(c => new c.HeadObjectCommand({ Bucket: this.bucketName, Key: this.name }));
+    if (headCache.size >= HEAD_CACHE_MAX) headCache.delete(headCache.keys().next().value as string);
+    headCache.set(this.cacheKey, { at: Date.now(), head });
+    return head;
+  }
+
+  /** A short-lived direct download link. The phone then downloads from S3 itself, not through our server. */
+  signedGetUrl(ttlSec = 900): Promise<string> {
+    return presignS3(this.bucketName, this.name, "GET", ttlSec);
   }
 
   async exists(): Promise<[boolean]> {
@@ -138,6 +160,7 @@ export class S3ObjectFile {
     const head = await this.head();
     const merged = { ...(head.Metadata ?? {}), ...toS3Metadata(update.metadata ?? {}) };
     const copySource = `${this.bucketName}/${this.name.split("/").map(encodeURIComponent).join("/")}`;
+    headCache.delete(this.cacheKey);
     await this.send(c => new c.CopyObjectCommand({
       Bucket: this.bucketName,
       Key: this.name,
@@ -167,7 +190,9 @@ export class S3ObjectFile {
 
   /** S3 delete is already idempotent, so `ignoreNotFound` needs no special handling. */
   async delete(_options?: { ignoreNotFound?: boolean }): Promise<[unknown]> {
+    headCache.delete(this.cacheKey);
     await this.send(c => new c.DeleteObjectCommand({ Bucket: this.bucketName, Key: this.name }));
+    headCache.delete(this.cacheKey);
     return [{}];
   }
 }

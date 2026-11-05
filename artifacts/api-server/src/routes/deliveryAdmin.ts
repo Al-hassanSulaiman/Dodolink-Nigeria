@@ -2,7 +2,10 @@ import { Router, type IRouter } from "express";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getAuth, clerkClient } from "@clerk/express";
-import { db, deliveryAgentsTable, deliveryOrdersTable, deliveryDisputesTable } from "@workspace/db";
+import {
+  db, deliveryAgentsTable, deliveryOrdersTable, deliveryDisputesTable,
+  deliveryConversationsTable, deliveryMessagesTable,
+} from "@workspace/db";
 import {
   paystackListBanks, paystackResolveAccount, paystackCreateRecipient, paystackInitiateTransfer,
   paystackFinalizeTransfer, paystackResendTransferOtp, paystackRefund,
@@ -307,4 +310,65 @@ deliveryAdminRouter.post("/admin/delivery-orders/:id/resolve", async (req, res):
   const [agent] = await db.select().from(deliveryAgentsTable).where(eq(deliveryAgentsTable.id, order.agentId));
   await pushToUser(agent?.linkedUserId, "Delivery dispute decided", `DodoLink support has decided job #${order.id}.`);
   res.json({ status: full ? "refunded" : "delivered" });
+});
+
+// Removing a company. Refused once it has any job, because those records hold payment history.
+deliveryAdminRouter.delete("/admin/delivery-agents/:id", async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id < 1) { res.status(400).json({ error: "Invalid id" }); return; }
+  const [agent] = await db.select().from(deliveryAgentsTable).where(eq(deliveryAgentsTable.id, id));
+  if (!agent) { res.status(404).json({ error: "Company not found" }); return; }
+  const [job] = await db.select({ id: deliveryOrdersTable.id }).from(deliveryOrdersTable).where(eq(deliveryOrdersTable.agentId, id)).limit(1);
+  if (job) {
+    res.status(409).json({ error: "This company has delivery jobs, so its payment records must be kept. Turn Active off instead to hide it from customers." });
+    return;
+  }
+  // Its chats and ratings go with it. The company's DodoLink login account is not deleted.
+  await db.delete(deliveryAgentsTable).where(eq(deliveryAgentsTable.id, id));
+  res.json({ deleted: true });
+});
+
+// Support can read the chat of a job ONLY once someone has reported a problem on it.
+async function disputedChat(req: { params: { id?: string | string[] } }) {
+  const order = await getOrder(req);
+  if (!order || !order.conversationId) return null;
+  const [dispute] = await db.select({ id: deliveryDisputesTable.id }).from(deliveryDisputesTable)
+    .where(eq(deliveryDisputesTable.orderId, order.id)).limit(1);
+  return dispute ? order : null;
+}
+
+deliveryAdminRouter.get("/admin/delivery-orders/:id/chat", async (req, res): Promise<void> => {
+  const order = await disputedChat(req);
+  if (!order) { res.status(404).json({ error: "Chats can only be opened for jobs with a reported problem." }); return; }
+  const [conv] = await db.select().from(deliveryConversationsTable).where(eq(deliveryConversationsTable.id, order.conversationId!));
+  const messages = await db.select().from(deliveryMessagesTable)
+    .where(eq(deliveryMessagesTable.conversationId, order.conversationId!))
+    .orderBy(deliveryMessagesTable.createdAt, deliveryMessagesTable.id);
+  res.json({
+    customerName: conv?.customerName ?? "Customer",
+    messages: messages.map(m => ({ id: m.id, senderType: m.senderType, senderName: m.senderName, body: m.body, createdAt: m.createdAt })),
+  });
+});
+
+// Support writes into the same chat, so the customer and the company both see it.
+deliveryAdminRouter.post("/admin/delivery-orders/:id/message", async (req, res): Promise<void> => {
+  const order = await disputedChat(req);
+  if (!order) { res.status(404).json({ error: "Chats can only be opened for jobs with a reported problem." }); return; }
+  const body = typeof req.body?.body === "string" ? req.body.body.trim() : "";
+  if (!body || body.length > 2000) { res.status(400).json({ error: "Write a message up to 2000 characters." }); return; }
+  const adminId = getAuth(req).userId ?? "admin";
+  await db.transaction(async tx => {
+    await tx.insert(deliveryMessagesTable).values({
+      conversationId: order.conversationId!, senderId: adminId, senderName: "DodoLink Support", senderType: "support", body,
+    });
+    await tx.update(deliveryConversationsTable).set({
+      lastMessage: body, lastMessageAt: new Date(),
+      customerUnread: sql`${deliveryConversationsTable.customerUnread} + 1`,
+      agentUnread: sql`${deliveryConversationsTable.agentUnread} + 1`,
+    }).where(eq(deliveryConversationsTable.id, order.conversationId!));
+  });
+  const [agent] = await db.select().from(deliveryAgentsTable).where(eq(deliveryAgentsTable.id, order.agentId));
+  await pushToUser(order.customerId, "DodoLink Support", body, { deliveryConversationId: order.conversationId });
+  await pushToUser(agent?.linkedUserId, "DodoLink Support", body, { deliveryConversationId: order.conversationId });
+  res.status(201).json({ sent: true });
 });

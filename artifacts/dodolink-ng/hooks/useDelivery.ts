@@ -21,7 +21,7 @@ export interface DeliveryInboxItem {
   deliveryType: DeliveryType | null; lastMessage: string | null; lastMessageAt: string | null; unread: number;
 }
 export interface DeliveryMessage {
-  id: number; body: string; senderType: "customer" | "agent"; senderName: string; mine: boolean; createdAt: string;
+  id: number; body: string; senderType: "customer" | "agent" | "support"; senderName: string; mine: boolean; createdAt: string;
 }
 export interface DeliveryThread {
   role: "customer" | "agent"; title: string; agent: DeliveryAgent; messages: DeliveryMessage[];
