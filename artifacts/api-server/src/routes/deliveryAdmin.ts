@@ -4,8 +4,9 @@ import { z } from "zod";
 import { getAuth, clerkClient } from "@clerk/express";
 import {
   db, deliveryAgentsTable, deliveryOrdersTable, deliveryDisputesTable,
-  deliveryConversationsTable, deliveryMessagesTable,
+  deliveryConversationsTable, deliveryMessagesTable, chatReportsTable, messagesTable,
 } from "@workspace/db";
+import { friendlyName } from "../lib/displayName";
 import {
   paystackListBanks, paystackResolveAccount, paystackCreateRecipient, paystackInitiateTransfer,
   paystackFinalizeTransfer, paystackResendTransferOtp, paystackRefund,
@@ -371,4 +372,51 @@ deliveryAdminRouter.post("/admin/delivery-orders/:id/message", async (req, res):
   await pushToUser(order.customerId, "DodoLink Support", body, { deliveryConversationId: order.conversationId });
   await pushToUser(agent?.linkedUserId, "DodoLink Support", body, { deliveryConversationId: order.conversationId });
   res.status(201).json({ sent: true });
+});
+
+// ---- Reports from chats (store chats and delivery chats) ----
+
+deliveryAdminRouter.get("/admin/reports", async (_req, res): Promise<void> => {
+  const rows = await db.select().from(chatReportsTable)
+    .orderBy(sql`${chatReportsTable.status} = 'open' desc`, desc(chatReportsTable.createdAt)).limit(200);
+  res.json(rows);
+});
+
+deliveryAdminRouter.get("/admin/reports/:id/chat", async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  const [report] = Number.isInteger(id) ? await db.select().from(chatReportsTable).where(eq(chatReportsTable.id, id)) : [];
+  if (!report) { res.status(404).json({ error: "Report not found" }); return; }
+  const messages = report.kind === "store"
+    ? await db.select().from(messagesTable).where(eq(messagesTable.conversationId, report.conversationId))
+        .orderBy(messagesTable.createdAt, messagesTable.id)
+    : await db.select().from(deliveryMessagesTable).where(eq(deliveryMessagesTable.conversationId, report.conversationId))
+        .orderBy(deliveryMessagesTable.createdAt, deliveryMessagesTable.id);
+  res.json({
+    report,
+    messages: messages.map(m => ({
+      id: m.id, senderName: friendlyName(m.senderName), senderType: m.senderType, body: m.body,
+      mediaUrl: m.mediaUrl, createdAt: m.createdAt,
+    })),
+  });
+});
+
+deliveryAdminRouter.post("/admin/reports/:id/resolve", async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  const note = typeof req.body?.note === "string" ? req.body.note.trim().slice(0, 1000) : "";
+  const { userId } = getAuth(req);
+  const [updated] = Number.isInteger(id) ? await db.update(chatReportsTable).set({
+    status: "resolved", adminNote: note || null, resolvedBy: userId ?? null, resolvedAt: new Date(),
+  }).where(eq(chatReportsTable.id, id)).returning() : [];
+  if (!updated) { res.status(404).json({ error: "Report not found" }); return; }
+  res.json(updated);
+});
+
+// Free-of-charge companies (same idea as a store's payment exemption).
+deliveryAdminRouter.patch("/admin/delivery-agents/:id/exempt", async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || typeof req.body?.exempt !== "boolean") { res.status(400).json({ error: "Invalid request" }); return; }
+  const [updated] = await db.update(deliveryAgentsTable).set({ subscriptionExempt: req.body.exempt })
+    .where(eq(deliveryAgentsTable.id, id)).returning();
+  if (!updated) { res.status(404).json({ error: "Company not found" }); return; }
+  res.json({ id: updated.id, subscriptionExempt: updated.subscriptionExempt });
 });

@@ -17,6 +17,7 @@ type Agent = {
   linkedUserId: string | null; deliveryType: DeliveryType; homeState: string | null;
   coveredStates: string[]; nationwide: boolean; bankName: string | null;
   bankCode: string | null; bankAccountNumber: string | null; bankAccountName: string | null; active: boolean;
+  qualifiedAt?: string | null; subscriptionDueAt?: string | null; subscriptionExempt?: boolean;
 };
 type Form = {
   imageUrl: string; name: string; phone: string; bio: string; accountEmail: string; deliveryType: DeliveryType;
@@ -136,6 +137,17 @@ export default function DeliveryPage() {
     if (window.confirm(`Delete ${editing.name}? Its chats and ratings are removed. This cannot be undone.`)) remove.mutate(editing.id);
   };
 
+  const setExempt = useMutation({
+    mutationFn: (v: { id: number; exempt: boolean }) =>
+      customFetch(`/api/admin/delivery-agents/${v.id}/exempt`, { method: "PATCH", body: JSON.stringify({ exempt: v.exempt }) }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["admin-delivery-agents"] }); toast.success("Saved"); },
+    onError: err => toast.error(errorMessage(err)),
+  });
+  const subscriptionLine = (a: Agent) =>
+    a.subscriptionExempt ? "Subscription: free of charge"
+    : a.subscriptionDueAt && new Date(a.subscriptionDueAt) > new Date() ? `Subscription paid until ${new Date(a.subscriptionDueAt).toLocaleDateString("en-NG")}`
+    : a.qualifiedAt ? "Subscription due, not paid" : "Subscription: not started";
+
   const needsHome = form.deliveryType !== "interstate";
   const needsStates = form.deliveryType !== "intrastate";
   const toggleState = (s: string) =>
@@ -173,9 +185,15 @@ export default function DeliveryPage() {
                     <p className="text-xs text-gray-600 truncate">
                       {coverage(a)} · {a.phone} · {a.linkedUserId ? "login linked" : "no login linked (cannot chat yet)"}
                     </p>
+                    <p className="text-xs text-gray-600 truncate">{subscriptionLine(a)}</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => openEdit(a)}><Pencil className="w-4 h-4 mr-1.5" />Edit</Button>
+                <div className="flex gap-2 flex-shrink-0">
+                  <Button variant="outline" size="sm" disabled={setExempt.isPending} onClick={() => setExempt.mutate({ id: a.id, exempt: !a.subscriptionExempt })}>
+                    {a.subscriptionExempt ? "Charge" : "Make free"}
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => openEdit(a)}><Pencil className="w-4 h-4 mr-1.5" />Edit</Button>
+                </div>
               </CardContent>
             </Card>
           ))}

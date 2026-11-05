@@ -19,6 +19,8 @@ import portfolioAnalyticsRouter from "./portfolioAnalytics";
 import deleteAccountRouter from "./delete-account";
 import deliveryRouter from "./delivery";
 import deliveryOrdersRouter from "./deliveryOrders";
+import deliverySubscriptionRouter from "./deliverySubscription";
+import chatReportsRouter from "./chatReports";
 
 const router: IRouter = Router();
 
@@ -32,6 +34,8 @@ router.use(deleteAccountRouter);
 router.use(adminRouter);
 router.use(deliveryRouter);
 router.use(deliveryOrdersRouter);
+router.use(deliverySubscriptionRouter);
+router.use(chatReportsRouter);
 router.use(storesRouter);
 router.use(productsRouter);
 router.use(searchRouter);

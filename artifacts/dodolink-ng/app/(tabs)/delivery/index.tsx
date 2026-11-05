@@ -14,7 +14,7 @@ import { RequireAccount } from '@/components/RequireAccount';
 import { getImageUrl } from '@/utils/storage';
 import { showAlert } from '@/utils/alerts';
 import {
-  useDeliveryAgents, useDeliveryInbox, useDeliveryStates, coverageLine, deliveryTypeLabel, ratingLine,
+  useDeliveryAgents, useDeliveryInbox, useDeliveryStates, useMyDeliveryCompany, coverageLine, deliveryTypeLabel, ratingLine,
   type DeliveryAgent,
 } from '@/hooks/useDelivery';
 
@@ -42,6 +42,7 @@ export default function DeliveryScreen() {
   const agents = useDeliveryAgents(type, state);
   const states = useDeliveryStates();
   const inbox = useDeliveryInbox(active ? 10000 : false);
+  const myCompany = useMyDeliveryCompany();
 
   if (!userId) return <RequireAccount />;
 
@@ -72,6 +73,16 @@ export default function DeliveryScreen() {
         <Text style={[styles.title, { color: colors.foreground }]}>Delivery</Text>
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Chat with a delivery company to move your goods.</Text>
       </View>
+
+      {myCompany.data ? (
+        <Pressable onPress={() => router.push('/delivery-subscription' as never)} style={[styles.subCard, { backgroundColor: colors.secondary }]}>
+          <Feather name="credit-card" size={18} color={colors.primary} />
+          <Text style={{ flex: 1, color: colors.secondaryForeground, fontFamily: 'Inter_600SemiBold', fontSize: 14 }}>
+            {myCompany.data.name}: your subscription
+          </Text>
+          <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+        </Pressable>
+      ) : null}
 
       {myChats.length > 0 && (
         <View style={styles.section}>
@@ -183,6 +194,7 @@ export default function DeliveryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  subCard: { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 16, marginTop: 16, padding: 14, borderRadius: 12 },
   header: { paddingTop: 60, paddingBottom: 16, paddingHorizontal: 16, borderBottomWidth: 1 },
   title: { fontFamily: 'Inter_700Bold', fontSize: 28 },
   subtitle: { fontSize: 14, marginTop: 4 },
