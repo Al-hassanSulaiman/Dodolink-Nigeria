@@ -96,7 +96,7 @@ async function publicProfiles(userIds: string[]): Promise<Map<string, PublicProf
 }
 
 async function followedStores(userId: string, limit: number, offset: number) {
-  const where = and(eq(storeFollowsTable.userId, userId), visibleStoresFilter());
+  const where = and(eq(storeFollowsTable.userId, userId), visibleStoresFilter(userId));
   const [{ count }] = await db.select({ count: sql<number>`count(*)::integer` })
     .from(storeFollowsTable).innerJoin(storesTable, eq(storesTable.id, storeFollowsTable.storeId)).where(where);
   const rows = await db.select({

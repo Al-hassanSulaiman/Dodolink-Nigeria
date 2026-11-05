@@ -37,7 +37,8 @@ router.get("/stores", async (req, res): Promise<void> => {
   // else asking for a specific owner's stores still gets the public
   // visibility filter applied — otherwise hidden/pending/rejected store data
   // would be enumerable by unauthenticated callers.
-  const visFilter = visibleStoresFilter();
+  const { userId: viewerId } = getAuth(req);
+  const visFilter = visibleStoresFilter(viewerId);
   const ownerFilter = typeof ownerUserId === "string" ? eq(storesTable.ownerUserId, ownerUserId) : undefined;
   const { userId: callerId } = getAuth(req);
   const isOwnerRequest = ownerFilter !== undefined && callerId != null && callerId === ownerUserId;

@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, avg, count } from "drizzle-orm";
+import { and, eq, avg, count, sql } from "drizzle-orm";
+import { getAuth } from "@clerk/express";
 import { db, reviewsTable, storesTable, pushTokensTable } from "@workspace/db";
 import { CreateReviewBody } from "@workspace/api-zod";
 import { notifyTokens } from "../lib/push";
@@ -15,7 +16,12 @@ router.get("/stores/:storeId/reviews", async (req, res): Promise<void> => {
   const storeId = parseInt(raw, 10);
   if (isNaN(storeId)) { res.status(400).json({ error: "Invalid storeId" }); return; }
 
-  const reviews = await db.select().from(reviewsTable).where(eq(reviewsTable.storeId, storeId));
+  // Reviews written by people the viewer has blocked are not shown to them.
+  const { userId: viewerId } = getAuth(req);
+  const reviews = await db.select().from(reviewsTable).where(and(
+    eq(reviewsTable.storeId, storeId),
+    viewerId ? sql`${reviewsTable.reviewerId} NOT IN (SELECT blocked_id FROM user_blocks WHERE blocker_id = ${viewerId})` : undefined,
+  ));
   res.json(reviews);
 });
 

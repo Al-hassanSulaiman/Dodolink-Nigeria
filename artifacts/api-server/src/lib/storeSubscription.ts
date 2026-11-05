@@ -144,8 +144,16 @@ type StoreVisibilityFields = {
   hiddenByAdmin: boolean;
 };
 
-/** Drizzle OR-condition: store is publicly visible. */
-export function visibleStoresFilter() {
+/**
+ * Drizzle condition: store is publicly visible. Pass the signed-in viewer to also hide stores
+ * owned by people that viewer has blocked.
+ */
+export function visibleStoresFilter(viewerId?: string | null) {
+  const base = baseVisibleStoresFilter();
+  return viewerId ? and(base, notBlockedByViewer(viewerId)) : base;
+}
+
+function baseVisibleStoresFilter() {
   const notHiddenByAdmin = eq(storesTable.hiddenByAdmin, false);
 
   // Before rollout only admin-hidden stores are hidden

@@ -12,6 +12,7 @@ import {
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { preventDeletedAccountWrites } from "./lib/accountDeletion";
+import { preventBannedUsers } from "./lib/ugcSafety";
 import { runtimeSafety, stagingWriteGuard, stagingAuthenticationGuard, readProxyHopCount } from "./lib/runtimeSafety";
 
 const app: Express = express();
@@ -105,6 +106,6 @@ app.use(
   })),
 );
 
-app.use("/api", preventDeletedAccountWrites, router);
+app.use("/api", preventDeletedAccountWrites, preventBannedUsers, router);
 
 export default app;

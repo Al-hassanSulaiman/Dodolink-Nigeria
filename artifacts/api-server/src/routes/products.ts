@@ -35,6 +35,7 @@ const productSelect = {
 
 router.get("/products", async (req, res): Promise<void> => {
   const { limit = 30, offset = 0, featured } = req.query;
+  const { userId: viewerId } = getAuth(req);
   const isFeatured = featured === "true";
 
   const topStoreIds = db
@@ -54,8 +55,8 @@ router.get("/products", async (req, res): Promise<void> => {
     .leftJoin(storesTable, eq(productsTable.storeId, storesTable.id))
     .where(
       isFeatured
-        ? and(visibleStoresFilter(), inArray(productsTable.storeId, topStoreIds))
-        : visibleStoresFilter(),
+        ? and(visibleStoresFilter(viewerId), inArray(productsTable.storeId, topStoreIds))
+        : visibleStoresFilter(viewerId),
     )
     .$dynamic();
 
@@ -118,11 +119,12 @@ router.get("/products/:productId", async (req, res): Promise<void> => {
   const productId = parseInt(raw, 10);
   if (isNaN(productId)) { res.status(400).json({ error: "Invalid productId" }); return; }
 
+  const { userId: viewerId } = getAuth(req);
   const rows = await db
     .select(productSelect)
     .from(productsTable)
     .leftJoin(storesTable, eq(productsTable.storeId, storesTable.id))
-    .where(and(eq(productsTable.id, productId), visibleStoresFilter()));
+    .where(and(eq(productsTable.id, productId), visibleStoresFilter(viewerId)));
 
   if (!rows[0]) { res.status(404).json({ error: "Product not found" }); return; }
   res.json({ ...rows[0], storeName: rows[0].storeName ?? "" });

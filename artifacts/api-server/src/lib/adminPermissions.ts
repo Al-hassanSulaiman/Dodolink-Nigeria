@@ -25,7 +25,7 @@ export function pageForPath(path: string): AdminPage | "any" | null {
     [/^\/admin\/leads(\/|$)/, "leads"],
     [/^\/admin\/portfolio-analytics(\/|$)/, "portfolio"],
     [/^\/admin\/(delivery-agents|delivery-banks|delivery-orders)(\/|$)/, "delivery"],
-    [/^\/admin\/reports(\/|$)/, "reports"],
+    [/^\/admin\/(reports|content-reports)(\/|$)/, "reports"],
   ];
   return rules.find(([re]) => re.test(path))?.[1] ?? null;
 }

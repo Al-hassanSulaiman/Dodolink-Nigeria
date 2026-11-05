@@ -21,11 +21,17 @@ import deliveryRouter from "./delivery";
 import deliveryOrdersRouter from "./deliveryOrders";
 import deliverySubscriptionRouter from "./deliverySubscription";
 import chatReportsRouter from "./chatReports";
+import ugcGuardsRouter from "./ugcGuards";
+import blocksRouter from "./blocks";
+import contentReportsRouter from "./contentReports";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(appVersionRouter);
+router.use(ugcGuardsRouter);
+router.use(blocksRouter);
+router.use(contentReportsRouter);
 router.use(followsRouter);
 router.use(homeFeedRouter);
 router.use(contactRouter);

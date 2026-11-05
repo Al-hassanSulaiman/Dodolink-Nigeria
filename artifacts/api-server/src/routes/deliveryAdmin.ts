@@ -4,8 +4,9 @@ import { z } from "zod";
 import { getAuth, clerkClient } from "@clerk/express";
 import {
   db, deliveryAgentsTable, deliveryOrdersTable, deliveryDisputesTable,
-  deliveryConversationsTable, deliveryMessagesTable, chatReportsTable, messagesTable,
+  deliveryConversationsTable, deliveryMessagesTable, chatReportsTable, messagesTable, contentReportsTable, storesTable, productsTable, reviewsTable, bannedUsersTable,
 } from "@workspace/db";
+import { invalidateBanCache } from "../lib/ugcSafety";
 import { friendlyName } from "../lib/displayName";
 import {
   paystackListBanks, paystackResolveAccount, paystackCreateRecipient, paystackInitiateTransfer,
@@ -419,4 +420,59 @@ deliveryAdminRouter.patch("/admin/delivery-agents/:id/exempt", async (req, res):
     .where(eq(deliveryAgentsTable.id, id)).returning();
   if (!updated) { res.status(404).json({ error: "Company not found" }); return; }
   res.json({ id: updated.id, subscriptionExempt: updated.subscriptionExempt });
+});
+
+// ---- Reports about stores, products, reviews and people, and blocks ----
+
+deliveryAdminRouter.get("/admin/content-reports", async (_req, res): Promise<void> => {
+  const rows = await db.select().from(contentReportsTable)
+    .orderBy(sql`${contentReportsTable.status} = 'open' desc`, desc(contentReportsTable.createdAt)).limit(300);
+  res.json(rows);
+});
+
+/** Recompute a store's rating after a review is removed. */
+async function refreshStoreRating(storeId: number): Promise<void> {
+  await db.execute(sql`
+    UPDATE stores SET
+      avg_rating = (SELECT avg(rating) FROM reviews WHERE store_id = ${storeId}),
+      total_reviews = (SELECT count(*) FROM reviews WHERE store_id = ${storeId})
+    WHERE id = ${storeId}`);
+}
+
+// action: "dismiss" (nothing wrong), "remove" (take the content down), "ban" (remove the person from the app)
+deliveryAdminRouter.post("/admin/content-reports/:id/resolve", async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  const action = req.body?.action;
+  const note = typeof req.body?.note === "string" ? req.body.note.trim().slice(0, 1000) : "";
+  if (!Number.isInteger(id) || !["dismiss", "remove", "ban"].includes(action)) { res.status(400).json({ error: "Invalid request" }); return; }
+  const [report] = await db.select().from(contentReportsTable).where(eq(contentReportsTable.id, id));
+  if (!report) { res.status(404).json({ error: "Report not found" }); return; }
+  const { userId: adminId } = getAuth(req);
+  const numeric = Number(report.targetId);
+
+  if (action === "remove") {
+    if (report.kind === "store") await db.update(storesTable).set({ hiddenByAdmin: true }).where(eq(storesTable.id, numeric));
+    else if (report.kind === "product") await db.delete(productsTable).where(eq(productsTable.id, numeric));
+    else if (report.kind === "review") {
+      const [review] = await db.delete(reviewsTable).where(eq(reviewsTable.id, numeric)).returning();
+      if (review) await refreshStoreRating(review.storeId);
+    } else { res.status(400).json({ error: "Nothing to remove here. Use Remove person instead." }); return; }
+  }
+  if (action === "ban") {
+    const target = report.targetOwnerId;
+    if (!target) { res.status(400).json({ error: "This report has no person to remove" }); return; }
+    await db.insert(bannedUsersTable).values({ userId: target, reason: report.reason.slice(0, 500), bannedBy: adminId ?? null })
+      .onConflictDoNothing();
+    // Everything they published disappears with them.
+    await db.update(storesTable).set({ hiddenByAdmin: true }).where(eq(storesTable.ownerUserId, target));
+    await db.update(contentReportsTable).set({
+      status: "resolved", action: "banned", adminNote: note || "Person removed", resolvedBy: adminId ?? null, resolvedAt: new Date(),
+    }).where(and(eq(contentReportsTable.targetOwnerId, target), eq(contentReportsTable.status, "open")));
+    invalidateBanCache();
+  }
+  const [updated] = await db.update(contentReportsTable).set({
+    status: "resolved", action: action === "dismiss" ? "dismissed" : action === "remove" ? "removed" : "banned",
+    adminNote: note || null, resolvedBy: adminId ?? null, resolvedAt: new Date(),
+  }).where(eq(contentReportsTable.id, id)).returning();
+  res.json(updated);
 });

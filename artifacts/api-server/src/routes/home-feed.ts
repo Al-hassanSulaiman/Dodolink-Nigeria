@@ -43,7 +43,7 @@ for (const kind of ["stores", "products"] as const) {
     const result = await db.execute(sql`
       WITH base AS (
         SELECT ${columns}, ${following} AS "isFollowing", ${followers} AS "followerCount", ${shuffle} AS shuffle
-        ${source} WHERE ${visibleStoresFilter()}
+        ${source} WHERE ${visibleStoresFilter(userId)}
       ), diversified AS (
         SELECT *, ${diversity} AS store_rank FROM base
       ), ranked AS (
