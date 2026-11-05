@@ -27,6 +27,7 @@ import { PhotoPreview } from '@/components/PhotoPreview';
 import { ChatMedia } from '@/components/ChatMedia';
 import { MessageQuote } from '@/components/MessageQuote';
 import { SwipeReply } from '@/components/SwipeReply';
+import { ReportChatModal } from '@/components/ReportChatModal';
 
 function CopyableMessage({ body, color }: { body: string; color: string }) {
   const [status, setStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
@@ -97,6 +98,7 @@ export default function ChatThreadScreen() {
   const [previewUri, setPreviewUri] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [productContextId, setProductContextId] = useState<number | null>(null);
+  const [reporting, setReporting] = useState(false);
   useEffect(() => {
     const value = Number(productParam);
     const valid = Number.isInteger(value) && value > 0 && value <= 2147483647;
@@ -291,7 +293,14 @@ export default function ChatThreadScreen() {
     // bar outside keyboard avoidance so it is not also added above the keyboard.
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom', 'left', 'right']}>
     <KeyboardControllerView style={styles.container} behavior="padding" keyboardVerticalOffset={100}>
-      <Stack.Screen options={{ title: isRetailer ? (conversation?.customerName ?? "Chat") : (conversation?.storeName ?? "Chat") }} />
+      <Stack.Screen options={{
+        title: isRetailer ? (conversation?.customerName ?? "Chat") : (conversation?.storeName ?? "Chat"),
+        headerRight: () => (
+          <Pressable onPress={() => setReporting(true)} hitSlop={8} accessibilityLabel="Report a problem">
+            <Feather name="flag" size={20} color="#1B5E20" />
+          </Pressable>
+        ),
+      }} />
       <FlatList
         data={messages ? [...messages].reverse() : []}
         inverted
@@ -381,6 +390,7 @@ export default function ChatThreadScreen() {
       </View>
     </KeyboardControllerView>
     <PhotoPreview uri={previewUri} onClose={() => setPreviewUri(null)} />
+    <ReportChatModal visible={reporting} kind="store" conversationId={id} onClose={() => setReporting(false)} />
     </SafeAreaView>
   );
 }
