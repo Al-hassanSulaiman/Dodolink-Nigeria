@@ -150,6 +150,7 @@ const appName = getAppName();
 const server = http.createServer((req, res) => {
   const url = new URL(req.url || "/", `http://${req.headers.host}`);
   let pathname = url.pathname;
+  try { pathname = decodeURIComponent(pathname); } catch { /* keep raw path */ }
 
   if (basePath && pathname.startsWith(basePath)) {
     pathname = pathname.slice(basePath.length) || "/";
