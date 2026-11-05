@@ -45,7 +45,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-const GRACE_PERIOD_DAYS = 14;
+const GRACE_PERIOD_DAYS = 7;
 
 function getSubscriptionInfo(store: {
   qualifiedAt?: string | null;
@@ -62,7 +62,7 @@ function getSubscriptionInfo(store: {
   // Missed renewal — hidden immediately, no grace
   if (status === "past_due") return { label: "Hidden – not paid", color: "red", hidden: true, daysLeft: null };
 
-  // Initial qualification only (inactive = never paid): 14-day grace from qualifiedAt
+  // Initial qualification only (inactive = never paid): 7-day grace from qualifiedAt
   const expiresAt = new Date(qualifiedAt.getTime() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
   const msLeft = expiresAt.getTime() - Date.now();
   const daysLeft = Math.ceil(msLeft / (24 * 60 * 60 * 1000));
@@ -381,7 +381,7 @@ export default function StoresPage() {
                       if (sub.hidden) return (
                         <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-red-700 bg-red-50 border border-red-100 rounded-md px-2.5 py-1.5">
                           <EyeOff className="w-3.5 h-3.5 flex-shrink-0" />
-                          Store is hidden from customers — subscription unpaid after 14-day grace period
+                          Store is hidden from customers — subscription unpaid after 7-day grace period
                         </div>
                       );
 
@@ -401,7 +401,7 @@ export default function StoresPage() {
                           <Clock className="w-3.5 h-3.5 flex-shrink-0" />
                           {sub.daysLeft === 0
                             ? "Grace period ends today — store will be hidden if unpaid"
-                            : `${sub.daysLeft} day${sub.daysLeft === 1 ? "" : "s"} left in 14-day grace period before store goes hidden`}
+                            : `${sub.daysLeft} day${sub.daysLeft === 1 ? "" : "s"} left in 7-day grace period before store goes hidden`}
                         </div>
                       );
 

@@ -235,7 +235,7 @@ export default function SubscriptionScreen() {
                   : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left in grace period`}
               </Text>
               <Text style={[styles.alertBody, { color: graceUrgencyColor + 'cc' }]}>
-                Pay before your 14-day grace period ends to keep your store visible to customers.
+                Pay before your 7-day grace period ends to keep your store visible to customers.
               </Text>
             </View>
           </View>
