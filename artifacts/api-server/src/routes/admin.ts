@@ -13,6 +13,7 @@ import {
 import adminReviewAccessRouter from "./adminReviewAccess";
 import { portfolioAdminRouter } from "./portfolioAnalytics";
 import { deliveryAdminRouter } from "./deliveryAdmin";
+import { canOpen, pageForPath, parsePermissions, type AdminPermissions } from "../lib/adminPermissions";
 
 /**
  * Bootstrap seed only: if the admins table is empty (first run after the
@@ -49,15 +50,18 @@ async function ensureBootstrapAdmins(): Promise<void> {
  * immediately.
  */
 const ADMIN_CACHE_TTL_MS = 30_000;
-let adminEmailCache: { emails: Set<string>; expiresAt: number } | null = null;
+let adminEmailCache: { emails: Map<string, AdminPermissions>; expiresAt: number } | null = null;
 
-async function getAdminEmailSet(): Promise<Set<string>> {
+async function getAdminEmailSet(): Promise<Map<string, AdminPermissions>> {
   const now = Date.now();
   if (adminEmailCache && adminEmailCache.expiresAt > now) {
     return adminEmailCache.emails;
   }
-  const rows = await db.select({ email: adminsTable.email }).from(adminsTable);
-  const emails = new Set(rows.map((r) => r.email.toLowerCase()));
+  const rows = await db.select({ email: adminsTable.email, permissions: adminsTable.permissions }).from(adminsTable);
+  // Owners always get every page, whatever the table says.
+  const emails = new Map<string, AdminPermissions>(
+    rows.map((r) => [r.email.toLowerCase(), isProtectedAdminEmail(r.email) ? null : ((r.permissions as AdminPermissions | undefined) ?? null)]),
+  );
   adminEmailCache = { emails, expiresAt: now + ADMIN_CACHE_TTL_MS };
   return emails;
 }
@@ -83,11 +87,15 @@ async function requireAdmin(req: Request, res: Response, next: NextFunction): Pr
     }
     const emails = user.emailAddresses.map((e: { emailAddress: string }) => e.emailAddress.toLowerCase());
     const adminEmails = await getAdminEmailSet();
-    const isAdmin = emails.some((email) => adminEmails.has(email));
-    if (!isAdmin) {
+    const matches = emails.filter((email) => adminEmails.has(email));
+    if (matches.length === 0) {
       res.status(403).json({ error: "Forbidden – not an admin account" });
       return;
     }
+    // Full access if any matching email has it; otherwise the pages they were given.
+    const lists = matches.map((email) => adminEmails.get(email) ?? null);
+    res.locals.adminPermissions = (lists.some((l) => l === null) ? null : [...new Set(lists.flat() as string[])]) as AdminPermissions;
+    res.locals.adminEmail = matches[0];
     next();
   } catch {
     res.status(403).json({ error: "Forbidden" });
@@ -104,9 +112,19 @@ function toSafeStore<T extends Record<string, unknown>>(store: T) {
   return pub as Omit<T, "paystackAuthCode" | "paystackCustomerCode" | "paystackEmail">;
 }
 
+/** After requireAdmin: an admin may only use the pages they were given. Unlisted paths need full access. */
+function requirePagePermission(req: Request, res: Response, next: NextFunction): void {
+  const perms = (res.locals.adminPermissions ?? null) as AdminPermissions;
+  if (canOpen(perms, pageForPath(`/admin${req.path}`.replace(/\/+$/, "")))) { next(); return; }
+  res.status(403).json({ error: "You do not have access to this page" });
+}
+
 const router: IRouter = Router();
 
-router.use("/admin", requireAdmin);
+router.use("/admin", requireAdmin, requirePagePermission);
+router.get("/admin/me", (_req, res): void => {
+  res.json({ email: res.locals.adminEmail ?? null, permissions: res.locals.adminPermissions ?? null });
+});
 router.use(portfolioAdminRouter);
 router.use(adminReviewAccessRouter);
 router.use(deliveryAdminRouter);
@@ -389,6 +407,14 @@ router.post("/admin/admins", async (req, res): Promise<void> => {
 
   const email = parsed.data.email.trim().toLowerCase();
   const { userId } = getAuth(req);
+  const permissions = parsePermissions(req.body?.permissions);
+  if (permissions === "invalid") { res.status(400).json({ error: "Choose at least one page this admin can open" }); return; }
+  const callerPerms = (res.locals.adminPermissions ?? null) as AdminPermissions;
+  // Nobody can hand out more access than they have themselves.
+  if (callerPerms !== null && (permissions === null || permissions.some((p) => !callerPerms.includes(p)))) {
+    res.status(403).json({ error: "You can only give pages you have access to yourself" });
+    return;
+  }
 
   const [existing] = await db.select().from(adminsTable).where(eq(adminsTable.email, email)).limit(1);
   if (existing) { res.status(409).json({ error: "This email is already an admin" }); return; }
@@ -404,10 +430,32 @@ router.post("/admin/admins", async (req, res): Promise<void> => {
 
   const [admin] = await db
     .insert(adminsTable)
-    .values({ email, addedBy: userId ?? null })
+    .values({ email, addedBy: userId ?? null, permissions })
     .returning();
   invalidateAdminEmailCache();
   res.status(201).json(admin);
+});
+
+router.patch("/admin/admins/:adminId/permissions", async (req, res): Promise<void> => {
+  const adminId = parseInt(req.params.adminId, 10);
+  if (isNaN(adminId)) { res.status(400).json({ error: "Invalid adminId" }); return; }
+  const permissions = parsePermissions(req.body?.permissions);
+  if (permissions === "invalid") { res.status(400).json({ error: "Choose at least one page this admin can open" }); return; }
+  const callerPerms = (res.locals.adminPermissions ?? null) as AdminPermissions;
+  if (callerPerms !== null && (permissions === null || permissions.some((p) => !callerPerms.includes(p)))) {
+    res.status(403).json({ error: "You can only give pages you have access to yourself" });
+    return;
+  }
+  const [target] = await db.select().from(adminsTable).where(eq(adminsTable.id, adminId)).limit(1);
+  if (!target) { res.status(404).json({ error: "Admin not found" }); return; }
+  if (isProtectedAdminEmail(target.email)) { res.status(403).json({ error: "Owner accounts always have every page" }); return; }
+  if (callerPerms !== null && (target.permissions ?? null) === null) {
+    res.status(403).json({ error: "Only a full-access admin can change a full-access admin" });
+    return;
+  }
+  const [updated] = await db.update(adminsTable).set({ permissions }).where(eq(adminsTable.id, adminId)).returning();
+  invalidateAdminEmailCache();
+  res.json(updated);
 });
 
 router.delete("/admin/admins/:adminId", async (req, res): Promise<void> => {
@@ -419,6 +467,12 @@ router.delete("/admin/admins/:adminId", async (req, res): Promise<void> => {
 
   if (isProtectedAdminEmail(target.email)) {
     res.status(403).json({ error: "This is an owner account and can never be revoked" });
+    return;
+  }
+
+  const callerPerms = (res.locals.adminPermissions ?? null) as AdminPermissions;
+  if (callerPerms !== null && (target.permissions ?? null) === null) {
+    res.status(403).json({ error: "Only a full-access admin can revoke a full-access admin" });
     return;
   }
 
