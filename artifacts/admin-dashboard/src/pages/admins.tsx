@@ -35,6 +35,9 @@ function errorMessage(err: unknown): string {
   return anyErr?.error ?? anyErr?.message ?? "Something went wrong";
 }
 
+// Display only: the server is what actually refuses to revoke these.
+const OWNER_EMAILS = ["alhassansulaiman1369@gmail.com", "alhassansulaiman5star@gmail.com"];
+
 export default function AdminsPage() {
   const queryClient = useQueryClient();
   const { data: admins, isLoading } = useAdminListAdmins();
@@ -121,7 +124,7 @@ export default function AdminsPage() {
                     <p className="text-sm font-medium text-gray-900 truncate">{admin.email}</p>
                     <p className="text-xs text-gray-500">
                       Added {formatDate(admin.createdAt)}
-                      {admin.addedBy === "bootstrap" ? " · original owner" : ""}
+                      {OWNER_EMAILS.includes(admin.email.toLowerCase()) ? " · owner, cannot be revoked" : ""}
                     </p>
                   </div>
                 </div>
@@ -130,7 +133,8 @@ export default function AdminsPage() {
                   size="sm"
                   className="text-red-600 hover:text-red-700 flex-shrink-0"
                   onClick={() => setRemoveTarget({ id: admin.id, email: admin.email })}
-                  disabled={(admins ?? []).length <= 1}
+                  disabled={(admins ?? []).length <= 1 || OWNER_EMAILS.includes(admin.email.toLowerCase())}
+                  title={OWNER_EMAILS.includes(admin.email.toLowerCase()) ? "Owner accounts can never be revoked" : undefined}
                 >
                   <Trash2 className="w-4 h-4 mr-1.5" />
                   Revoke

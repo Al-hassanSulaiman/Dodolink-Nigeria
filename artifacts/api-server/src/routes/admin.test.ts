@@ -474,6 +474,24 @@ describe("DELETE /admin/admins/:adminId protections", () => {
     expect((db as any).delete).not.toHaveBeenCalled();
   });
 
+  it("never revokes an owner email (403)", async () => {
+    authedAs(ADMIN_USER_ID, [ADMIN_EMAIL]);
+    const { db } = await import("@workspace/db");
+    setupSelectMock(db as any, [
+      BOOTSTRAP_COUNT,
+      [{ email: ADMIN_EMAIL }],
+      [{ id: 7, email: "AlHassanSulaiman5Star@gmail.com" }],
+      [{ total: 5 }],
+    ]);
+    (db as any).delete.mockImplementation(() => makeDeleteChain());
+
+    const app = await buildApp();
+    const res = await request(app).delete("/admin/admins/7");
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/owner account/i);
+    expect((db as any).delete).not.toHaveBeenCalled();
+  });
+
   it("refuses to let an admin revoke their own access (400)", async () => {
     authedAs(ADMIN_USER_ID, [ADMIN_EMAIL]);
     const { db } = await import("@workspace/db");
