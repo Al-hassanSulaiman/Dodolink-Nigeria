@@ -11,6 +11,7 @@ describe("admin page access", () => {
     expect(pageForPath("/admin/review-access/u1")).toBe("admins");
     expect(pageForPath("/admin/portfolio-analytics/links")).toBe("portfolio");
     expect(pageForPath("/admin/me")).toBe("any");
+    expect(pageForPath("/admin/badges")).toBe("any");
     expect(pageForPath("/admin/something-new")).toBeNull();
   });
   it("lets full-access admins everywhere and limited admins only their pages", () => {

@@ -15,7 +15,7 @@ export function parsePermissions(value: unknown): AdminPermissions | "invalid" {
 
 /** Which page an /admin URL belongs to. "any" = every admin; null = owners and full-access admins only. */
 export function pageForPath(path: string): AdminPage | "any" | null {
-  if (path === "/admin/me") return "any";
+  if (path === "/admin/me" || path === "/admin/badges") return "any";
   const rules: Array<[RegExp, AdminPage]> = [
     [/^\/admin\/stores(\/|$)/, "stores"],
     [/^\/admin\/analytics(\/|$)/, "dashboard"],
