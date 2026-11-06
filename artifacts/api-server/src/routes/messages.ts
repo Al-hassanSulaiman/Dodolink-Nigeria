@@ -13,7 +13,7 @@ import { clerkClient } from "@clerk/express";
 import { resolveMessageContext } from "../lib/messageContext";
 import { friendlyName } from "../lib/displayName";
 import { containsObjectionable, OBJECTIONABLE_MESSAGE } from "../lib/contentFilter";
-import { blockedWith, eitherBlocked } from "../lib/blocks";
+import { blockedWith, eitherBlocked, conversationBlocked } from "../lib/blocks";
 
 const router: IRouter = Router();
 const objectStorage = new ObjectStorageService();
@@ -314,13 +314,9 @@ router.post("/conversations/:conversationId/messages", sendMessageLimit, async (
   const { conv: conversation, allowed } = await loadConversationIfParticipant(conversationId, authUserId);
   if (!conversation) { res.status(404).json({ error: "Conversation not found" }); return; }
   if (!allowed) { res.status(403).json({ error: "You are not a participant in this conversation" }); return; }
-  {
-    const [st] = await db.select({ owner: storesTable.ownerUserId }).from(storesTable).where(eq(storesTable.id, conversation.storeId));
-    const other = conversation.customerId === authUserId ? st?.owner : conversation.customerId;
-    if (other && await eitherBlocked(authUserId, other)) {
-      res.status(403).json({ error: "You can't message this person" });
-      return;
-    }
+  if (await conversationBlocked(conversation, authUserId)) {
+    res.status(403).json({ error: "You can't message this person" });
+    return;
   }
 
   const context = await resolveMessageContext(conversationId, conversation.storeId, parsed.data);

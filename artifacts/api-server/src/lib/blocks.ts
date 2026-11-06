@@ -31,3 +31,17 @@ export async function blockedWith(userId: string): Promise<Set<string>> {
   }
   return out;
 }
+
+/** True when the other person in this store chat is blocked by, or has blocked, `userId`. */
+export async function conversationBlocked(
+  conversation: { customerId: string; storeId: number },
+  userId: string,
+): Promise<boolean> {
+  let other: string | null | undefined = conversation.customerId;
+  if (conversation.customerId === userId) {
+    const [st] = await db.select({ owner: storesTable.ownerUserId }).from(storesTable)
+      .where(sql`${storesTable.id} = ${conversation.storeId}`);
+    other = st?.owner;
+  }
+  return !!other && (await eitherBlocked(userId, other));
+}
