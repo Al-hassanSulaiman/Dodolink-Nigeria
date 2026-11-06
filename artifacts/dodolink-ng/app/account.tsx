@@ -58,6 +58,7 @@ export default function AccountScreen() {
           variant="outline"
           onPress={() => router.push({ pathname: '/follow-list', params: { kind: 'my-following' } })}
         />
+        <Button title="Blocked users" variant="outline" onPress={() => router.push('/blocked-users')} />
         <Button title="Sign out" onPress={async () => { await queryClient.cancelQueries(); queryClient.clear(); await signOut(); router.replace('/(tabs)'); }} />
         <View style={{ borderColor: colors.border, borderWidth: 1, borderRadius: 12, padding: 20, gap: 16 }}>
           <Text style={{ color: colors.foreground, fontFamily: 'Inter_600SemiBold', fontSize: 20 }}>Delete account</Text>

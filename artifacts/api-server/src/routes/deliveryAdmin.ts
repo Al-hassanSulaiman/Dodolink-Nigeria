@@ -5,7 +5,9 @@ import { getAuth, clerkClient } from "@clerk/express";
 import {
   db, deliveryAgentsTable, deliveryOrdersTable, deliveryDisputesTable,
   deliveryConversationsTable, deliveryMessagesTable, chatReportsTable, messagesTable,
+  contentReportsTable, storesTable, productsTable, adminsTable,
 } from "@workspace/db";
+import { isProtectedAdminEmail } from "../lib/protectedAdmins";
 import { friendlyName } from "../lib/displayName";
 import {
   paystackListBanks, paystackResolveAccount, paystackCreateRecipient, paystackInitiateTransfer,
@@ -408,6 +410,77 @@ deliveryAdminRouter.post("/admin/reports/:id/resolve", async (req, res): Promise
     status: "resolved", adminNote: note || null, resolvedBy: userId ?? null, resolvedAt: new Date(),
   }).where(eq(chatReportsTable.id, id)).returning() : [];
   if (!updated) { res.status(404).json({ error: "Report not found" }); return; }
+  res.json(updated);
+});
+
+// ---- Reports on stores, products and people (App Store guideline 1.2) ----
+
+deliveryAdminRouter.get("/admin/reports/content", async (_req, res): Promise<void> => {
+  const rows = await db.select().from(contentReportsTable)
+    .orderBy(sql`${contentReportsTable.status} = 'open' desc`, contentReportsTable.createdAt).limit(300);
+  res.json(rows);
+});
+
+// action: "none" | "remove_content" (hide the store / delete the product) | "ban_user" (also removes the content)
+deliveryAdminRouter.post("/admin/reports/content/:id/resolve", async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  const note = typeof req.body?.note === "string" ? req.body.note.trim().slice(0, 1000) : "";
+  const action = req.body?.action ?? "none";
+  if (!Number.isInteger(id) || !["none", "remove_content", "ban_user"].includes(action)) {
+    res.status(400).json({ error: "Invalid request" }); return;
+  }
+  const [report] = await db.select().from(contentReportsTable).where(eq(contentReportsTable.id, id));
+  if (!report) { res.status(404).json({ error: "Report not found" }); return; }
+
+  // Work out who owns the reported thing.
+  let offenderId: string | null = null;
+  const numericTarget = Number(report.targetId);
+  if (report.targetType === "user") {
+    offenderId = report.targetId;
+  } else if (report.targetType === "store" && Number.isInteger(numericTarget)) {
+    const [st] = await db.select({ owner: storesTable.ownerUserId }).from(storesTable).where(eq(storesTable.id, numericTarget));
+    offenderId = st?.owner ?? null;
+  } else if (report.targetType === "product" && Number.isInteger(numericTarget)) {
+    const [row] = await db.select({ owner: storesTable.ownerUserId }).from(productsTable)
+      .innerJoin(storesTable, eq(storesTable.id, productsTable.storeId)).where(eq(productsTable.id, numericTarget));
+    offenderId = row?.owner ?? null;
+  }
+  if (action !== "none" && offenderId) {
+    try {
+      const offender = await clerkClient.users.getUser(offenderId);
+      const emails = offender.emailAddresses.map(e => e.emailAddress.toLowerCase());
+      const [adminRow] = emails.length ? await db.select().from(adminsTable).where(inArray(adminsTable.email, emails)) : [];
+      if (adminRow || emails.some(isProtectedAdminEmail)) {
+        res.status(403).json({ error: "Admins cannot be actioned from here" }); return;
+      }
+    } catch {
+      /* user already gone from Clerk: nothing to protect */
+    }
+  }
+
+  if (action === "remove_content" || action === "ban_user") {
+    if (report.targetType === "product" && Number.isInteger(numericTarget)) {
+      await db.delete(productsTable).where(eq(productsTable.id, numericTarget));
+    } else if (report.targetType === "store" && Number.isInteger(numericTarget)) {
+      await db.update(storesTable).set({ hiddenByAdmin: true }).where(eq(storesTable.id, numericTarget));
+    }
+  }
+  if (action === "ban_user") {
+    if (!offenderId) { res.status(400).json({ error: "No user to ban for this report" }); return; }
+    await db.update(storesTable).set({ hiddenByAdmin: true }).where(eq(storesTable.ownerUserId, offenderId));
+    try {
+      await clerkClient.users.banUser(offenderId);
+    } catch (err) {
+      res.status(502).json({ error: "Could not ban this user right now. Their stores were hidden; try the ban again." });
+      return;
+    }
+  }
+
+  const { userId } = getAuth(req);
+  const [updated] = await db.update(contentReportsTable).set({
+    status: "resolved", adminNote: [action !== "none" ? `Action: ${action}` : "", note].filter(Boolean).join(" · ") || null,
+    resolvedBy: userId ?? null, resolvedAt: new Date(),
+  }).where(eq(contentReportsTable.id, id)).returning();
   res.json(updated);
 });
 

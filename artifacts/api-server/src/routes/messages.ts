@@ -12,6 +12,8 @@ import { validateStoredMedia } from "../lib/mediaLimits";
 import { clerkClient } from "@clerk/express";
 import { resolveMessageContext } from "../lib/messageContext";
 import { friendlyName } from "../lib/displayName";
+import { containsObjectionable, OBJECTIONABLE_MESSAGE } from "../lib/contentFilter";
+import { blockedWith, eitherBlocked, conversationBlocked } from "../lib/blocks";
 
 const router: IRouter = Router();
 const objectStorage = new ObjectStorageService();
@@ -119,7 +121,16 @@ router.get("/conversations", async (req, res): Promise<void> => {
       where ${messagesTable.conversationId} = ${conversationsTable.id}
     )`,
   ));
-  const relevant = allConvs.filter(c => c.customerId === userId || storeIds.includes(c.storeId));
+  const blockedIds = await blockedWith(userId);
+  let ownerByStore = new Map<number, string>();
+  if (blockedIds.size) {
+    const ids = [...new Set(allConvs.map(c => c.storeId))];
+    const owners = ids.length ? await db.select({ id: storesTable.id, owner: storesTable.ownerUserId })
+      .from(storesTable).where(inArray(storesTable.id, ids)) : [];
+    ownerByStore = new Map(owners.map(o => [o.id, o.owner]));
+  }
+  const relevant = allConvs.filter(c => (c.customerId === userId || storeIds.includes(c.storeId)) &&
+    !(blockedIds.size && blockedIds.has(c.customerId === userId ? (ownerByStore.get(c.storeId) ?? "") : c.customerId)));
   const customerStores = await ownedStoreNames(relevant.map(c => c.customerId));
 
   const storeNames: Record<number, string> = {};
@@ -166,8 +177,12 @@ router.post("/conversations/start", startConversationLimit, async (req, res): Pr
   const initialMessage = parsed.data.initialMessage?.trim();
   if (customerId !== authUserId) { res.status(403).json({ error: "customerId must match the authenticated user" }); return; }
 
-  const [store] = await db.select({ name: storesTable.name }).from(storesTable).where(eq(storesTable.id, storeId));
+  const [store] = await db.select({ name: storesTable.name, ownerUserId: storesTable.ownerUserId }).from(storesTable).where(eq(storesTable.id, storeId));
   if (!store) { res.status(404).json({ error: "Store not found" }); return; }
+  if (await eitherBlocked(authUserId, store.ownerUserId)) {
+    res.status(403).json({ error: "You can't message this seller" });
+    return;
+  }
 
   const resolvedCustomerName = await customerDisplayName(authUserId);
 
@@ -287,6 +302,10 @@ router.post("/conversations/:conversationId/messages", sendMessageLimit, async (
   const parsed = SendMessageBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
   if (parsed.data.senderId !== authUserId) { res.status(403).json({ error: "senderId must match the authenticated user" }); return; }
+  if (containsObjectionable(parsed.data.body)) {
+    res.status(400).json({ error: OBJECTIONABLE_MESSAGE });
+    return;
+  }
   if (!parsed.data.body.trim() && !parsed.data.mediaUrl) {
     res.status(400).json({ error: "Enter a message or attach a photo or video" });
     return;
@@ -295,6 +314,10 @@ router.post("/conversations/:conversationId/messages", sendMessageLimit, async (
   const { conv: conversation, allowed } = await loadConversationIfParticipant(conversationId, authUserId);
   if (!conversation) { res.status(404).json({ error: "Conversation not found" }); return; }
   if (!allowed) { res.status(403).json({ error: "You are not a participant in this conversation" }); return; }
+  if (await conversationBlocked(conversation, authUserId)) {
+    res.status(403).json({ error: "You can't message this person" });
+    return;
+  }
 
   const context = await resolveMessageContext(conversationId, conversation.storeId, parsed.data);
   if (!context.ok) { res.status(400).json({ error: context.error }); return; }

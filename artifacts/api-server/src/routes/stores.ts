@@ -7,6 +7,7 @@ import {
   UpdateStoreBody,
 } from "@workspace/api-zod";
 import { visibleStoresFilter, isStoreHidden } from "../lib/storeSubscription";
+import { notBlockedOwnerFilter } from "../lib/blocks";
 import { requireUser } from "../lib/auth";
 import { rateLimit } from "../lib/rateLimit";
 import {
@@ -41,7 +42,8 @@ router.get("/stores", async (req, res): Promise<void> => {
   const ownerFilter = typeof ownerUserId === "string" ? eq(storesTable.ownerUserId, ownerUserId) : undefined;
   const { userId: callerId } = getAuth(req);
   const isOwnerRequest = ownerFilter !== undefined && callerId != null && callerId === ownerUserId;
-  const accessFilter = isOwnerRequest ? ownerFilter : ownerFilter ? and(ownerFilter, visFilter) : visFilter;
+  const notBlocked = notBlockedOwnerFilter(callerId);
+  const accessFilter = isOwnerRequest ? ownerFilter : ownerFilter ? and(ownerFilter, visFilter, notBlocked) : and(visFilter, notBlocked);
 
   let query = db.select().from(storesTable).$dynamic();
   if (category && typeof category === "string") {
@@ -135,17 +137,22 @@ router.patch("/stores/:storeId", async (req, res): Promise<void> => {
   }
 
   const updates = { ...parsed.data };
-  if (existing.detailsLockedByAdmin) {
+  const verified = existing.verificationStatus === "verified";
+  if (existing.detailsLockedByAdmin || verified) {
     const changingName = updates.name !== undefined && updates.name !== existing.name;
     const changingLocation = updates.location !== undefined && updates.location !== existing.location;
-    if (changingName || changingLocation) {
+    const changingDescription = verified && updates.description !== undefined && updates.description !== existing.description;
+    if (changingName || changingLocation || changingDescription) {
       res.status(403).json({
-        error: "Store name and location were set by an admin and can no longer be changed",
+        error: verified
+          ? "This store is verified, so its name, location and description can no longer be changed"
+          : "Store name and location were set by an admin and can no longer be changed",
       });
       return;
     }
     delete updates.name;
     delete updates.location;
+    if (verified) delete updates.description;
   }
 
   if (

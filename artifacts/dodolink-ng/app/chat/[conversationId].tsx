@@ -11,6 +11,7 @@ import {
   getListConversationsQueryKey,
   markConversationRead,
   useGetProduct,
+  useGetStore,
 } from '@workspace/api-client-react';
 import type { Message } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
@@ -28,6 +29,7 @@ import { ChatMedia } from '@/components/ChatMedia';
 import { MessageQuote } from '@/components/MessageQuote';
 import { SwipeReply } from '@/components/SwipeReply';
 import { ReportChatModal } from '@/components/ReportChatModal';
+import { useSafetyMenu } from '@/components/SafetyMenu';
 
 function CopyableMessage({ body, color }: { body: string; color: string }) {
   const [status, setStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
@@ -99,6 +101,17 @@ export default function ChatThreadScreen() {
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [productContextId, setProductContextId] = useState<number | null>(null);
   const [reporting, setReporting] = useState(false);
+  const { data: chatStore } = useGetStore(conversation?.storeId ?? 0, { query: { enabled: !!conversation?.storeId } });
+  const otherUserId = conversation ? (isRetailer ? conversation.customerId : chatStore?.ownerUserId ?? null) : null;
+  const otherName = conversation ? (isRetailer ? conversation.customerName : conversation.storeName) : '';
+  const safety = useSafetyMenu({
+    targetType: 'user',
+    targetId: otherUserId ?? '',
+    targetLabel: otherName ?? '',
+    blockUserId: otherUserId,
+    onReport: () => setReporting(true),
+    onBlocked: () => router.back(),
+  });
   useEffect(() => {
     const value = Number(productParam);
     const valid = Number.isInteger(value) && value > 0 && value <= 2147483647;
@@ -296,7 +309,7 @@ export default function ChatThreadScreen() {
       <Stack.Screen options={{
         title: isRetailer ? (conversation?.customerName ?? "Chat") : (conversation?.storeName ?? "Chat"),
         headerRight: () => (
-          <Pressable onPress={() => setReporting(true)} hitSlop={8} accessibilityLabel="Report a problem">
+          <Pressable onPress={safety.open} hitSlop={8} accessibilityLabel="Report or block">
             <Feather name="flag" size={20} color="#1B5E20" />
           </Pressable>
         ),
@@ -390,6 +403,7 @@ export default function ChatThreadScreen() {
       </View>
     </KeyboardControllerView>
     <PhotoPreview uri={previewUri} onClose={() => setPreviewUri(null)} />
+    {safety.element}
     <ReportChatModal visible={reporting} kind="store" conversationId={id} onClose={() => setReporting(false)} />
     </SafeAreaView>
   );

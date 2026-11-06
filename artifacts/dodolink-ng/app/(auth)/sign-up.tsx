@@ -32,6 +32,7 @@ export default function SignUpPage() {
   const [pendingVerification, setPendingVerification] = React.useState(false);
   const [finalizeFailed, setFinalizeFailed] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
+  const [agreed, setAgreed] = React.useState(false);
 
   const handleSubmit = async () => {
     if (submitting) return;
@@ -238,7 +239,7 @@ export default function SignUpPage() {
     );
   }
 
-  const canSubmit = emailAddress.length > 0 && password.length >= 8 && !isLoading;
+  const canSubmit = emailAddress.length > 0 && password.length >= 8 && agreed && !isLoading;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -344,8 +345,23 @@ export default function SignUpPage() {
             </Link>
           </View>
 
+          <Pressable
+            style={styles.agreeRow}
+            onPress={() => setAgreed(v => !v)}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: agreed }}
+            accessibilityLabel="I agree to the Terms of Service"
+          >
+            <View style={[styles.checkbox, agreed && styles.checkboxOn]}>
+              {agreed ? <Text style={styles.checkMark}>✓</Text> : null}
+            </View>
+            <Text style={styles.agreeText}>
+              I agree to the Terms of Service. There is no tolerance for objectionable content or abusive users;
+              offending content is removed and abusive users are banned.
+            </Text>
+          </Pressable>
           <View style={styles.legalRow}>
-            <Text style={styles.legalText}>By creating an account you agree to our </Text>
+            <Text style={styles.legalText}>Read our </Text>
             <Pressable onPress={() => WebBrowser.openBrowserAsync(TERMS_URL)} hitSlop={6}>
               <Text style={styles.legalLink}>Terms of Service</Text>
             </Pressable>
@@ -496,6 +512,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontFamily: "Inter_600SemiBold",
   },
+  agreeRow: { flexDirection: "row", alignItems: "flex-start", gap: 10, marginTop: 16, paddingHorizontal: 8 },
+  checkbox: {
+    width: 22, height: 22, borderRadius: 5, borderWidth: 2, borderColor: "#1B5E20",
+    alignItems: "center", justifyContent: "center", marginTop: 1,
+  },
+  checkboxOn: { backgroundColor: "#1B5E20" },
+  checkMark: { color: "#fff", fontSize: 14, fontWeight: "700", lineHeight: 16 },
+  agreeText: { flex: 1, fontSize: 13, color: "#374151", fontFamily: "Inter_400Regular", lineHeight: 18 },
   legalRow: {
     flexDirection: "row",
     justifyContent: "center",

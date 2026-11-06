@@ -17,6 +17,7 @@ import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { showAlert } from '@/utils/alerts';
 import { PhotoPreview } from '@/components/PhotoPreview';
+import { useSafetyMenu } from '@/components/SafetyMenu';
 
 export default function ProductScreen() {
   const { width: SCREEN_WIDTH } = useWindowDimensions();
@@ -74,6 +75,13 @@ export default function ProductScreen() {
   const handleImgError = (index: number) => setImgErrors(prev => ({ ...prev, [index]: true }));
 
   const isOwner = !!userId && !!store && store.ownerUserId === userId;
+  const safety = useSafetyMenu({
+    targetType: 'product',
+    targetId: productId,
+    targetLabel: product?.name ?? '',
+    blockUserId: store && store.ownerUserId !== userId ? store.ownerUserId : null,
+    onBlocked: () => router.back(),
+  });
   const refreshing = productLoading || storeLoading;
 
   if ((productLoading || storeLoading) && !product) return <LoadingScreen message="Loading product..." />;
@@ -98,7 +106,15 @@ export default function ProductScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Stack.Screen options={{ title: product.name }} />
+      <Stack.Screen options={{
+        title: product.name,
+        headerRight: isOwner ? undefined : () => (
+          <Pressable onPress={safety.open} hitSlop={8} accessibilityLabel="Report or block">
+            <Feather name="flag" size={18} color={colors.mutedForeground} />
+          </Pressable>
+        ),
+      }} />
+      {safety.element}
       <PhotoPreview uri={previewUri} images={images.map(getImageUrl)} title={product.name} onClose={() => setPreviewUri(null)} />
       <ScrollView 
         contentContainerStyle={styles.content}

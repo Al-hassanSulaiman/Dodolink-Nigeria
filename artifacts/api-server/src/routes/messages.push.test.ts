@@ -100,6 +100,13 @@ function makeUpdateChain() {
 
 const notifyTokensMock = vi.fn().mockResolvedValue(undefined);
 
+vi.mock("../lib/blocks", () => ({
+  eitherBlocked: vi.fn().mockResolvedValue(false),
+  blockedWith: vi.fn().mockResolvedValue(new Set()),
+  conversationBlocked: vi.fn().mockResolvedValue(false),
+  notBlockedOwnerFilter: vi.fn(),
+}));
+
 vi.mock("../lib/push", () => ({
   notifyTokens: notifyTokensMock,
   sendPushNotification: vi.fn().mockResolvedValue(undefined),

@@ -30,6 +30,7 @@ import { useStoreFollowStatus } from '@/hooks/useHomeFeed';
 import { useFollowTotal } from '@/hooks/useFollowLists';
 import { formatCount } from '@/components/FollowButton';
 import { useQueryClient } from '@tanstack/react-query';
+import { useSafetyMenu } from '@/components/SafetyMenu';
 
 export default function StoreScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -97,7 +98,15 @@ export default function StoreScreen() {
   });
 
   const isOwner = !!userId && !!store && store.ownerUserId === userId;
-  const detailsLocked = !!store?.detailsLockedByAdmin;
+  const safety = useSafetyMenu({
+    targetType: 'store',
+    targetId: storeId,
+    targetLabel: store?.name ?? '',
+    blockUserId: store && store.ownerUserId !== userId ? store.ownerUserId : null,
+    onBlocked: () => router.back(),
+  });
+  const profileVerified = store?.verificationStatus === 'verified';
+  const detailsLocked = !!store?.detailsLockedByAdmin || profileVerified;
   const startConversation = useStartConversation({
     mutation: {
       onSuccess: (conversation) => {
@@ -145,7 +154,7 @@ export default function StoreScreen() {
               name: editName.trim() || store!.name,
               location: editLocation.trim(),
             }),
-        description: editDescription.trim(),
+        ...(profileVerified ? {} : { description: editDescription.trim() }),
         category: editCategory.trim(),
         phone: editPhone.trim(),
         cacNumber: editCacNumber.trim() || null,
@@ -208,9 +217,14 @@ export default function StoreScreen() {
                 <Feather name="edit-2" size={18} color={colors.mutedForeground} />
               </Pressable>
             )
-          ) : undefined,
+          ) : (
+            <Pressable onPress={safety.open} hitSlop={8} style={styles.headerBtn} accessibilityLabel="Report or block">
+              <Feather name="flag" size={18} color={colors.mutedForeground} />
+            </Pressable>
+          ),
         }}
       />
+      {safety.element}
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={storeLoading} onRefresh={onRefresh} />}
@@ -332,18 +346,22 @@ export default function StoreScreen() {
               <View style={[styles.lockedNotice, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <Feather name="lock" size={14} color={colors.mutedForeground} />
                 <Text style={[styles.lockedNoticeText, { color: colors.mutedForeground }]}>
-                  Your store name and location were set by Dodolink admin and can no longer be changed.
+                  Your store is verified, so its name, location and description can no longer be changed.
                 </Text>
               </View>
             ) : null}
             <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Description</Text>
-            <Input
-              value={editDescription}
-              onChangeText={setEditDescription}
-              placeholder="Tell customers about your store..."
-              multiline
-              style={styles.textArea}
-            />
+            {profileVerified ? (
+              <Text style={{ color: colors.mutedForeground }}>{store.description} <Feather name="lock" size={12} /></Text>
+            ) : (
+              <Input
+                value={editDescription}
+                onChangeText={setEditDescription}
+                placeholder="Tell customers about your store..."
+                multiline
+                style={styles.textArea}
+              />
+            )}
             <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Category</Text>
             <Input
               value={editCategory}

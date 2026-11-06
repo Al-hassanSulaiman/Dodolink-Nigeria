@@ -61,6 +61,18 @@ export default function TermsOfServicePage() {
               We reserve the right to investigate suspected violations and take any action we deem
               appropriate, including removing content or suspending accounts.
             </p>
+            <p className="text-gray-700 mt-2 font-medium">
+              Zero tolerance: there is no place on Dodolink NG for objectionable content or abusive
+              users. This includes hate speech, harassment, threats, sexual or violent content, scams,
+              and any content that exploits or endangers others. By creating an account you agree to
+              these terms.
+            </p>
+            <p className="text-gray-700 mt-2">
+              Any user can report a store, product or person from inside the App, and can block another
+              user, which immediately removes that person's content from their view and stops them from
+              messaging them. We review every report within 24 hours. Content that breaks these rules is
+              removed and the user who posted it is ejected from the App.
+            </p>
           </section>
 
           <section>
