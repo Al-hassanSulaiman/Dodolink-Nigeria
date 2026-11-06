@@ -60,6 +60,14 @@ jobs:
             await page.goto("http://localhost:4173" + process.env.PAGE_PATH, { waitUntil: "load" });
             await page.waitForTimeout(12000);
             console.log("BODY TEXT:", (await page.innerText("body")).slice(0, 500));
+            for (const target of ["/store/1", "/store/3", "/product/14", "/search"]) {
+              await page.goto("http://localhost:4173" + target, { waitUntil: "load" });
+              await page.waitForTimeout(6000);
+              console.log("PAGE", target, "=>", (await page.innerText("body")).replace(/\s+/g, " ").slice(0, 160));
+            }
+            await page.goto("http://localhost:4173/", { waitUntil: "load" });
+            await page.waitForTimeout(6000);
+            try { await page.locator('[aria-label*="suggested store"]').first().click({ timeout: 5000 }); await page.waitForTimeout(5000); console.log("AFTER TAP:", page.url(), (await page.innerText("body")).replace(/\s+/g, " ").slice(0, 200)); } catch (e) { console.log("TAP FAILED", String(e).slice(0, 200)); }
             await browser.close(); process.exit(0);
           });
           JS
