@@ -2,7 +2,7 @@ import { useRef } from "react";
 import type { PointerEvent } from "react";
 import { ActivityIndicator, FlatList, Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { Link } from "expo-router";
 import type { HomeStore } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { getImageUrl } from "@/utils/storage";
@@ -13,32 +13,34 @@ export function truncateName(name: string, max = 11) {
   return name.length > max ? `${name.slice(0, max)}..` : name;
 }
 
-function Circle({ store, shouldSuppress }: { store: HomeStore; shouldSuppress: () => boolean }) {
+function Circle({ store }: { store: HomeStore }) {
   const colors = useColors();
   const ring = store.isFollowing ? colors.primary : colors.accent;
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${store.name}, ${store.isFollowing ? "following" : "suggested store"}`}
-      onPress={() => { if (!shouldSuppress()) router.push(`/store/${store.id}`); }}
-      style={({ pressed }) => [styles.item, pressed && { opacity: 0.7 }]}
-    >
-      <View style={[styles.ring, { borderColor: ring }]}>
-        {store.imageUrl ? (
-          <Image source={{ uri: getImageUrl(store.imageUrl) }} style={[styles.img, { backgroundColor: colors.muted }]} />
-        ) : (
-          <View style={[styles.img, styles.initial, { backgroundColor: colors.secondary }]}>
-            <Text style={[styles.initialText, { color: colors.secondaryForeground }]}>{store.name.slice(0, 1).toUpperCase()}</Text>
-          </View>
-        )}
-        {!store.isFollowing && (
-          <View style={[styles.badge, { backgroundColor: colors.foreground, borderColor: colors.background }]}>
-            <Feather name="user-plus" size={11} color={colors.background} />
-          </View>
-        )}
-      </View>
-      <Text numberOfLines={1} style={[styles.name, { color: colors.foreground }]}>{truncateName(store.name)}</Text>
-    </Pressable>
+    <Link href={`/store/${store.id}`} asChild>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${store.name}, ${store.isFollowing ? "following" : "suggested store"}`}
+        hitSlop={4}
+        style={({ pressed }) => [styles.item, pressed && { opacity: 0.7 }]}
+      >
+        <View style={[styles.ring, { borderColor: ring }]}>
+          {store.imageUrl ? (
+            <Image source={{ uri: getImageUrl(store.imageUrl) }} style={[styles.img, { backgroundColor: colors.muted }]} />
+          ) : (
+            <View style={[styles.img, styles.initial, { backgroundColor: colors.secondary }]}>
+              <Text style={[styles.initialText, { color: colors.secondaryForeground }]}>{store.name.slice(0, 1).toUpperCase()}</Text>
+            </View>
+          )}
+          {!store.isFollowing && (
+            <View style={[styles.badge, { backgroundColor: colors.foreground, borderColor: colors.background }]}>
+              <Feather name="user-plus" size={11} color={colors.background} />
+            </View>
+          )}
+        </View>
+        <Text numberOfLines={1} style={[styles.name, { color: colors.foreground }]}>{truncateName(store.name)}</Text>
+      </Pressable>
+    </Link>
   );
 }
 
@@ -144,7 +146,8 @@ export function StoreRail({ stores, isLoading, isError, hasNextPage, isFetchingN
         horizontal
         data={stores}
         keyExtractor={(s) => String(s.id)}
-        renderItem={({ item }) => <Circle store={item} shouldSuppress={shouldSuppress} />}
+        renderItem={({ item }) => <Circle store={item} />}
+        keyboardShouldPersistTaps="handled"
         showsHorizontalScrollIndicator={Platform.OS === "web"}
         contentContainerStyle={styles.row}
         onScroll={(e) => { offset.current = e.nativeEvent.contentOffset.x; }}

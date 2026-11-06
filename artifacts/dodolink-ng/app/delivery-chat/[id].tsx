@@ -221,7 +221,7 @@ export default function DeliveryChatScreen() {
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
           ListFooterComponent={data.messages.length === 0 ? (
-            <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginVertical: 40, transform: [{ scaleY: -1 }] }}>
+            <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginVertical: 40 }}>
               Say hello and describe what you want delivered, and where from and to.
             </Text>
           ) : null}
