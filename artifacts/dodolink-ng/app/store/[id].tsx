@@ -30,6 +30,7 @@ import { useStoreFollowStatus } from '@/hooks/useHomeFeed';
 import { useFollowTotal } from '@/hooks/useFollowLists';
 import { formatCount } from '@/components/FollowButton';
 import { useQueryClient } from '@tanstack/react-query';
+import { useSafetyMenu } from '@/components/SafetyMenu';
 
 export default function StoreScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -97,6 +98,13 @@ export default function StoreScreen() {
   });
 
   const isOwner = !!userId && !!store && store.ownerUserId === userId;
+  const safety = useSafetyMenu({
+    targetType: 'store',
+    targetId: storeId,
+    targetLabel: store?.name ?? '',
+    blockUserId: store && store.ownerUserId !== userId ? store.ownerUserId : null,
+    onBlocked: () => router.back(),
+  });
   const detailsLocked = !!store?.detailsLockedByAdmin;
   const startConversation = useStartConversation({
     mutation: {
@@ -208,9 +216,14 @@ export default function StoreScreen() {
                 <Feather name="edit-2" size={18} color={colors.mutedForeground} />
               </Pressable>
             )
-          ) : undefined,
+          ) : (
+            <Pressable onPress={safety.open} hitSlop={8} style={styles.headerBtn} accessibilityLabel="Report or block">
+              <Feather name="flag" size={18} color={colors.mutedForeground} />
+            </Pressable>
+          ),
         }}
       />
+      {safety.element}
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={storeLoading} onRefresh={onRefresh} />}

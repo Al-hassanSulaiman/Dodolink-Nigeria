@@ -13,6 +13,10 @@ type Report = {
   id: number; kind: "store" | "delivery"; conversationId: number; reporterName: string; otherPartyName: string;
   reason: string; status: "open" | "resolved"; adminNote: string | null; createdAt: string;
 };
+type ContentReport = {
+  id: number; targetType: "store" | "product" | "user"; targetId: string; targetLabel: string; reporterName: string;
+  reason: string; status: "open" | "resolved"; adminNote: string | null; createdAt: string;
+};
 type Msg = { id: number; senderName: string; senderType: string; body: string; mediaUrl: string | null; createdAt: string };
 
 const when = (v: string) => new Date(v).toLocaleString("en-NG", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -26,6 +30,13 @@ export default function ReportsPage() {
   const chat = useQuery({
     queryKey: ["admin-report-chat", open?.id], enabled: !!open,
     queryFn: () => customFetch<{ messages: Msg[] }>(`/api/admin/reports/${open!.id}/chat`),
+  });
+  const contentReports = useQuery({ queryKey: ["admin-content-reports"], queryFn: () => customFetch<ContentReport[]>("/api/admin/reports/content") });
+  const actOnContent = useMutation({
+    mutationFn: (v: { id: number; action: "none" | "remove_content" | "ban_user" }) =>
+      customFetch(`/api/admin/reports/content/${v.id}/resolve`, { method: "POST", body: JSON.stringify({ action: v.action }) }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["admin-content-reports"] }); toast.success("Report closed"); },
+    onError: err => toast.error(errorMessage(err)),
   });
   const resolve = useMutation({
     mutationFn: () => customFetch(`/api/admin/reports/${open!.id}/resolve`, { method: "POST", body: JSON.stringify({ note }) }),
@@ -60,6 +71,40 @@ export default function ReportsPage() {
           {(reports.data ?? []).length === 0 && <p className="text-sm text-gray-600">No reports.</p>}
         </div>
       )}
+
+      <div>
+        <h2 className="text-xl font-bold text-gray-900">Reported stores, products and people</h2>
+        <p className="text-sm text-gray-600">Reports and blocks from users. Apple needs each one acted on within 24 hours.</p>
+      </div>
+      <div className="space-y-3">
+        {(contentReports.data ?? []).map(r => (
+          <Card key={r.id}>
+            <CardContent className="py-4 flex items-center justify-between gap-4 flex-wrap">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-gray-900">
+                  <Flag className="inline w-4 h-4 mr-1 text-amber-600" />
+                  {r.reporterName} reported {r.targetLabel || r.targetId}
+                  <span className="ml-2 text-xs rounded-full bg-gray-100 px-2 py-0.5 text-gray-700 capitalize">{r.targetType}</span>
+                  {r.status === "resolved" && <span className="ml-2 text-xs rounded-full bg-green-100 px-2 py-0.5 text-green-800">Closed</span>}
+                </p>
+                <p className="text-xs text-gray-600">{when(r.createdAt)} · {r.reason}{r.adminNote ? ` · ${r.adminNote}` : ""}</p>
+              </div>
+              {r.status === "open" && (
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" disabled={actOnContent.isPending} onClick={() => actOnContent.mutate({ id: r.id, action: "none" })}>No action</Button>
+                  {r.targetType !== "user" && (
+                    <Button variant="outline" size="sm" disabled={actOnContent.isPending}
+                      onClick={() => confirm("Remove this content?") && actOnContent.mutate({ id: r.id, action: "remove_content" })}>Remove content</Button>
+                  )}
+                  <Button variant="destructive" size="sm" disabled={actOnContent.isPending}
+                    onClick={() => confirm("Ban this user and hide their stores?") && actOnContent.mutate({ id: r.id, action: "ban_user" })}>Ban user</Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+        {(contentReports.data ?? []).length === 0 && <p className="text-sm text-gray-600">No reports.</p>}
+      </div>
 
       <Dialog open={!!open} onOpenChange={v => !v && setOpen(null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">

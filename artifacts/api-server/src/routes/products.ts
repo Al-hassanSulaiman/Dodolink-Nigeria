@@ -3,6 +3,8 @@ import { getAuth } from "@clerk/express";
 import { eq, and, desc, inArray, sql } from "drizzle-orm";
 import { db, productsTable, storesTable } from "@workspace/db";
 import { CreateProductBody, UpdateProductBody } from "@workspace/api-zod";
+import { containsObjectionable, OBJECTIONABLE_MESSAGE } from "../lib/contentFilter";
+import { notBlockedOwnerFilter } from "../lib/blocks";
 import { requireUser } from "../lib/auth";
 import { isStoreHidden, visibleStoresFilter } from "../lib/storeSubscription";
 
@@ -36,6 +38,8 @@ const productSelect = {
 router.get("/products", async (req, res): Promise<void> => {
   const { limit = 30, offset = 0, featured } = req.query;
   const isFeatured = featured === "true";
+  const { userId: viewerId } = getAuth(req);
+  const notBlocked = notBlockedOwnerFilter(viewerId);
 
   const topStoreIds = db
     .select({ id: storesTable.id })
@@ -54,8 +58,8 @@ router.get("/products", async (req, res): Promise<void> => {
     .leftJoin(storesTable, eq(productsTable.storeId, storesTable.id))
     .where(
       isFeatured
-        ? and(visibleStoresFilter(), inArray(productsTable.storeId, topStoreIds))
-        : visibleStoresFilter(),
+        ? and(visibleStoresFilter(), notBlocked, inArray(productsTable.storeId, topStoreIds))
+        : and(visibleStoresFilter(), notBlocked),
     )
     .$dynamic();
 
@@ -98,6 +102,9 @@ router.post("/stores/:storeId/products", async (req, res): Promise<void> => {
 
   const parsed = CreateProductBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  if (containsObjectionable(parsed.data.name, parsed.data.description)) {
+    res.status(400).json({ error: OBJECTIONABLE_MESSAGE }); return;
+  }
 
   const [store] = await db.select({ name: storesTable.name, ownerUserId: storesTable.ownerUserId }).from(storesTable).where(eq(storesTable.id, storeId));
   if (!store) { res.status(404).json({ error: "Store not found" }); return; }
@@ -138,6 +145,9 @@ router.patch("/products/:productId", async (req, res): Promise<void> => {
 
   const parsed = UpdateProductBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  if (containsObjectionable(parsed.data.name, parsed.data.description)) {
+    res.status(400).json({ error: OBJECTIONABLE_MESSAGE }); return;
+  }
 
   const owner = await productStoreOwner(productId);
   if (!owner.found) { res.status(404).json({ error: "Product not found" }); return; }

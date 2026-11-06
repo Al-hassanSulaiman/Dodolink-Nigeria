@@ -7,6 +7,7 @@ import {
   UpdateStoreBody,
 } from "@workspace/api-zod";
 import { visibleStoresFilter, isStoreHidden } from "../lib/storeSubscription";
+import { notBlockedOwnerFilter } from "../lib/blocks";
 import { requireUser } from "../lib/auth";
 import { rateLimit } from "../lib/rateLimit";
 import {
@@ -41,7 +42,8 @@ router.get("/stores", async (req, res): Promise<void> => {
   const ownerFilter = typeof ownerUserId === "string" ? eq(storesTable.ownerUserId, ownerUserId) : undefined;
   const { userId: callerId } = getAuth(req);
   const isOwnerRequest = ownerFilter !== undefined && callerId != null && callerId === ownerUserId;
-  const accessFilter = isOwnerRequest ? ownerFilter : ownerFilter ? and(ownerFilter, visFilter) : visFilter;
+  const notBlocked = notBlockedOwnerFilter(callerId);
+  const accessFilter = isOwnerRequest ? ownerFilter : ownerFilter ? and(ownerFilter, visFilter, notBlocked) : and(visFilter, notBlocked);
 
   let query = db.select().from(storesTable).$dynamic();
   if (category && typeof category === "string") {

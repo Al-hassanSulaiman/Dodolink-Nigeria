@@ -13,6 +13,7 @@ import {
 import adminReviewAccessRouter from "./adminReviewAccess";
 import { portfolioAdminRouter } from "./portfolioAnalytics";
 import { deliveryAdminRouter } from "./deliveryAdmin";
+import { BOOTSTRAP_ADMIN_EMAILS, isProtectedAdminEmail } from "../lib/protectedAdmins";
 import { canOpen, pageForPath, parsePermissions, type AdminPermissions } from "../lib/adminPermissions";
 
 /**
@@ -20,14 +21,8 @@ import { canOpen, pageForPath, parsePermissions, type AdminPermissions } from ".
  * migration), these owner emails are inserted so the owner is never locked
  * out. Ongoing admin management happens in the database via the dashboard.
  */
-const BOOTSTRAP_ADMIN_EMAILS = [
-  "alhassansulaiman1369@gmail.com",
-  "alhassansulaiman5star@gmail.com",
-];
 
 /** The two owner emails can never be revoked, whatever the admins table says. */
-const isProtectedAdminEmail = (email: string) =>
-  BOOTSTRAP_ADMIN_EMAILS.some((owner) => owner.toLowerCase() === email.toLowerCase());
 
 let bootstrapChecked = false;
 

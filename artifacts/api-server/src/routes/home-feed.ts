@@ -3,6 +3,7 @@ import { getAuth } from "@clerk/express";
 import { sql } from "drizzle-orm";
 import { db, storesTable, productsTable, storeFollowsTable } from "@workspace/db";
 import { visibleStoresFilter } from "../lib/storeSubscription";
+import { notBlockedOwnerFilter } from "../lib/blocks";
 
 const router: IRouter = Router();
 for (const kind of ["stores", "products"] as const) {
@@ -43,7 +44,7 @@ for (const kind of ["stores", "products"] as const) {
     const result = await db.execute(sql`
       WITH base AS (
         SELECT ${columns}, ${following} AS "isFollowing", ${followers} AS "followerCount", ${shuffle} AS shuffle
-        ${source} WHERE ${visibleStoresFilter()}
+        ${source} WHERE ${visibleStoresFilter()} AND ${notBlockedOwnerFilter(userId)}
       ), diversified AS (
         SELECT *, ${diversity} AS store_rank FROM base
       ), ranked AS (

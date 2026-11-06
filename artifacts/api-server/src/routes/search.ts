@@ -1,7 +1,9 @@
 import { Router, type IRouter } from "express";
 import { ilike, or, eq, and } from "drizzle-orm";
 import { db, storesTable, productsTable } from "@workspace/db";
+import { getAuth } from "@clerk/express";
 import { visibleStoresFilter } from "../lib/storeSubscription";
+import { notBlockedOwnerFilter } from "../lib/blocks";
 
 const router: IRouter = Router();
 
@@ -15,12 +17,15 @@ router.get("/search", async (req, res): Promise<void> => {
   if (!q) { res.json({ stores: [], products: [], query: q }); return; }
 
   const pattern = `%${q}%`;
+  const { userId: viewerId } = getAuth(req);
+  const notBlocked = notBlockedOwnerFilter(viewerId);
 
   const stores = await db
     .select()
     .from(storesTable)
     .where(and(
       visibleStoresFilter(),
+      notBlocked,
       or(ilike(storesTable.name, pattern), ilike(storesTable.category, pattern), ilike(storesTable.location, pattern))
     ));
 
@@ -41,6 +46,7 @@ router.get("/search", async (req, res): Promise<void> => {
     .leftJoin(storesTable, eq(productsTable.storeId, storesTable.id))
     .where(and(
       visibleStoresFilter(),
+      notBlocked,
       or(ilike(productsTable.name, pattern), ilike(productsTable.category, pattern), ilike(productsTable.description, pattern))
     ));
 

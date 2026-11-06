@@ -21,6 +21,7 @@ import deliveryRouter from "./delivery";
 import deliveryOrdersRouter from "./deliveryOrders";
 import deliverySubscriptionRouter from "./deliverySubscription";
 import chatReportsRouter from "./chatReports";
+import safetyRouter from "./safety";
 
 const router: IRouter = Router();
 
@@ -36,6 +37,7 @@ router.use(deliveryRouter);
 router.use(deliveryOrdersRouter);
 router.use(deliverySubscriptionRouter);
 router.use(chatReportsRouter);
+router.use(safetyRouter);
 router.use(storesRouter);
 router.use(productsRouter);
 router.use(searchRouter);
