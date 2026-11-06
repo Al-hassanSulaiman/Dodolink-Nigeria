@@ -1,0 +1,60 @@
+# Opens the website build in a real browser and prints any crash with a readable stack. Manual only, deploys nothing.
+name: Web crash check (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      path:
+        description: "Page to open (for example / or /store/1)"
+        default: "/"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      CI: "1"
+      EXPO_NO_DOTENV: "1"
+      EXPO_PUBLIC_DOMAIN: dodolink.com.ng
+      EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.DODOLINK_CLERK_PRODUCTION_PUBLISHABLE_KEY }}
+      NODE_OPTIONS: --max-old-space-size=3072
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: pnpm install --frozen-lockfile
+      - name: Export web app without minifying (readable errors)
+        working-directory: artifacts/dodolink-ng
+        run: pnpm exec expo export --platform web --no-minify --output-dir /tmp/webdbg
+      - name: Open it in Chromium
+        run: |
+          mkdir -p /tmp/pw && cd /tmp/pw && npm init -y >/dev/null && npm i playwright >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null 2>&1
+          cat > run.js <<'JS'
+          const { chromium } = require("playwright");
+          const http = require("http"), fs = require("fs"), path = require("path");
+          const root = "/tmp/webdbg";
+          const types = { ".js": "text/javascript", ".html": "text/html", ".css": "text/css", ".json": "application/json", ".ttf": "font/ttf", ".png": "image/png" };
+          http.createServer((req, res) => {
+            let p = path.join(root, decodeURIComponent(req.url.split("?")[0]));
+            if (!fs.existsSync(p) || fs.statSync(p).isDirectory()) p = path.join(root, "index.html");
+            res.setHeader("content-type", types[path.extname(p)] || "application/octet-stream");
+            fs.createReadStream(p).pipe(res);
+          }).listen(4173, async () => {
+            const browser = await chromium.launch({ args: ["--disable-web-security"] });
+            const page = await browser.newPage();
+            page.on("pageerror", e => console.log("PAGEERROR:", e.message, "\n", (e.stack || "").split("\n").slice(0, 12).join("\n")));
+            page.on("console", m => { if (m.type() === "error") console.log("CONSOLE:", m.text().slice(0, 600)); });
+            await page.goto("http://localhost:4173" + process.env.PAGE_PATH, { waitUntil: "load" });
+            await page.waitForTimeout(12000);
+            console.log("BODY TEXT:", (await page.innerText("body")).slice(0, 500));
+            await browser.close(); process.exit(0);
+          });
+          JS
+          PAGE_PATH="${{ inputs.path }}" node run.js
