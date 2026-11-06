@@ -31,3 +31,4 @@ pnpm --filter @workspace/admin-dashboard run typecheck
 pnpm --filter @workspace/api-server run build
 node artifacts/api-server/scripts/gcp-build-frontends.mjs
 node artifacts/api-server/scripts/gcp-prepare-runtime.mjs --with-frontends
+echo "ICON DIAG:"; cd generated-artifacts/gcp-web/app; grep -rhoE "[^\"'(]*Feather[^\"')]*\.ttf" _expo index.html 2>/dev/null | sort -u | head -5; grep -rhoE "uri:[^}]{0,200}Feather[^}]{0,80}" _expo 2>/dev/null | head -3; grep -rhoE "httpServerLocation[^}]{0,200}Feather[^}]{0,60}" _expo 2>/dev/null | head -3; grep -rhoE ".{120}Feather\.[a-f0-9]{32}.{60}" _expo 2>/dev/null | head -3; cd - >/dev/null

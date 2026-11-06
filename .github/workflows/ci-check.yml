@@ -4,7 +4,7 @@ name: CI check (no deploy)
 
 on:
   push:
-    branches: [main, release/merge-all, fix/chat-list-polish, feat/delivery, feat/delivery-otp-payouts, feat/speed-and-admin, fix/splash-dark, fix/grace-7-days, feat/protected-admins-update-prompt, feat/delivery-chat-parity, feat/admin-page-access, feat/user-safety, fix/web-fonts-admin-theme, feat/security-headers-build21]
+    branches: [main, release/merge-all, fix/chat-list-polish, feat/delivery, feat/delivery-otp-payouts, feat/speed-and-admin, fix/splash-dark, fix/grace-7-days, feat/protected-admins-update-prompt, feat/delivery-chat-parity, feat/admin-page-access, feat/user-safety, fix/web-fonts-admin-theme, feat/security-headers-build21, diag/web-icons]
   workflow_dispatch:
 
 permissions:
