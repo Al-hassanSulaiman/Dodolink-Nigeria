@@ -10,6 +10,7 @@ import { useActiveScreen } from "@/hooks/useActiveScreen";
 import { getUnreadSupportMessageIds } from "@/utils/supportUnread";
 import { useHomeFeed } from "@/hooks/useHomeFeed";
 import { StoreRail } from "@/components/home/StoreRail";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { HomeProductCard } from "@/components/home/HomeProductCard";
 import { EmptyState } from "@/components/EmptyState";
 
@@ -74,6 +75,11 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      <ErrorBoundary FallbackComponent={({ resetError }) => (
+        <Pressable onPress={resetError} accessibilityRole="button" style={[styles.nudge, { backgroundColor: colors.secondary }]}>
+          <Text style={{ color: colors.secondaryForeground }}>Couldn't show stores. Tap to retry.</Text>
+        </Pressable>
+      )}>
       <StoreRail
         stores={storeItems}
         isLoading={stores.isLoading}
@@ -84,6 +90,7 @@ export default function HomeScreen() {
         onLoadMore={() => stores.fetchNextPage()}
         onRetry={() => stores.refetch()}
       />
+      </ErrorBoundary>
 
       {!stores.isLoading && !followsSomeone && (
         <View style={[styles.nudge, { backgroundColor: colors.secondary }]}>
