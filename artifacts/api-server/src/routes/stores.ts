@@ -137,17 +137,22 @@ router.patch("/stores/:storeId", async (req, res): Promise<void> => {
   }
 
   const updates = { ...parsed.data };
-  if (existing.detailsLockedByAdmin) {
+  const verified = existing.verificationStatus === "verified";
+  if (existing.detailsLockedByAdmin || verified) {
     const changingName = updates.name !== undefined && updates.name !== existing.name;
     const changingLocation = updates.location !== undefined && updates.location !== existing.location;
-    if (changingName || changingLocation) {
+    const changingDescription = verified && updates.description !== undefined && updates.description !== existing.description;
+    if (changingName || changingLocation || changingDescription) {
       res.status(403).json({
-        error: "Store name and location were set by an admin and can no longer be changed",
+        error: verified
+          ? "This store is verified, so its name, location and description can no longer be changed"
+          : "Store name and location were set by an admin and can no longer be changed",
       });
       return;
     }
     delete updates.name;
     delete updates.location;
+    if (verified) delete updates.description;
   }
 
   if (
