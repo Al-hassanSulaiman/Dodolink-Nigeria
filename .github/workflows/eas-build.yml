@@ -1,0 +1,54 @@
+# Builds the iPhone/Android app on Expo's servers, and optionally sends the iPhone build to App Store Connect.
+# Manual only. Needs repository secrets: EXPO_TOKEN, and for submitting: ASC_API_KEY_P8 (the full text of the .p8 file).
+name: Build app with EAS (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: "Which app to build"
+        type: choice
+        options: [ios, android, all]
+        default: ios
+      submit_ios:
+        description: "Also send the iPhone build to App Store Connect"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Write App Store Connect key
+        if: ${{ inputs.submit_ios }}
+        env:
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+        run: |
+          test -n "$ASC_API_KEY_P8" || { echo "Secret ASC_API_KEY_P8 is missing"; exit 1; }
+          printf '%s\n' "$ASC_API_KEY_P8" > /tmp/AuthKey_5B5WP5KMAG.p8
+      - name: Build
+        working-directory: artifacts/dodolink-ng
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          test -n "$EXPO_TOKEN" || { echo "Secret EXPO_TOKEN is missing"; exit 1; }
+          npx --yes eas-cli@latest build --platform "${{ inputs.platform }}" --profile production --non-interactive --no-wait
+      - name: Submit iPhone build to App Store Connect
+        if: ${{ inputs.submit_ios && inputs.platform != 'android' }}
+        working-directory: artifacts/dodolink-ng
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          npx --yes eas-cli@latest submit --platform ios --profile production --latest --non-interactive --no-wait
