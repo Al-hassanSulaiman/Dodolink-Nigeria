@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { getAuth, clerkClient } from "@clerk/express";
 import { and, asc, eq, count, desc, sql, inArray } from "drizzle-orm";
-import { db, storesTable, productsTable, conversationsTable, supportMessagesTable, pushTokensTable, adminsTable, contactLeadsTable } from "@workspace/db";
+import { db, chatReportsTable, contentReportsTable, storesTable, productsTable, conversationsTable, supportMessagesTable, pushTokensTable, adminsTable, contactLeadsTable } from "@workspace/db";
 import { AdminRejectStoreBody, AdminUpdateStoreBody, AdminSetPaymentExemptionBody, SendSupportMessageBody, AdminAddAdminBody } from "@workspace/api-zod";
 import { notifyTokens } from "../lib/push";
 import { withStoreChargeLock } from "../lib/subscriptionBilling";
@@ -119,6 +119,23 @@ const router: IRouter = Router();
 router.use("/admin", requireAdmin, requirePagePermission);
 router.get("/admin/me", (_req, res): void => {
   res.json({ email: res.locals.adminEmail ?? null, permissions: res.locals.adminPermissions ?? null });
+});
+/** Little red numbers in the dashboard menu: what is waiting for this admin. */
+router.get("/admin/badges", async (_req, res): Promise<void> => {
+  const perms = (res.locals.adminPermissions ?? null) as AdminPermissions;
+  const out = { reports: 0, support: 0 };
+  if (canOpen(perms, "reports")) {
+    const [a] = await db.select({ n: count() }).from(chatReportsTable).where(eq(chatReportsTable.status, "open"));
+    const [b] = await db.select({ n: count() }).from(contentReportsTable).where(eq(contentReportsTable.status, "open"));
+    out.reports = Number(a?.n ?? 0) + Number(b?.n ?? 0);
+  }
+  if (canOpen(perms, "support")) {
+    const [c] = await db.select({ n: count() }).from(supportMessagesTable)
+      .where(and(eq(supportMessagesTable.senderRole, "user"), eq(supportMessagesTable.readByAdmin, false)));
+    out.support = Number(c?.n ?? 0);
+  }
+  res.setHeader("Cache-Control", "no-store");
+  res.json(out);
 });
 router.use(portfolioAdminRouter);
 router.use(adminReviewAccessRouter);

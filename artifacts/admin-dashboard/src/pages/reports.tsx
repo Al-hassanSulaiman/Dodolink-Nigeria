@@ -126,8 +126,8 @@ export default function ReportsPage() {
           </div>
           {open?.status === "open" ? (
             <form className="flex gap-2" onSubmit={e => { e.preventDefault(); resolve.mutate(); }}>
-              <Input placeholder="Your note (what you decided)" value={note} onChange={e => setNote(e.target.value)} maxLength={1000} />
-              <Button type="submit" disabled={resolve.isPending}>Close report</Button>
+              <Input placeholder="Write your reply or decision here" value={note} onChange={e => setNote(e.target.value)} maxLength={1000} />
+              <Button type="submit" disabled={resolve.isPending}>Send reply and close report</Button>
             </form>
           ) : open?.adminNote ? <p className="text-sm text-gray-700">Note: {open.adminNote}</p> : null}
         </DialogContent>

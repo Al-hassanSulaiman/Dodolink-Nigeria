@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Switch, Route, Router as WouterRouter, Redirect, useLocation, Link } from "wouter";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "sonner";
@@ -24,7 +24,7 @@ import {
   useAdminListSupportThreads,
   getAdminListSupportThreadsQueryKey,
 } from "@workspace/api-client-react";
-import { LayoutDashboard, Store, LogOut, ShieldCheck, Users, HelpCircle, Inbox, BarChart3, Truck, Flag } from "lucide-react";
+import { LayoutDashboard, Store, LogOut, ShieldCheck, Users, HelpCircle, Inbox, BarChart3, Truck, Flag, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const queryClient = new QueryClient({
@@ -75,6 +75,48 @@ function useAdminMe() {
 }
 const canSee = (me: AdminMe | undefined, page: string) => !me || me.permissions === null || me.permissions.includes(page);
 
+type Badges = { reports: number; support: number };
+
+/** Waiting items for this admin, refreshed every 30s. Also pops a browser notification when something new arrives. */
+function useAdminBadges() {
+  const { data } = useQuery({
+    queryKey: ["admin-badges"],
+    queryFn: () => customFetch<Badges>("/api/admin/badges"),
+    refetchInterval: 30000,
+    refetchIntervalInBackground: true,
+  });
+  const previous = useRef<Badges | null>(null);
+  useEffect(() => {
+    if (!data) return;
+    const total = data.reports + data.support;
+    document.title = total > 0 ? `(${total}) Dodolink Admin` : "Dodolink Admin";
+    const before = previous.current;
+    previous.current = data;
+    if (!before || typeof Notification === "undefined" || Notification.permission !== "granted") return;
+    const say = (title: string, body: string) => {
+      try { new Notification(title, { body, tag: title }); } catch { /* some browsers need a service worker */ }
+    };
+    if (data.reports > before.reports) say("New report", `${data.reports} report${data.reports === 1 ? "" : "s"} waiting for you`);
+    if (data.support > before.support) say("New support message", `${data.support} unread support message${data.support === 1 ? "" : "s"}`);
+  }, [data]);
+  return data;
+}
+
+function NotifyButton() {
+  const [permission, setPermission] = useState(() => (typeof Notification === "undefined" ? "unsupported" : Notification.permission));
+  if (permission !== "default") return null;
+  return (
+    <Button
+      variant="ghost"
+      className="w-full justify-start gap-3 text-green-200 hover:bg-white/10 hover:text-white text-sm"
+      onClick={() => Notification.requestPermission().then(setPermission)}
+    >
+      <Bell className="w-4 h-4" />
+      Turn on notifications
+    </Button>
+  );
+}
+
 function Sidebar() {
   const adminMe = useAdminMe();
   const { signOut } = useClerk();
@@ -86,7 +128,8 @@ function Sidebar() {
       refetchInterval: 30000,
     },
   });
-  const supportUnread = (supportThreads ?? []).reduce((sum, t) => sum + t.unreadCount, 0);
+  const badges = useAdminBadges();
+  const supportUnread = Math.max(badges?.support ?? 0, (supportThreads ?? []).reduce((sum, t) => sum + t.unreadCount, 0));
 
   return (
     <aside className="w-56 min-h-screen bg-[#1B5E20] flex flex-col">
@@ -115,6 +158,11 @@ function Sidebar() {
             >
               <Icon className="w-4.5 h-4.5 flex-shrink-0" />
               <span className="flex-1">{label}</span>
+              {to === "/reports" && (badges?.reports ?? 0) > 0 && (
+                <span className="min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-semibold flex items-center justify-center">
+                  {badges?.reports}
+                </span>
+              )}
               {to === "/support" && supportUnread > 0 && (
                 <span className="min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-semibold flex items-center justify-center">
                   {supportUnread}
@@ -126,6 +174,7 @@ function Sidebar() {
       </nav>
 
       <div className="px-3 pb-5">
+        <NotifyButton />
         <Button
           variant="ghost"
           className="w-full justify-start gap-3 text-green-200 hover:bg-white/10 hover:text-white text-sm"
