@@ -40,11 +40,11 @@ export function PushNotificationSetup({
     if (permissionDenied) markDeniedPromptSeen();
   };
 
-  const needsAttention =
-    (permissionDenied && deniedPromptSeen === false) ||
-    state.status === 'unsupported' ||
-    state.status === 'error' ||
-    (registering && showSlowRegistration);
+  // Only ever interrupt the person for the one thing they can fix: notifications
+  // switched off in phone settings, and only once per install. Connection hiccups
+  // (slow registration, no network, unsupported build) stay silent and are
+  // retried on the next app start; they must never open a pop-up.
+  const needsAttention = permissionDenied && deniedPromptSeen === false;
 
   useEffect(() => {
     if (needsAttention) setDismissed(false);

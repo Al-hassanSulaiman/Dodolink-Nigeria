@@ -194,8 +194,15 @@ export default function DeliveryChatScreen() {
           title: data.title,
           headerRight: () => (
             <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
-              {data.role === 'customer' && data.canRate ? (
-                <Pressable onPress={() => setRating(true)} hitSlop={8} accessibilityLabel="Rate this company">
+              {data.role === 'customer' ? (
+                <Pressable
+                  onPress={() => {
+                    if (data.canRate) setRating(true);
+                    else showAlert('Rate this company', 'You can rate the company once it has replied to you in this chat.');
+                  }}
+                  hitSlop={8}
+                  accessibilityLabel="Rate this company"
+                >
                   <Feather name="star" size={20} color="#1B5E20" />
                 </Pressable>
               ) : null}

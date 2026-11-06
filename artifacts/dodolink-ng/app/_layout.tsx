@@ -12,6 +12,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { HeaderBack } from "@/components/HeaderBack";
 import { PushNotificationSetup } from "@/components/PushNotificationSetup";
 import { WebMcpRegistration } from "@/components/WebMcpRegistration";
 import { setAuthTokenGetter, setBaseUrl, setRequestTimeout, setPublicReadAuthEnabled } from "@workspace/api-client-react";
@@ -94,10 +95,10 @@ function RootLayoutNav() {
     <Stack screenOptions={{ headerBackTitle: "Back", headerTintColor: "#1B5E20" }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      <Stack.Screen name="store/[id]" options={{ title: "Store", headerShown: true }} />
-      <Stack.Screen name="product/[id]" options={{ title: "Product", headerShown: true }} />
+      <Stack.Screen name="store/[id]" options={{ title: "Store", headerShown: true, headerBackVisible: false, headerLeft: () => <HeaderBack /> }} />
+      <Stack.Screen name="product/[id]" options={{ title: "Product", headerShown: true, headerBackVisible: false, headerLeft: () => <HeaderBack /> }} />
       <Stack.Screen name="chat" options={{ headerShown: false }} />
-      <Stack.Screen name="delivery-chat/[id]" options={{ title: "Delivery chat", headerShown: true }} />
+      <Stack.Screen name="delivery-chat/[id]" options={{ title: "Delivery chat", headerShown: true, headerBackVisible: false, headerLeft: () => <HeaderBack /> }} />
       <Stack.Screen name="delivery-subscription" options={{ title: "Subscription", headerShown: true }} />
       <Stack.Screen name="my-store" options={{ headerShown: false }} />
       <Stack.Screen name="account" options={{ title: "Account settings" }} />
