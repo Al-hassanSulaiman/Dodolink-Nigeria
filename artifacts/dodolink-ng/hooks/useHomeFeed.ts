@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useCallback, useMemo, useState } from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getHomeStores,
@@ -48,24 +47,9 @@ export function useHomeFeed() {
   const [seed, setSeed] = useState(newSeed);
   const queryClient = useQueryClient();
 
-  // Show what was on screen last time straight away while fresh data loads,
-  // so opening the app never starts with an empty page.
-  const cacheKey = `dodolink.home.v1.${identity(userId)}`;
-  const [cached, setCached] = useState<{ stores?: HomeStore[]; products?: HomeProduct[] } | null>(null);
-  useEffect(() => {
-    let live = true;
-    AsyncStorage.getItem(cacheKey)
-      .then((v) => { if (live) setCached(v ? JSON.parse(v) : null); })
-      .catch(() => { if (live) setCached(null); });
-    return () => { live = false; };
-  }, [cacheKey]);
-  const asPages = <T,>(items?: T[]) =>
-    items?.length ? { pages: [{ items, next: undefined as number | undefined }], pageParams: [0] } : undefined;
-
   const stores = useInfiniteQuery({
     queryKey: homeStoresKey(userId, seed),
     enabled: isLoaded,
-    placeholderData: asPages(cached?.stores),
     initialPageParam: 0,
     queryFn: async ({ pageParam, signal }) => {
       const page = await getHomeStores({ seed, offset: pageParam, limit: STORE_PAGE }, { signal });
@@ -77,7 +61,6 @@ export function useHomeFeed() {
   const products = useInfiniteQuery({
     queryKey: homeProductsKey(userId, seed),
     enabled: isLoaded,
-    placeholderData: asPages(cached?.products),
     initialPageParam: 0,
     queryFn: async ({ pageParam, signal }) => {
       const page = await getHomeProducts({ seed, offset: pageParam, limit: PRODUCT_PAGE }, { signal });
@@ -88,12 +71,6 @@ export function useHomeFeed() {
 
   const storeItems = useMemo<HomeStore[]>(() => dedupe((stores.data?.pages ?? []).map((p) => p.items)), [stores.data]);
   const productItems = useMemo<HomeProduct[]>(() => dedupe((products.data?.pages ?? []).map((p) => p.items)), [products.data]);
-
-  useEffect(() => {
-    if (stores.isPlaceholderData || products.isPlaceholderData || !stores.data || !products.data) return;
-    const first = { stores: stores.data.pages[0]?.items ?? [], products: products.data.pages[0]?.items ?? [] };
-    AsyncStorage.setItem(cacheKey, JSON.stringify(first)).catch(() => {});
-  }, [stores.data, products.data, stores.isPlaceholderData, products.isPlaceholderData, cacheKey]);
 
   /** New seed => new keys => fresh first pages. Old seeds are dropped. */
   const refresh = useCallback(() => {
