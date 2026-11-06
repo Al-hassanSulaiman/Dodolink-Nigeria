@@ -53,6 +53,7 @@ jobs:
           name: runtime-context
           path: generated-artifacts/gcp-runtime
           if-no-files-found: error
+          include-hidden-files: true
           retention-days: 3
 
   image-and-deploy:
