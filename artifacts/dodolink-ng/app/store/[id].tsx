@@ -217,7 +217,7 @@ export default function StoreScreen() {
                 <Feather name="edit-2" size={18} color={colors.mutedForeground} />
               </Pressable>
             )
-          ) : (
+          ) : () => (
             <Pressable onPress={safety.open} hitSlop={8} style={styles.headerBtn} accessibilityLabel="Report or block">
               <Feather name="flag" size={18} color={colors.mutedForeground} />
             </Pressable>
