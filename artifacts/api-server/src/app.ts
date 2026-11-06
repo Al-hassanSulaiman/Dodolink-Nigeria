@@ -3,6 +3,7 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import { clerkMiddleware } from "@clerk/express";
 import { resolveClerkPublishableKey } from "./lib/clerkConfiguration";
+import { securityHeaders } from "./middlewares/securityHeaders";
 import { mountWebFrontends } from "./lib/webFrontends";
 import {
   CLERK_PROXY_PATH,
@@ -20,6 +21,8 @@ const app: Express = express();
 // and load-balancer IP, requiring two. Never trust attacker-supplied leftmost
 // X-Forwarded-For entries or use blanket trust; rate limiting depends on req.ip.
 app.set("trust proxy", readProxyHopCount(process.env));
+
+app.use(securityHeaders);
 
 // Cloud-only static hosting. Never change Replit's existing artifact routing.
 if (process.env.WEB_FRONTEND_DIR) {
