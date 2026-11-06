@@ -12,6 +12,9 @@ for (const folder of ["app", "admin"]) {
   writeFileSync(path.join(directory, folder, "index.html"), `<html>${folder}</html>`);
   writeFileSync(path.join(directory, folder, "assets", "bundle.js"), `/* ${folder} */`);
 }
+// Expo puts icon fonts under assets/__node_modules/.pnpm/... (a dot folder).
+mkdirSync(path.join(directory, "app", "assets", "__node_modules", ".pnpm", "x"), { recursive: true });
+writeFileSync(path.join(directory, "app", "assets", "__node_modules", ".pnpm", "x", "Feather.ttf"), "font");
 afterAll(() => rmSync(directory, { recursive: true, force: true }));
 const app = express();
 mountWebFrontends(app, directory);
@@ -32,6 +35,13 @@ describe("combined Cloud Run web routing", () => {
   });
   it("does not turn missing assets into successful HTML", async () => {
     expect((await request(app).get("/admin/assets/missing.js")).status).toBe(404);
+  });
+  it("serves icon fonts that live inside dot folders", async () => {
+    const res = await request(app).get("/assets/__node_modules/.pnpm/x/Feather.ttf").buffer(true).parse((r, cb) => {
+      const chunks: Buffer[] = []; r.on("data", (c: Buffer) => chunks.push(c)); r.on("end", () => cb(null, Buffer.concat(chunks)));
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.toString()).toBe("font");
   });
   it("never shadows API routes", async () => {
     expect((await request(app).get("/api/healthz")).body).toEqual({ status: "ok" });

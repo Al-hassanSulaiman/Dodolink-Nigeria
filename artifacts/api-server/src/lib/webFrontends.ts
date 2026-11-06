@@ -19,10 +19,10 @@ export function mountWebFrontends(app: Express, directory: string) {
     res.sendFile(path.join(folder, "index.html"));
   };
   app.get(/^\/admin$/, (_req, res) => { res.redirect(308, "/admin/"); });
-  app.use("/admin", express.static(admin, { index: false }), fallback(admin));
+  app.use("/admin", express.static(admin, { index: false, dotfiles: "allow" }), fallback(admin));
   app.use((req, res, next) => {
     if (/^\/api(?:\/|$)/.test(req.path)) { next(); return; }
-    express.static(customer, { index: false })(req, res, error => {
+    express.static(customer, { index: false, dotfiles: "allow" })(req, res, error => {
       if (error) { next(error); return; }
       fallback(customer)(req, res, next);
     });
