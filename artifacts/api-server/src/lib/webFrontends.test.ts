@@ -37,7 +37,11 @@ describe("combined Cloud Run web routing", () => {
     expect((await request(app).get("/admin/assets/missing.js")).status).toBe(404);
   });
   it("serves icon fonts that live inside dot folders", async () => {
-    expect((await request(app).get("/assets/__node_modules/.pnpm/x/Feather.ttf")).text).toBe("font");
+    const res = await request(app).get("/assets/__node_modules/.pnpm/x/Feather.ttf").buffer(true).parse((r, cb) => {
+      const chunks: Buffer[] = []; r.on("data", (c: Buffer) => chunks.push(c)); r.on("end", () => cb(null, Buffer.concat(chunks)));
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.toString()).toBe("font");
   });
   it("never shadows API routes", async () => {
     expect((await request(app).get("/api/healthz")).body).toEqual({ status: "ok" });
