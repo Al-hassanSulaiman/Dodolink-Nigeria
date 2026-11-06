@@ -41,7 +41,12 @@ jobs:
           const http = require("http"), fs = require("fs"), path = require("path");
           const root = "/tmp/webdbg";
           const types = { ".js": "text/javascript", ".html": "text/html", ".css": "text/css", ".json": "application/json", ".ttf": "font/ttf", ".png": "image/png" };
-          http.createServer((req, res) => {
+          http.createServer(async (req, res) => {
+            if (req.url.startsWith("/api")) {
+              const r = await fetch("https://dodolink.com.ng" + req.url, { headers: { accept: "application/json" } }).catch(e => ({ status: 502, headers: new Map(), text: async () => String(e) }));
+              res.statusCode = r.status; res.setHeader("content-type", "application/json");
+              res.end(await r.text()); return;
+            }
             let p = path.join(root, decodeURIComponent(req.url.split("?")[0]));
             if (!fs.existsSync(p) || fs.statSync(p).isDirectory()) p = path.join(root, "index.html");
             res.setHeader("content-type", types[path.extname(p)] || "application/octet-stream");
