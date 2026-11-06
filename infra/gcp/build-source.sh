@@ -31,4 +31,3 @@ pnpm --filter @workspace/admin-dashboard run typecheck
 pnpm --filter @workspace/api-server run build
 node artifacts/api-server/scripts/gcp-build-frontends.mjs
 node artifacts/api-server/scripts/gcp-prepare-runtime.mjs --with-frontends
-echo "WEB FONT FILES:"; find generated-artifacts/gcp-web/app -iname "*.ttf" | head -20; ls generated-artifacts/gcp-web/app generated-artifacts/gcp-runtime/web/app | head -30
